@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/dmpinero/gestor-gastos-personal/compare/v1.0.0...v1.0.1) (2026-08-15)
+
+### 🐛 Corregido
+
+* evitar checks obligatorios que nunca se disparan por filtros de ruta ([72d742b](https://github.com/dmpinero/gestor-gastos-personal/commit/72d742bb716b3368f16ffbc3f537d39f6ae9bc48))
+
 ## 1.0.0 (2026-08-15)
 
 ### 🐛 Corregido

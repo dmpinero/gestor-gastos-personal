@@ -1,0 +1,34 @@
+schema: spec-driven
+
+context: |
+  Monorepo: backend Python 3.12 + FastAPI (hexagonal/DDD, capas dominio/
+  aplicacion/infraestructura/interfaces en backend/src/gestor_gastos, español),
+  MySQL + SQLAlchemy + Alembic. Frontend Vue 3 + TypeScript + Tailwind + Pinia.
+  Testing: pytest+pytest-bdd+Schemathesis (backend), Vitest+Playwright+axe-core
+  (frontend). Lint: ruff+pep8-naming+import-linter+bandit; ESLint naming-convention.
+  Código, comentarios y specs en español de España (ver CONTRIBUTING.md).
+
+rules:
+  proposal:
+    - Incluir plan de rollback para cambios de riesgo (migraciones, auth)
+    - Identificar si el cambio toca dominio, aplicacion, infraestructura o interfaces
+  specs:
+    - Escenarios en formato Given/When/Then (Dado/Cuando/Entonces), en español
+    - Usar palabras clave RFC 2119 (DEBE, DEBERÁ, DEBERÍA, PUEDE)
+    - Los escenarios deben poder traducirse 1:1 a .feature de pytest-bdd
+  design:
+    - Documentar en qué capa hexagonal vive cada pieza nueva
+    - Justificar cualquier excepción a la regla de dependencias (dominio no
+      depende de infraestructura/interfaces)
+  tasks:
+    - Agrupar por fase: dominio, aplicación, infraestructura/API, frontend, tests
+    - Cada tarea de código sigue TDD: test unitario antes que implementación
+  apply:
+    - Seguir las convenciones de CONTRIBUTING.md (idioma español, Clean Code)
+    - Antes de dar una tarea por cerrada, considerar /revision-clean-code
+  verify:
+    - Ejecutar pytest (backend) y Vitest/Playwright (frontend)
+    - Comparar la implementación contra cada escenario Given/When/Then de la spec
+    - Comprobar que ruff, bandit, import-linter y ESLint siguen en verde
+  archive:
+    - Avisar antes de fusionar deltas destructivos (eliminar entidades/endpoints)

@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: gestor_gastos
+      MYSQL_USER: gestor
+      MYSQL_PASSWORD: gestor
+      MYSQL_ROOT_PASSWORD: raiz
+    ports:
+      - "3306:3306"
+    volumes:
+      - datos_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ugestor", "-pgestor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      ENTORNO: desarrollo
+      URL_BASE_DATOS: mysql+pymysql://gestor:gestor@mysql:3306/gestor_gastos
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  datos_mysql:

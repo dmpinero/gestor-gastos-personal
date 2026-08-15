@@ -1,0 +1,11 @@
+{
+  "name": "gestor-gastos-personal",
+  "private": true,
+  "description": "Herramientas de versionado y release del monorepo (no es la aplicación en sí, ver backend/ y frontend/).",
+  "devDependencies": {
+    "semantic-release": "^24.2.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.1"
+  }
+}

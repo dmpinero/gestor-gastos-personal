@@ -1,5 +1,10 @@
 # Gestor de Gastos Personal
 
+[![CI Backend](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/ci-backend.yml)
+[![CI Frontend](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/ci-frontend.yml)
+[![E2E](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/e2e.yml/badge.svg)](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/e2e.yml)
+[![Análisis de seguridad](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/security-scan.yml/badge.svg)](https://github.com/dmpinero/gestor-gastos-personal/actions/workflows/security-scan.yml)
+
 Aplicación web para llevar el control de gastos personales.
 
 ## Arquitectura

@@ -49,7 +49,7 @@ jobs:
         working-directory: frontend
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:5173
-        run: pnpm exec playwright test
+        run: pnpm exec playwright test --project=chromium
 
       - name: Publicar informe de Playwright
         if: always()

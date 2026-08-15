@@ -10,6 +10,10 @@ permissions:
 
 jobs:
   gitleaks:
+    # El token de las PRs abiertas por Dependabot es de solo lectura y la action
+    # de gitleaks necesita listar los commits de la PR vía API; sus bumps de
+    # lockfile no son un vector realista de secretos, así que se excluyen.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +26,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   revision-dependencias:
-    if: github.event_name == 'pull_request'
+    # dependency-review-action requiere GitHub Advanced Security, que en repos
+    # privados es una función de pago. En un repo privado nos apoyamos en las
+    # alertas de Dependabot (ya activadas) para las CVEs conocidas.
+    if: github.event_name == 'pull_request' && github.event.repository.private == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -2,21 +2,19 @@ name: CI Frontend
 
 on:
   pull_request:
-    paths:
-      - "frontend/**"
-      - ".github/workflows/ci-frontend.yml"
   push:
     branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/ci-frontend.yml"
+
+# Sin filtro de "paths": si el workflow no se dispara para una PR (por no tocar
+# frontend/), un check "requerido" en la protección de rama se quedaría en
+# pendiente para siempre y bloquearía el merge. Se ejecuta siempre; es rápido.
 
 defaults:
   run:
     working-directory: frontend
 
 jobs:
-  calidad-y-tests:
+  calidad-y-tests-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

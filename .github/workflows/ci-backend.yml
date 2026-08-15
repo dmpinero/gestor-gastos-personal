@@ -2,21 +2,19 @@ name: CI Backend
 
 on:
   pull_request:
-    paths:
-      - "backend/**"
-      - ".github/workflows/ci-backend.yml"
   push:
     branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/ci-backend.yml"
+
+# Sin filtro de "paths": si el workflow no se dispara para una PR (por no tocar
+# backend/), un check "requerido" en la protección de rama se quedaría en
+# pendiente para siempre y bloquearía el merge. Se ejecuta siempre; es rápido.
 
 defaults:
   run:
     working-directory: backend
 
 jobs:
-  calidad-y-tests:
+  calidad-y-tests-backend:
     runs-on: ubuntu-latest
 
     services:

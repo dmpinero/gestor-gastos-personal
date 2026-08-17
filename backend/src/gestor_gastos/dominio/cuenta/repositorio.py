@@ -1,0 +1,19 @@
+from typing import Protocol
+
+from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
+
+
+class RepositorioCuentas(Protocol):
+    """Puerto de persistencia para CuentaBancaria."""
+
+    def crear(self, cuenta: CuentaBancaria) -> CuentaBancaria: ...
+
+    def obtener_por_id(self, id_cuenta: int) -> CuentaBancaria | None: ...
+
+    def obtener_por_numero_cuenta(self, numero_cuenta: str) -> CuentaBancaria | None: ...
+
+    def listar(self) -> list[CuentaBancaria]: ...
+
+    def actualizar(self, cuenta: CuentaBancaria) -> CuentaBancaria: ...
+
+    def eliminar(self, id_cuenta: int) -> None: ...

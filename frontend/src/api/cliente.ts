@@ -15,6 +15,20 @@ interface OpcionesPeticion {
   token?: string | null
 }
 
+async function extraerMensajeDeError(respuesta: Response): Promise<string> {
+  try {
+    const datos = await respuesta.clone().json()
+    if (typeof datos.detalle === 'string') return datos.detalle
+    if (typeof datos.detail === 'string') return datos.detail
+    if (Array.isArray(datos.detail)) {
+      return datos.detail.map((error: { msg?: string }) => error.msg).join('; ')
+    }
+  } catch {
+    // El cuerpo no era JSON; se usa el texto del estado HTTP como mensaje.
+  }
+  return respuesta.statusText
+}
+
 async function peticion<T>(
   metodo: 'GET' | 'POST' | 'PUT' | 'DELETE',
   ruta: string,
@@ -34,11 +48,27 @@ async function peticion<T>(
   })
 
   if (!respuesta.ok) {
-    throw new ErrorApi(respuesta.status, `Error al llamar a ${ruta}: ${respuesta.statusText}`)
+    throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))
   }
 
   if (respuesta.status === 204) {
     return undefined as T
+  }
+
+  return (await respuesta.json()) as T
+}
+
+async function subirArchivo<T>(ruta: string, campo: string, fichero: File): Promise<T> {
+  const formData = new FormData()
+  formData.append(campo, fichero)
+
+  const respuesta = await fetch(`${URL_BASE_API}${ruta}`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!respuesta.ok) {
+    throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))
   }
 
   return (await respuesta.json()) as T
@@ -51,4 +81,5 @@ export const clienteApi = {
   actualizar: <T>(ruta: string, cuerpo: unknown, token?: string | null) =>
     peticion<T>('PUT', ruta, { cuerpo, token }),
   eliminar: <T>(ruta: string, token?: string | null) => peticion<T>('DELETE', ruta, { token }),
+  subirArchivo,
 }

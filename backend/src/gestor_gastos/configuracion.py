@@ -10,7 +10,11 @@ class Configuracion(BaseSettings):
 
     entorno: str = "desarrollo"
 
-    url_base_datos: str = "mysql+pymysql://gestor:gestor@localhost:3306/gestor_gastos"
+    # PyMySQL usa "latin1" como charset por defecto si no se indica lo contrario,
+    # lo que corrompe caracteres Unicode de 4 bytes (emoji, ciertos alfabetos).
+    url_base_datos: str = (
+        "mysql+pymysql://gestor:gestor@localhost:3306/gestor_gastos?charset=utf8mb4"
+    )
 
     clave_secreta_jwt: str = "cambia-esta-clave-en-produccion"
     algoritmo_jwt: str = "HS256"

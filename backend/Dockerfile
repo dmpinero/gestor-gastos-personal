@@ -9,9 +9,12 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 COPY . .
 RUN uv sync --frozen --no-dev
+RUN chmod +x entrypoint.sh
 
 ENV PATH="/aplicacion/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-CMD ["uvicorn", "gestor_gastos.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Aplica las migraciones de Alembic antes de arrancar; sin esto, un contenedor
+# con una base de datos nueva arrancaría sin tablas.
+CMD ["./entrypoint.sh"]

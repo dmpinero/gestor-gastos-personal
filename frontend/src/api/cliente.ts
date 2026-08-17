@@ -41,11 +41,12 @@ async function peticion<T>(
     cabeceras.Authorization = `Bearer ${opciones.token}`
   }
 
-  const respuesta = await fetch(`${URL_BASE_API}${ruta}`, {
+  const opcionesFetch: RequestInit = {
     method: metodo,
     headers: cabeceras,
-    body: opciones.cuerpo ? JSON.stringify(opciones.cuerpo) : undefined,
-  })
+    ...(opciones.cuerpo ? { body: JSON.stringify(opciones.cuerpo) } : {}),
+  }
+  const respuesta = await fetch(`${URL_BASE_API}${ruta}`, opcionesFetch)
 
   if (!respuesta.ok) {
     throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))

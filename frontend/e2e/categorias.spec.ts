@@ -10,7 +10,7 @@ test('gestión de categoría y subcategoría', async ({ page }) => {
   await page.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
   await page.getByRole('button', { name: 'Crear categoría' }).click()
 
-  const tarjetaCategoria = page.locator('li', { hasText: nombreCategoria })
+  const tarjetaCategoria = page.locator('[data-slot="card"]', { hasText: nombreCategoria })
   await expect(tarjetaCategoria).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/categorias-02-tras-crear-categoria.png' })
 
@@ -23,9 +23,11 @@ test('gestión de categoría y subcategoría', async ({ page }) => {
     .locator('li', { hasText: nombreSubcategoria })
     .getByRole('button', { name: 'Eliminar' })
     .click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toHaveCount(0)
 
   await tarjetaCategoria.getByRole('button', { name: 'Eliminar categoría' }).click()
-  await expect(page.locator('li', { hasText: nombreCategoria })).toHaveCount(0)
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toHaveCount(0)
   await page.screenshot({ path: 'e2e/capturas/categorias-04-tras-eliminar.png' })
 })

@@ -32,6 +32,17 @@ export default defineConfigWithVueTs(
     files: ['src/**/__tests__/*'],
   },
 
+  {
+    name: 'app/componentes-ui-shadcn-vue',
+    // Los componentes copiados de shadcn-vue en componentes/ui/ siguen la
+    // convención de nombre corto de esa librería (Button, Input, Table...);
+    // no se renombran para no romper el contrato con el registro de shadcn-vue.
+    files: ['src/componentes/ui/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+    },
+  },
+
   ...pluginOxlint.buildFromOxlintConfigFile('.oxlintrc.json'),
 
   {

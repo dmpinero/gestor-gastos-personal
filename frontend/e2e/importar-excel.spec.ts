@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test, expect } from '@playwright/test'
@@ -46,4 +47,50 @@ test('subir un fichero con extensión no soportada muestra un error', async ({ p
 
   await expect(page.getByRole('alert')).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-05-extension-no-soportada.png' })
+})
+
+test('soltar el fichero sobre la zona de arrastre también permite importarlo', async ({ page }) => {
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: 'Seleccionar o soltar archivo Excel' })
+
+  const contenido = fs.readFileSync(RUTA_FICHERO)
+  const dataTransfer = await page.evaluateHandle((bytes) => {
+    const transferencia = new DataTransfer()
+    transferencia.items.add(
+      new File([new Uint8Array(bytes)], 'movimientos_ejemplo.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    )
+    return transferencia
+  }, Array.from(contenido))
+
+  await zona.dispatchEvent('dragenter', { dataTransfer })
+  await page.screenshot({ path: 'e2e/capturas/importar-06-arrastrando-fichero.png' })
+  await zona.dispatchEvent('drop', { dataTransfer })
+
+  await expect(zona).toContainText('movimientos_ejemplo.xlsx')
+
+  await page.getByRole('button', { name: 'Importar' }).click()
+  await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/importar-07-resumen-tras-arrastrar.png' })
+})
+
+test('soltar un fichero con extensión no soportada sobre la zona de arrastre también lo rechaza', async ({
+  page,
+}) => {
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: 'Seleccionar o soltar archivo Excel' })
+
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transferencia = new DataTransfer()
+    transferencia.items.add(
+      new File(['fecha,importe\n2026-01-01,-10'], 'movimientos.csv', { type: 'text/csv' }),
+    )
+    return transferencia
+  })
+
+  await zona.dispatchEvent('drop', { dataTransfer })
+  await page.getByRole('button', { name: 'Importar' }).click()
+
+  await expect(page.getByRole('alert')).toBeVisible()
 })

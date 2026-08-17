@@ -87,3 +87,26 @@ movimiento por debajo.
 - Dado un fichero con la cabecera de columnas pero sin filas de datos
 - Cuando se intenta importar
 - Entonces el sistema informa de que no hay movimientos que importar
+
+### Requisito: Carga de fichero por arrastrar y soltar
+
+El sistema DEBE permitir seleccionar el fichero Excel a importar arrastrándolo
+y soltándolo sobre una zona designada de la interfaz, como alternativa a
+seleccionarlo mediante el diálogo de selección de fichero del sistema
+operativo (click). Ambas vías DEBEN dar lugar al mismo comportamiento de
+importación una vez el fichero está seleccionado.
+
+#### Escenario: Soltar un fichero válido sobre la zona de carga
+- Dado que el usuario está en la vista de importación con la zona de arrastre visible
+- Cuando arrastra un fichero ".xlsx" válido y lo suelta sobre esa zona
+- Entonces el fichero queda seleccionado para importar, igual que si se hubiera elegido por click
+
+#### Escenario: Soltar un fichero con extensión no soportada
+- Dado que el usuario está en la vista de importación
+- Cuando arrastra un fichero ".csv" y lo suelta sobre la zona de carga
+- Entonces el sistema aplica el mismo rechazo por extensión no soportada que ya aplica cuando el fichero se selecciona por click
+
+#### Escenario: Seleccionar el fichero por click sigue disponible
+- Dado que el usuario está en la vista de importación
+- Cuando hace click sobre la zona de carga en vez de arrastrar un fichero
+- Entonces se abre el selector de fichero del sistema operativo, igual que antes de añadir el arrastrar y soltar

@@ -10,18 +10,22 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.19.1",
     "fastapi>=0.141.1",
+    "openpyxl>=3.1.5",
     "opentelemetry-exporter-otlp>=1.44.0",
     "opentelemetry-instrumentation-fastapi>=0.65b0",
     "opentelemetry-sdk>=1.44.0",
+    "pandas>=3.0.5",
     "passlib[argon2]>=1.7.4",
     "prometheus-fastapi-instrumentator>=8.1.0",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.13.0",
     "pymysql>=1.2.0",
     "python-json-logger>=4.2.0",
+    "python-multipart>=0.0.32",
     "sentry-sdk>=2.68.0",
     "sqlalchemy>=2.0.52",
     "uvicorn[standard]>=0.52.3",
+    "xlrd>=2.0.2",
 ]
 
 [build-system]
@@ -52,6 +56,9 @@ source = ["src/gestor_gastos"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Scripts autogenerados por "alembic revision --autogenerate"; no se lintan a
+# mano, se regeneran con cada migración.
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM"]

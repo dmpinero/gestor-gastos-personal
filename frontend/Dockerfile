@@ -12,6 +12,7 @@ RUN pnpm build
 
 FROM nginx:alpine AS produccion
 
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=construccion /aplicacion/dist /usr/share/nginx/html
 
 EXPOSE 80

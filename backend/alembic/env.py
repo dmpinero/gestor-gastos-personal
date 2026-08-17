@@ -4,7 +4,11 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from gestor_gastos.configuracion import obtener_configuracion
+from gestor_gastos.infraestructura.persistencia import modelos  # noqa: F401
 from gestor_gastos.infraestructura.persistencia.sesion import Base
+
+# Los modelos ORM se importan arriba (uno por módulo, según se vayan creando)
+# para que se registren en Base.metadata y Alembic los detecte con --autogenerate.
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -15,8 +19,6 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Los modelos ORM se importan aquí (uno por línea, según se vayan creando) para
-# que Alembic los detecte al generar migraciones automáticas con --autogenerate.
 target_metadata = Base.metadata
 
 config.set_main_option("sqlalchemy.url", obtener_configuracion().url_base_datos)

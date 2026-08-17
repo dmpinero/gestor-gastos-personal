@@ -7,10 +7,17 @@ from gestor_gastos.infraestructura.observabilidad.registro_logs import (
 )
 from gestor_gastos.infraestructura.observabilidad.sentry import inicializar_sentry
 from gestor_gastos.infraestructura.observabilidad.trazas import configurar_trazas
+from gestor_gastos.interfaces.api.manejadores_errores import registrar_manejadores_de_errores
 from gestor_gastos.interfaces.api.middleware.cabeceras_seguridad import (
     MiddlewareCabecerasSeguridad,
 )
-from gestor_gastos.interfaces.api.v1.enrutadores import salud
+from gestor_gastos.interfaces.api.v1.enrutadores import (
+    categorias,
+    cuentas,
+    importacion,
+    movimientos,
+    salud,
+)
 
 
 def crear_aplicacion() -> FastAPI:
@@ -27,7 +34,13 @@ def crear_aplicacion() -> FastAPI:
     )
 
     aplicacion.add_middleware(MiddlewareCabecerasSeguridad)
+    registrar_manejadores_de_errores(aplicacion)
+
     aplicacion.include_router(salud.enrutador, prefix="/api/v1")
+    aplicacion.include_router(cuentas.enrutador, prefix="/api/v1")
+    aplicacion.include_router(categorias.enrutador, prefix="/api/v1")
+    aplicacion.include_router(movimientos.enrutador, prefix="/api/v1")
+    aplicacion.include_router(importacion.enrutador, prefix="/api/v1")
 
     Instrumentator().instrument(aplicacion).expose(
         aplicacion, endpoint="/metricas", include_in_schema=False

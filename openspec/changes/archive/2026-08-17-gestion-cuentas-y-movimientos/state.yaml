@@ -1,0 +1,11 @@
+change: gestion-cuentas-y-movimientos
+created: "2026-08-16"
+phases:
+  explore: skipped
+  propose: done
+  spec: done
+  design: done
+  tasks: done
+  apply: done
+  verify: done
+  archive: pending

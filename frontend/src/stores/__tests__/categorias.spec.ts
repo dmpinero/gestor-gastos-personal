@@ -6,10 +6,10 @@ import { useTiendaCategorias } from '@/stores/categorias'
 
 vi.mock('@/api/cliente', () => ({
   clienteApi: {
-    obtener: vi.fn(),
-    crear: vi.fn(),
-    actualizar: vi.fn(),
-    eliminar: vi.fn(),
+    obtener: vi.fn<(...args: unknown[]) => unknown>(),
+    crear: vi.fn<(...args: unknown[]) => unknown>(),
+    actualizar: vi.fn<(...args: unknown[]) => unknown>(),
+    eliminar: vi.fn<(...args: unknown[]) => unknown>(),
   },
 }))
 

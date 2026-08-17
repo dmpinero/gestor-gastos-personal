@@ -6,6 +6,25 @@ import { aTextoOULlo } from '@/api/utilidades'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
+import { Button } from '@/componentes/ui/button'
+import { Input } from '@/componentes/ui/input'
+import { Label } from '@/componentes/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/componentes/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/componentes/ui/table'
+import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
@@ -24,6 +43,33 @@ const formulario = reactive<DatosMovimiento>({
   comentario: '',
   importe: '',
   saldo: '',
+})
+
+// Los componentes Select trabajan con valores de texto; estos proxies traducen
+// entre esa representación y los identificadores numéricos del formulario.
+const cuentaSeleccionadaTexto = computed<string | undefined>({
+  get: () => (cuentaSeleccionada.value === null ? undefined : String(cuentaSeleccionada.value)),
+  set: (valor) => {
+    cuentaSeleccionada.value = valor === undefined ? null : Number(valor)
+  },
+})
+
+const categoriaSeleccionadaTexto = computed<string | undefined>({
+  get: () => (formulario.categoria_id ? String(formulario.categoria_id) : undefined),
+  set: (valor) => {
+    formulario.categoria_id = valor === undefined ? 0 : Number(valor)
+    formulario.subcategoria_id = null
+  },
+})
+
+const SIN_SUBCATEGORIA = 'sin-subcategoria'
+
+const subcategoriaSeleccionadaTexto = computed<string>({
+  get: () =>
+    formulario.subcategoria_id === null ? SIN_SUBCATEGORIA : String(formulario.subcategoria_id),
+  set: (valor) => {
+    formulario.subcategoria_id = valor === SIN_SUBCATEGORIA ? null : Number(valor)
+  },
 })
 
 const subcategoriasDeLaCategoria = computed(() => {
@@ -102,115 +148,115 @@ async function eliminar(id: number): Promise<void> {
   <section>
     <h2 class="text-xl font-semibold">Movimientos</h2>
 
-    <label class="mt-4 block text-sm">
-      Cuenta
-      <select v-model="cuentaSeleccionada" class="ml-2 rounded border border-gray-300 px-2 py-1">
-        <option v-for="cuenta in tiendaCuentas.cuentas" :key="cuenta.id" :value="cuenta.id">
-          {{ cuenta.alias ?? cuenta.numero_cuenta }}
-        </option>
-      </select>
-    </label>
+    <div class="mt-4 flex max-w-xs flex-col gap-1.5">
+      <Label id="etiqueta-cuenta" for="selector-cuenta">Cuenta</Label>
+      <Select v-model="cuentaSeleccionadaTexto">
+        <SelectTrigger id="selector-cuenta" aria-labelledby="etiqueta-cuenta">
+          <SelectValue placeholder="Selecciona una cuenta" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            v-for="cuenta in tiendaCuentas.cuentas"
+            :key="cuenta.id"
+            :value="String(cuenta.id)"
+          >
+            {{ cuenta.alias ?? cuenta.numero_cuenta }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
 
-    <form
-      class="mt-4 grid grid-cols-3 gap-3 rounded border border-gray-200 p-4"
-      @submit.prevent="guardar"
-    >
-      <input
-        v-model="formulario.fecha_valor"
-        type="date"
-        required
-        class="rounded border border-gray-300 px-2 py-1"
-      />
-      <select
-        v-model.number="formulario.categoria_id"
-        required
-        class="rounded border border-gray-300 px-2 py-1"
-      >
-        <option :value="0" disabled>Categoría</option>
-        <option
-          v-for="c in tiendaCategorias.categorias"
-          :key="c.categoria.id"
-          :value="c.categoria.id"
-        >
-          {{ c.categoria.nombre }}
-        </option>
-      </select>
-      <select
-        v-model.number="formulario.subcategoria_id"
-        class="rounded border border-gray-300 px-2 py-1"
-      >
-        <option :value="null">(sin subcategoría)</option>
-        <option v-for="s in subcategoriasDeLaCategoria" :key="s.id" :value="s.id">
-          {{ s.nombre }}
-        </option>
-      </select>
-      <input
+    <form class="mt-4 grid grid-cols-3 gap-3 rounded-lg border p-4" @submit.prevent="guardar">
+      <div class="flex flex-col gap-1.5">
+        <Label for="fecha-valor">Fecha</Label>
+        <Input id="fecha-valor" v-model="formulario.fecha_valor" type="date" required />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <Label id="etiqueta-categoria" for="selector-categoria">Categoría</Label>
+        <Select v-model="categoriaSeleccionadaTexto">
+          <SelectTrigger id="selector-categoria" aria-labelledby="etiqueta-categoria">
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="c in tiendaCategorias.categorias"
+              :key="c.categoria.id"
+              :value="String(c.categoria.id)"
+            >
+              {{ c.categoria.nombre }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <Label id="etiqueta-subcategoria" for="selector-subcategoria">Subcategoría</Label>
+        <Select v-model="subcategoriaSeleccionadaTexto">
+          <SelectTrigger id="selector-subcategoria" aria-labelledby="etiqueta-subcategoria">
+            <SelectValue placeholder="(sin subcategoría)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
+            <SelectItem v-for="s in subcategoriasDeLaCategoria" :key="s.id" :value="String(s.id)">
+              {{ s.nombre }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Input
         v-model="formulario.descripcion"
         placeholder="Descripción"
         required
-        class="col-span-2 rounded border border-gray-300 px-2 py-1"
+        class="col-span-2"
       />
-      <input
-        v-model="formulario.comentario"
-        placeholder="Comentario"
-        class="rounded border border-gray-300 px-2 py-1"
-      />
-      <input
-        v-model="formulario.importe"
-        placeholder="Importe"
-        required
-        class="rounded border border-gray-300 px-2 py-1"
-      />
-      <input
-        v-model="formulario.saldo"
-        placeholder="Saldo"
-        required
-        class="rounded border border-gray-300 px-2 py-1"
-      />
+      <Input v-model="formulario.comentario" placeholder="Comentario" />
+      <Input v-model="formulario.importe" placeholder="Importe" required />
+      <Input v-model="formulario.saldo" placeholder="Saldo" required />
 
       <div class="col-span-3 flex gap-2">
-        <button type="submit" class="rounded bg-blue-600 px-3 py-1 text-white">
+        <Button type="submit">
           {{ idEnEdicion === null ? 'Crear movimiento' : 'Guardar cambios' }}
-        </button>
-        <button
+        </Button>
+        <Button
           v-if="idEnEdicion !== null"
           type="button"
-          class="rounded border border-gray-300 px-3 py-1"
+          variant="outline"
           @click="limpiarFormulario"
         >
           Cancelar
-        </button>
+        </Button>
       </div>
     </form>
 
-    <p v-if="error" class="mt-2 text-sm text-red-600" role="alert">{{ error }}</p>
+    <p v-if="error" class="mt-2 text-sm text-destructive" role="alert">{{ error }}</p>
 
-    <table class="mt-6 w-full text-left text-sm">
-      <thead>
-        <tr class="border-b border-gray-200">
-          <th class="py-2">Fecha</th>
-          <th>Descripción</th>
-          <th>Importe</th>
-          <th>Saldo</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="movimiento in tiendaMovimientos.movimientos"
-          :key="movimiento.id"
-          class="border-b border-gray-100"
-        >
-          <td class="py-2">{{ movimiento.fecha_valor }}</td>
-          <td>{{ movimiento.descripcion }}</td>
-          <td>{{ movimiento.importe }}</td>
-          <td>{{ movimiento.saldo }}</td>
-          <td class="space-x-2 text-right">
-            <button class="text-blue-600" @click="editar(movimiento)">Editar</button>
-            <button class="text-red-600" @click="eliminar(movimiento.id)">Eliminar</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <Table class="mt-6">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Fecha</TableHead>
+          <TableHead>Descripción</TableHead>
+          <TableHead>Importe</TableHead>
+          <TableHead>Saldo</TableHead>
+          <TableHead></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow v-for="movimiento in tiendaMovimientos.movimientos" :key="movimiento.id">
+          <TableCell>{{ movimiento.fecha_valor }}</TableCell>
+          <TableCell>{{ movimiento.descripcion }}</TableCell>
+          <TableCell>{{ movimiento.importe }}</TableCell>
+          <TableCell>{{ movimiento.saldo }}</TableCell>
+          <TableCell class="text-right">
+            <Button variant="link" @click="editar(movimiento)">Editar</Button>
+            <DialogoConfirmarEliminacion
+              :descripcion="`el movimiento ${movimiento.descripcion}`"
+              @confirmar="eliminar(movimiento.id)"
+            />
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   </section>
 </template>

@@ -2,6 +2,10 @@
 import { onMounted, ref } from 'vue'
 
 import { useTiendaCategorias } from '@/stores/categorias'
+import { Button } from '@/componentes/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
+import { Input } from '@/componentes/ui/input'
+import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tienda = useTiendaCategorias()
 const error = ref<string | null>(null)
@@ -58,56 +62,53 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
     <h2 class="text-xl font-semibold">Categorías</h2>
 
     <form class="mt-4 flex gap-2" @submit.prevent="crearCategoria">
-      <input
+      <Input
         v-model="nombreNuevaCategoria"
         placeholder="Nueva categoría"
         required
-        class="rounded border border-gray-300 px-2 py-1"
+        class="max-w-xs"
       />
-      <button type="submit" class="rounded bg-blue-600 px-3 py-1 text-white">
-        Crear categoría
-      </button>
+      <Button type="submit">Crear categoría</Button>
     </form>
 
-    <p v-if="error" class="mt-2 text-sm text-red-600" role="alert">{{ error }}</p>
+    <p v-if="error" class="mt-2 text-sm text-destructive" role="alert">{{ error }}</p>
 
-    <ul class="mt-6 space-y-4">
-      <li
-        v-for="item in tienda.categorias"
-        :key="item.categoria.id"
-        class="rounded border border-gray-200 p-3"
-      >
-        <div class="flex items-center justify-between">
-          <h3 class="font-medium">{{ item.categoria.nombre }}</h3>
-          <button class="text-red-600" @click="eliminarCategoria(item.categoria.id)">
-            Eliminar categoría
-          </button>
-        </div>
-
-        <ul class="mt-2 ml-4 space-y-1 text-sm">
-          <li
-            v-for="sub in item.subcategorias"
-            :key="sub.id"
-            class="flex items-center justify-between"
-          >
-            <span>{{ sub.nombre }}</span>
-            <button class="text-red-600" @click="eliminarSubcategoria(item.categoria.id, sub.id)">
-              Eliminar
-            </button>
-          </li>
-        </ul>
-
-        <form class="mt-2 ml-4 flex gap-2" @submit.prevent="crearSubcategoria(item.categoria.id)">
-          <input
-            v-model="subcategoriaNuevaPorCategoria[item.categoria.id]"
-            placeholder="Nueva subcategoría"
-            class="rounded border border-gray-300 px-2 py-1 text-sm"
+    <div class="mt-6 space-y-4">
+      <Card v-for="item in tienda.categorias" :key="item.categoria.id">
+        <CardHeader class="flex flex-row items-center justify-between">
+          <CardTitle>{{ item.categoria.nombre }}</CardTitle>
+          <DialogoConfirmarEliminacion
+            :descripcion="`la categoría ${item.categoria.nombre}`"
+            texto-boton="Eliminar categoría"
+            @confirmar="eliminarCategoria(item.categoria.id)"
           />
-          <button type="submit" class="rounded border border-gray-300 px-2 py-1 text-sm">
-            Añadir
-          </button>
-        </form>
-      </li>
-    </ul>
+        </CardHeader>
+
+        <CardContent>
+          <ul class="space-y-1 text-sm">
+            <li
+              v-for="sub in item.subcategorias"
+              :key="sub.id"
+              class="flex items-center justify-between"
+            >
+              <span>{{ sub.nombre }}</span>
+              <DialogoConfirmarEliminacion
+                :descripcion="`la subcategoría ${sub.nombre}`"
+                @confirmar="eliminarSubcategoria(item.categoria.id, sub.id)"
+              />
+            </li>
+          </ul>
+
+          <form class="mt-2 flex gap-2" @submit.prevent="crearSubcategoria(item.categoria.id)">
+            <Input
+              v-model="subcategoriaNuevaPorCategoria[item.categoria.id]"
+              placeholder="Nueva subcategoría"
+              class="max-w-xs"
+            />
+            <Button type="submit" variant="outline">Añadir</Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   </section>
 </template>

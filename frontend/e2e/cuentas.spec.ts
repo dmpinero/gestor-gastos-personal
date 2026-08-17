@@ -25,6 +25,11 @@ test('gestión completa de una cuenta bancaria: crear, editar y eliminar', async
     .locator('tr', { hasText: numeroCuenta })
     .getByRole('button', { name: 'Eliminar' })
     .click()
+  const dialogo = page.getByRole('alertdialog')
+  await expect(dialogo).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/cuentas-05-confirmar-eliminacion.png' })
+
+  await dialogo.getByRole('button', { name: 'Eliminar' }).click()
   await expect(page.locator('tr', { hasText: numeroCuenta })).toHaveCount(0)
-  await page.screenshot({ path: 'e2e/capturas/cuentas-05-tras-eliminar.png' })
+  await page.screenshot({ path: 'e2e/capturas/cuentas-06-tras-eliminar.png' })
 })

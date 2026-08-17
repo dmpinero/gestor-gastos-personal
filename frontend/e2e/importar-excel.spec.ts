@@ -10,7 +10,7 @@ const RUTA_FICHERO = path.resolve(
 )
 
 test('importar un Excel de movimientos muestra el resumen de la importación', async ({ page }) => {
-  await page.goto('/importar')
+  await page.goto('/gestion/importar')
   await page.screenshot({ path: 'e2e/capturas/importar-01-pagina-inicial.png' })
 
   await page.locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
@@ -29,13 +29,13 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
   const omitidos = Number(texto.match(/duplicado: (\d+)/)?.[1])
   expect(importados + omitidos).toBe(5)
 
-  await page.goto('/cuentas')
+  await page.goto('/gestion/cuentas')
   await expect(page.locator('tr', { hasText: '1234 5678 9012 34567890' })).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-04-cuenta-creada.png' })
 })
 
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {
-  await page.goto('/importar')
+  await page.goto('/gestion/importar')
 
   // Fichero .csv generado en memoria (no hace falta uno real en disco).
   await page.locator('input[type="file"]').setInputFiles({
@@ -50,7 +50,7 @@ test('subir un fichero con extensión no soportada muestra un error', async ({ p
 })
 
 test('soltar el fichero sobre la zona de arrastre también permite importarlo', async ({ page }) => {
-  await page.goto('/importar')
+  await page.goto('/gestion/importar')
   const zona = page.getByRole('button', { name: 'Seleccionar o soltar archivo Excel' })
 
   const contenido = fs.readFileSync(RUTA_FICHERO)
@@ -78,7 +78,7 @@ test('soltar el fichero sobre la zona de arrastre también permite importarlo', 
 test('soltar un fichero con extensión no soportada sobre la zona de arrastre también lo rechaza', async ({
   page,
 }) => {
-  await page.goto('/importar')
+  await page.goto('/gestion/importar')
   const zona = page.getByRole('button', { name: 'Seleccionar o soltar archivo Excel' })
 
   const dataTransfer = await page.evaluateHandle(() => {

@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-const RUTAS = ['/', '/cuentas', '/categorias', '/movimientos', '/importar']
+const RUTAS = [
+  '/',
+  '/gestion/cuentas',
+  '/gestion/categorias',
+  '/gestion/movimientos',
+  '/gestion/importar',
+]
 
 async function auditarPagina(page: import('@playwright/test').Page) {
   return (

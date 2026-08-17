@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import VistaInicio from '@/vistas/VistaInicio.vue'
+import VistaGestion from '@/vistas/VistaGestion.vue'
 import VistaCuentas from '@/vistas/VistaCuentas.vue'
 import VistaCategorias from '@/vistas/VistaCategorias.vue'
 import VistaMovimientos from '@/vistas/VistaMovimientos.vue'
@@ -14,24 +15,31 @@ const router = createRouter({
       component: VistaInicio,
     },
     {
-      path: '/cuentas',
-      name: 'cuentas',
-      component: VistaCuentas,
-    },
-    {
-      path: '/categorias',
-      name: 'categorias',
-      component: VistaCategorias,
-    },
-    {
-      path: '/movimientos',
-      name: 'movimientos',
-      component: VistaMovimientos,
-    },
-    {
-      path: '/importar',
-      name: 'importar',
-      component: VistaImportarExcel,
+      path: '/gestion',
+      component: VistaGestion,
+      redirect: '/gestion/cuentas',
+      children: [
+        {
+          path: 'cuentas',
+          name: 'gestion-cuentas',
+          component: VistaCuentas,
+        },
+        {
+          path: 'categorias',
+          name: 'gestion-categorias',
+          component: VistaCategorias,
+        },
+        {
+          path: 'movimientos',
+          name: 'gestion-movimientos',
+          component: VistaMovimientos,
+        },
+        {
+          path: 'importar',
+          name: 'gestion-importar',
+          component: VistaImportarExcel,
+        },
+      ],
     },
   ],
 })

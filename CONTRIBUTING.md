@@ -62,9 +62,13 @@ La regla de dependencias se comprueba automáticamente con `import-linter` en CI
 
 ## Releases
 
-Al fusionar a `main`, `semantic-release` calcula la versión, actualiza
-`CHANGELOG.md` y publica un borrador de release agrupado por categorías
-(`✨ Novedades`, `🐛 Corregido`, `🔧 Mejoras`, `⚙️ Cambios internos`). Antes de
-publicar la versión final, ejecuta la skill `/generar-release-notes` para
-reescribir ese borrador en prosa narrativa (estilo "Novedades de la versión" de
-Visual Studio Code) en `docs/release-notes/`.
+Al fusionar a `main`, `semantic-release` calcula la versión y publica
+directamente un release de GitHub agrupado por categorías (`✨ Novedades`,
+`🐛 Corregido`, `🔧 Mejoras`, `⚙️ Cambios internos`); no actualiza ningún
+fichero en el repositorio (`main` es una rama protegida sin pushes directos).
+La aplicación lee la versión y el historial de cambios en vivo desde la API
+de GitHub (`frontend/src/api/github.ts`), así que siempre coinciden con la
+última release publicada. Antes de publicar la versión final, ejecuta la
+skill `/generar-release-notes` para reescribir ese borrador en prosa
+narrativa (estilo "Novedades de la versión" de Visual Studio Code) en
+`docs/release-notes/`.

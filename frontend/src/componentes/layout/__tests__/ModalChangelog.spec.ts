@@ -12,10 +12,17 @@ afterEach(() => {
 })
 
 describe('ModalChangelog', () => {
-  it('muestra el changelog renderizado tras abrir el diálogo', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      new Response('## 1.0.0\n\n### Novedades\n\n* primera versión', { status: 200 }),
-    )
+  it('muestra el historial de releases de GitHub renderizado tras abrir el diálogo', async () => {
+    const releases = [
+      {
+        tag_name: 'v1.0.0',
+        name: 'v1.0.0',
+        body: '### ✨ Novedades\n\n* primera versión',
+        published_at: '2026-08-15T00:00:00Z',
+        html_url: 'https://github.com/dmpinero/gestor-gastos-personal/releases/tag/v1.0.0',
+      },
+    ]
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(releases), { status: 200 }))
 
     const wrapper = mount(ModalChangelog, { attachTo: document.body })
     await wrapper.get('button').trigger('click')
@@ -26,7 +33,7 @@ describe('ModalChangelog', () => {
     wrapper.unmount()
   })
 
-  it('muestra un error si la carga del changelog falla', async () => {
+  it('muestra un error si la carga del historial de GitHub falla', async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 404 }))
 
     const wrapper = mount(ModalChangelog, { attachTo: document.body })

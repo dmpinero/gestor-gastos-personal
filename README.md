@@ -102,7 +102,9 @@ pnpm build
 
 ## Releases
 
-Al fusionar a `main`, `semantic-release` calcula la versión y genera el
-`CHANGELOG.md` y el release de GitHub agrupado por categorías. Ver
+Al fusionar a `main`, `semantic-release` calcula la versión y publica
+directamente el release de GitHub agrupado por categorías (sin comitear de
+vuelta a `main`, que es una rama protegida). La aplicación lee la versión y el
+historial de cambios en vivo desde la API de GitHub. Ver
 [CONTRIBUTING.md](CONTRIBUTING.md#releases) para el paso de redacción final de
 las notas de versión.

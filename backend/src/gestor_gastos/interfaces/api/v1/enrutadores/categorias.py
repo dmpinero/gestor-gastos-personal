@@ -65,7 +65,7 @@ def crear(
 @enrutador.put(
     "/{id_categoria:int}",
     response_model=CategoriaSalidaEsquema,
-    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CUERPO_MALFORMADO},
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO, **RESPUESTA_CUERPO_MALFORMADO},
 )
 def actualizar(
     id_categoria: int,
@@ -107,7 +107,7 @@ def crear_subcategoria(
 @enrutador.put(
     "/{id_categoria:int}/subcategorias/{id_subcategoria:int}",
     response_model=SubcategoriaSalidaEsquema,
-    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CUERPO_MALFORMADO},
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO, **RESPUESTA_CUERPO_MALFORMADO},
 )
 def actualizar_subcategoria(
     id_categoria: int,

@@ -61,3 +61,23 @@ export interface ResumenImportacion {
   categorias_creadas: string[]
   subcategorias_creadas: string[]
 }
+
+export interface SaldoCuenta {
+  cuenta_id: number
+  numero_cuenta: string
+  alias: string | null
+  saldo: string
+}
+
+export interface TotalCategoria {
+  categoria_id: number
+  nombre: string
+  total: string
+}
+
+export interface ResumenDashboard {
+  saldo_global: string
+  saldos_por_cuenta: SaldoCuenta[]
+  gastos_por_categoria: TotalCategoria[]
+  ingresos_por_categoria: TotalCategoria[]
+}

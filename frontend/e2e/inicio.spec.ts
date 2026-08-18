@@ -1,7 +1,71 @@
 import { test, expect } from '@playwright/test'
 
-test('la página de inicio muestra el mensaje de bienvenida', async ({ page }) => {
+test('la página de inicio muestra el panel principal con saldos y totales por categoría', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 DASH ${sufijo}`
+  const nombreCategoriaGasto = `Categoría gasto ${sufijo}`
+  const nombreCategoriaIngreso = `Categoría ingreso ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombreCategoria of [nombreCategoriaGasto, nombreCategoriaIngreso]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+  }
+
+  await page.goto('/gestion/movimientos')
+  await page.getByLabel('Cuenta').click()
+  await page.getByRole('option', { name: numeroCuenta }).click()
+
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  let panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-01')
+  await panel.getByLabel('Categoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreCategoriaGasto }).click()
+  await panel.getByPlaceholder('Descripción').fill('Gasto de prueba')
+  await panel.getByPlaceholder('Importe').fill('-30.00')
+  await panel.getByPlaceholder('Saldo').fill('970.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: 'Gasto de prueba' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-02')
+  await panel.getByLabel('Categoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreCategoriaIngreso }).click()
+  await panel.getByPlaceholder('Descripción').fill('Ingreso de prueba')
+  await panel.getByPlaceholder('Importe').fill('1500.00')
+  await panel.getByPlaceholder('Saldo').fill('2470.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: 'Ingreso de prueba' })).toBeVisible()
+
   await page.goto('/')
   await expect(page.locator('h1')).toHaveText('Gestor de Gastos Personal')
-  await expect(page.locator('h2')).toHaveText('Bienvenido')
+  await expect(page.getByText('Saldo global')).toBeVisible()
+
+  // El saldo global agrega TODAS las cuentas existentes (no solo la creada en
+  // este test), así que se comprueba la tarjeta de la cuenta propia en vez de
+  // un valor global exacto, para no depender del resto de datos ya cargados.
+  const tarjetaCuenta = page.locator('[data-slot="card"]', { hasText: numeroCuenta })
+  await expect(tarjetaCuenta).toBeVisible()
+  await expect(tarjetaCuenta).toContainText('2470,00 €')
+
+  const filaGasto = page.locator('li', { hasText: nombreCategoriaGasto })
+  await expect(filaGasto).toContainText('-30,00 €')
+
+  const filaIngreso = page.locator('li', { hasText: nombreCategoriaIngreso })
+  await expect(filaIngreso).toContainText('1500,00 €')
+
+  await page.screenshot({ path: 'e2e/capturas/inicio-01-panel-principal.png' })
 })

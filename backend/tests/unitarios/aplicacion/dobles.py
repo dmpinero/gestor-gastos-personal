@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Callable
 from decimal import Decimal
 
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
@@ -155,6 +156,28 @@ class RepositorioMovimientosFalso:
 
     def existen_movimientos_de_subcategoria(self, id_subcategoria: int) -> bool:
         return any(m.subcategoria_id == id_subcategoria for m in self._movimientos.values())
+
+    def obtener_ultimo_saldo(self, id_cuenta: int) -> Decimal | None:
+        movimientos = [m for m in self._movimientos.values() if m.cuenta_id == id_cuenta]
+        if not movimientos:
+            return None
+        ultimo = max(movimientos, key=lambda m: (m.fecha_valor, m.id))
+        return ultimo.saldo
+
+    def sumar_gastos_por_categoria(self) -> dict[int, Decimal]:
+        return self._sumar_por_categoria(lambda importe: importe < 0)
+
+    def sumar_ingresos_por_categoria(self) -> dict[int, Decimal]:
+        return self._sumar_por_categoria(lambda importe: importe > 0)
+
+    def _sumar_por_categoria(self, incluir: Callable[[Decimal], bool]) -> dict[int, Decimal]:
+        totales: dict[int, Decimal] = {}
+        for movimiento in self._movimientos.values():
+            if incluir(movimiento.importe):
+                totales[movimiento.categoria_id] = (
+                    totales.get(movimiento.categoria_id, Decimal("0")) + movimiento.importe
+                )
+        return totales
 
 
 class LectorExcelFalso:

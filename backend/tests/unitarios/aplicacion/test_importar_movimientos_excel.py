@@ -65,6 +65,20 @@ def test_importa_crea_cuenta_nueva_y_movimientos() -> None:
     assert len(repo_movimientos.listar_por_cuenta(cuenta.id)) == 1
 
 
+def test_el_resumen_incluye_el_id_de_la_cuenta_usada() -> None:
+    datos = DatosExcelLeidos(
+        cabecera=CabeceraExcel(numero_cuenta="ES00 1234", titular="Ana"),
+        filas=[_fila(datetime.date(2026, 1, 1))],
+    )
+    caso_de_uso, repo_cuentas, _, _ = _construir_caso_de_uso(LectorExcelFalso(datos=datos))
+
+    resumen = caso_de_uso.ejecutar(b"contenido", "movimientos.xlsx")
+
+    cuenta = repo_cuentas.obtener_por_numero_cuenta("ES00 1234")
+    assert cuenta is not None
+    assert resumen.cuenta_id == cuenta.id
+
+
 def test_importa_reutiliza_cuenta_existente() -> None:
     datos = DatosExcelLeidos(
         cabecera=CabeceraExcel(numero_cuenta="ES00 1234", titular="Ana"),

@@ -28,6 +28,7 @@ class DatosExcelLeidos:
 
 @dataclass
 class ResumenImportacion:
+    cuenta_id: int = 0
     movimientos_importados: int = 0
     movimientos_omitidos_por_duplicado: int = 0
     categorias_creadas: list[str] = field(default_factory=list)

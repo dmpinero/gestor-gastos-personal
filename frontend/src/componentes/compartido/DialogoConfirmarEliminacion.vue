@@ -21,7 +21,9 @@ const emit = defineEmits<{ confirmar: [] }>()
 <template>
   <AlertDialog>
     <AlertDialogTrigger as-child>
-      <Button variant="link" class="text-destructive">{{ textoBoton }}</Button>
+      <slot name="disparador">
+        <Button variant="link" class="text-destructive">{{ textoBoton }}</Button>
+      </slot>
     </AlertDialogTrigger>
     <AlertDialogContent>
       <AlertDialogHeader>

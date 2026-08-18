@@ -48,6 +48,24 @@ def test_actualizar_categoria_renombra() -> None:
     assert actualizada.nombre == "Ocio y viajes"
 
 
+def test_actualizar_categoria_con_su_propio_nombre_no_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio")
+
+    actualizada = ActualizarCategoria(repo).ejecutar(categoria.id, "Ocio")
+
+    assert actualizada.nombre == "Ocio"
+
+
+def test_actualizar_categoria_con_nombre_de_otra_categoria_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    CrearCategoria(repo).ejecutar("Ocio")
+    hogar = CrearCategoria(repo).ejecutar("Hogar")
+
+    with pytest.raises(NombreDuplicadoError):
+        ActualizarCategoria(repo).ejecutar(hogar.id, "Ocio")
+
+
 def test_eliminar_categoria_con_subcategorias_falla() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
@@ -105,6 +123,38 @@ def test_actualizar_subcategoria_renombra() -> None:
     )
 
     assert actualizada.nombre == "Cafeterías y restaurantes"
+
+
+def test_actualizar_subcategoria_con_su_propio_nombre_no_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafes")
+
+    actualizada = ActualizarSubcategoria(repo).ejecutar(subcategoria.id, "Cafes")
+
+    assert actualizada.nombre == "Cafes"
+
+
+def test_actualizar_subcategoria_con_nombre_de_otra_de_la_misma_categoria_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    CrearSubcategoria(repo).ejecutar(categoria.id, "Cafes")
+    hoteles = CrearSubcategoria(repo).ejecutar(categoria.id, "Hoteles")
+
+    with pytest.raises(NombreDuplicadoError):
+        ActualizarSubcategoria(repo).ejecutar(hoteles.id, "Cafes")
+
+
+def test_actualizar_subcategoria_con_nombre_de_otra_categoria_no_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    compras = CrearCategoria(repo).ejecutar("Compras")
+    hogar = CrearCategoria(repo).ejecutar("Hogar")
+    CrearSubcategoria(repo).ejecutar(compras.id, "Otros")
+    de_hogar = CrearSubcategoria(repo).ejecutar(hogar.id, "Varios")
+
+    actualizada = ActualizarSubcategoria(repo).ejecutar(de_hogar.id, "Otros")
+
+    assert actualizada.nombre == "Otros"
 
 
 def test_eliminar_subcategoria_con_movimientos_falla() -> None:

@@ -100,3 +100,64 @@ def test_existen_movimientos_de_cuenta_categoria_y_subcategoria(sesion_bd) -> No
     assert repositorio.existen_movimientos_de_cuenta(cuenta.id) is True
     assert repositorio.existen_movimientos_de_categoria(categoria.id) is True
     assert repositorio.existen_movimientos_de_subcategoria(999) is False
+
+
+def test_obtener_ultimo_saldo(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+
+    assert repositorio.obtener_ultimo_saldo(cuenta.id) is None
+
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Antiguo",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 15),
+            descripcion="Reciente",
+            importe=Decimal("-5.00"),
+            saldo=Decimal("95.00"),
+        )
+    )
+
+    assert repositorio.obtener_ultimo_saldo(cuenta.id) == Decimal("95.00")
+
+
+def test_sumar_gastos_e_ingresos_por_categoria(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    otra_categoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_categoria(
+        Categoria(nombre="Nómina")
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Compra",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=otra_categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Nómina",
+            importe=Decimal("1500.00"),
+            saldo=Decimal("1600.00"),
+        )
+    )
+
+    assert repositorio.sumar_gastos_por_categoria() == {categoria.id: Decimal("-10.00")}
+    assert repositorio.sumar_ingresos_por_categoria() == {otra_categoria.id: Decimal("1500.00")}

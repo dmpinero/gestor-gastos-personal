@@ -14,6 +14,7 @@ from gestor_gastos.interfaces.api.middleware.cabeceras_seguridad import (
 from gestor_gastos.interfaces.api.v1.enrutadores import (
     categorias,
     cuentas,
+    dashboard,
     importacion,
     movimientos,
     salud,
@@ -41,6 +42,7 @@ def crear_aplicacion() -> FastAPI:
     aplicacion.include_router(categorias.enrutador, prefix="/api/v1")
     aplicacion.include_router(movimientos.enrutador, prefix="/api/v1")
     aplicacion.include_router(importacion.enrutador, prefix="/api/v1")
+    aplicacion.include_router(dashboard.enrutador, prefix="/api/v1")
 
     Instrumentator().instrument(aplicacion).expose(
         aplicacion, endpoint="/metricas", include_in_schema=False

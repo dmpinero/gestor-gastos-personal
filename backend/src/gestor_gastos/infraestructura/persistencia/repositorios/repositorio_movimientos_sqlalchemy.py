@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
@@ -115,4 +115,30 @@ class RepositorioMovimientosSqlAlchemy:
                 select(MovimientoModelo).where(MovimientoModelo.subcategoria_id == id_subcategoria)
             )
             is not None
+        )
+
+    def obtener_ultimo_saldo(self, id_cuenta: int) -> Decimal | None:
+        return self._sesion.scalar(
+            select(MovimientoModelo.saldo)
+            .where(MovimientoModelo.cuenta_id == id_cuenta)
+            .order_by(MovimientoModelo.fecha_valor.desc(), MovimientoModelo.id.desc())
+            .limit(1)
+        )
+
+    def sumar_gastos_por_categoria(self) -> dict[int, Decimal]:
+        return dict(
+            self._sesion.execute(
+                select(MovimientoModelo.categoria_id, func.sum(MovimientoModelo.importe))
+                .where(MovimientoModelo.importe < 0)
+                .group_by(MovimientoModelo.categoria_id)
+            ).all()
+        )
+
+    def sumar_ingresos_por_categoria(self) -> dict[int, Decimal]:
+        return dict(
+            self._sesion.execute(
+                select(MovimientoModelo.categoria_id, func.sum(MovimientoModelo.importe))
+                .where(MovimientoModelo.importe > 0)
+                .group_by(MovimientoModelo.categoria_id)
+            ).all()
         )

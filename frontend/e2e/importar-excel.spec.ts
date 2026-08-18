@@ -8,6 +8,7 @@ const RUTA_FICHERO = path.resolve(
   __dirname,
   '../../backend/tests/fixtures/movimientos_ejemplo.xlsx',
 )
+const NOMBRE_BOTON_ZONA = 'Seleccionar o soltar uno o varios archivos Excel'
 
 test('importar un Excel de movimientos muestra el resumen de la importación', async ({ page }) => {
   await page.goto('/gestion/importar')
@@ -34,6 +35,26 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
   await page.screenshot({ path: 'e2e/capturas/importar-04-cuenta-creada.png' })
 })
 
+test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta correcta', async ({
+  page,
+}) => {
+  await page.goto('/gestion/importar')
+  await page.locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
+  await page.getByRole('button', { name: 'Importar' }).click()
+  await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Ver movimientos importados' }).click()
+
+  await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
+  await expect(page.getByRole('tab', { name: 'Movimientos' })).toHaveAttribute(
+    'data-state',
+    'active',
+  )
+  await expect(page.getByLabel('Cuenta')).toContainText('1234 5678 9012 34567890')
+  await expect(page.locator('tbody tr').first()).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/importar-10-ver-movimientos-importados.png' })
+})
+
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {
   await page.goto('/gestion/importar')
 
@@ -51,7 +72,7 @@ test('subir un fichero con extensión no soportada muestra un error', async ({ p
 
 test('soltar el fichero sobre la zona de arrastre también permite importarlo', async ({ page }) => {
   await page.goto('/gestion/importar')
-  const zona = page.getByRole('button', { name: 'Seleccionar o soltar archivo Excel' })
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
 
   const contenido = fs.readFileSync(RUTA_FICHERO)
   const dataTransfer = await page.evaluateHandle((bytes) => {
@@ -79,7 +100,7 @@ test('soltar un fichero con extensión no soportada sobre la zona de arrastre ta
   page,
 }) => {
   await page.goto('/gestion/importar')
-  const zona = page.getByRole('button', { name: 'Seleccionar o soltar archivo Excel' })
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
 
   const dataTransfer = await page.evaluateHandle(() => {
     const transferencia = new DataTransfer()
@@ -93,4 +114,49 @@ test('soltar un fichero con extensión no soportada sobre la zona de arrastre ta
   await page.getByRole('button', { name: 'Importar' }).click()
 
   await expect(page.getByRole('alert')).toBeVisible()
+})
+
+test('soltar varios ficheros a la vez los procesa e importa todos ("procesamiento masivo")', async ({
+  page,
+}) => {
+  await page.goto('/gestion/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
+
+  const contenido = fs.readFileSync(RUTA_FICHERO)
+  const dataTransfer = await page.evaluateHandle((bytes) => {
+    const transferencia = new DataTransfer()
+    transferencia.items.add(
+      new File([new Uint8Array(bytes)], 'lote-1.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    )
+    transferencia.items.add(
+      new File([new Uint8Array(bytes)], 'lote-2.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    )
+    return transferencia
+  }, Array.from(contenido))
+
+  await zona.dispatchEvent('drop', { dataTransfer })
+
+  await expect(zona).toContainText('lote-1.xlsx')
+  await expect(zona).toContainText('lote-2.xlsx')
+  await page.screenshot({ path: 'e2e/capturas/importar-08-varios-ficheros-seleccionados.png' })
+
+  await page.getByRole('button', { name: 'Importar' }).click()
+
+  const resumen = page.locator('[data-test="resumen-importacion"]')
+  await expect(resumen).toBeVisible()
+  await expect(resumen).toContainText('lote-1.xlsx')
+  await expect(resumen).toContainText('lote-2.xlsx')
+  await page.screenshot({ path: 'e2e/capturas/importar-09-resumen-varios-ficheros.png' })
+
+  // Los 2 ficheros tienen el mismo contenido (5 movimientos cada uno): al
+  // procesar ambos en el mismo lote, el total de importados + omitidos debe
+  // ser el doble que al importar uno solo.
+  const texto = await resumen.innerText()
+  const importados = Number(texto.match(/importados: (\d+)/)?.[1])
+  const omitidos = Number(texto.match(/duplicado: (\d+)/)?.[1])
+  expect(importados + omitidos).toBe(10)
 })

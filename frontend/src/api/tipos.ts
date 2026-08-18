@@ -55,6 +55,7 @@ export interface DatosMovimiento {
 }
 
 export interface ResumenImportacion {
+  cuenta_id: number
   movimientos_importados: number
   movimientos_omitidos_por_duplicado: number
   categorias_creadas: string[]

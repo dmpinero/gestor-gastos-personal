@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Pencil, Trash2 } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import type { DatosMovimiento, Movimiento } from '@/api/tipos'
 import { aTextoOULlo } from '@/api/utilidades'
@@ -29,6 +30,7 @@ import {
 } from '@/componentes/ui/table'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
+const ruta = useRoute()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaMovimientos = useTiendaMovimientos()
@@ -92,7 +94,14 @@ const todosSeleccionados = computed(
 
 onMounted(async () => {
   await Promise.all([tiendaCuentas.cargar(), tiendaCategorias.cargar()])
-  if (tiendaCuentas.cuentas[0]) {
+
+  // Si se llega desde "Ver movimientos" tras una importación, se preselecciona
+  // la cuenta indicada en la URL en vez de la primera de la lista.
+  const idDesdeUrl = Number(ruta.query.cuenta_id)
+  const cuentaDesdeUrl = tiendaCuentas.cuentas.find((c) => c.id === idDesdeUrl)
+  if (cuentaDesdeUrl) {
+    cuentaSeleccionada.value = cuentaDesdeUrl.id
+  } else if (tiendaCuentas.cuentas[0]) {
     cuentaSeleccionada.value = tiendaCuentas.cuentas[0].id
   }
 })

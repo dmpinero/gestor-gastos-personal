@@ -2,6 +2,7 @@
 import { History } from '@lucide/vue'
 import { marked } from 'marked'
 import { ref } from 'vue'
+import { obtenerHistorialDeReleases } from '@/api/github'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -22,12 +23,11 @@ async function cargarChangelog(): Promise<void> {
   cargando.value = true
   error.value = null
   try {
-    const respuesta = await fetch('/CHANGELOG.md')
-    if (!respuesta.ok) {
-      throw new Error('No se pudo cargar el historial de cambios.')
-    }
-    const texto = await respuesta.text()
-    contenidoHtml.value = await marked.parse(texto)
+    const releases = await obtenerHistorialDeReleases()
+    const markdown = releases
+      .map((release) => `## ${release.name ?? release.tag_name}\n\n${release.body ?? ''}`)
+      .join('\n\n')
+    contenidoHtml.value = await marked.parse(markdown)
   } catch {
     error.value = 'No se pudo cargar el historial de cambios.'
   } finally {

@@ -32,7 +32,7 @@ class ImportarMovimientosExcel:
 
         cuenta = self._obtener_o_crear_cuenta(datos.cabecera.numero_cuenta, datos.cabecera.titular)
 
-        resumen = ResumenImportacion()
+        resumen = ResumenImportacion(cuenta_id=cuenta.id)
         cache_categorias: dict[str, Categoria] = {}
         cache_subcategorias: dict[tuple[int, str], Subcategoria] = {}
 

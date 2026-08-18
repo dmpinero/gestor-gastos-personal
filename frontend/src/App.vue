@@ -3,16 +3,18 @@ import { RouterView } from 'vue-router'
 import { SidebarInset, SidebarProvider } from '@/componentes/ui/sidebar'
 import BarraLateral from '@/componentes/layout/BarraLateral.vue'
 import BarraSuperior from '@/componentes/layout/BarraSuperior.vue'
+import BarraEstado from '@/componentes/layout/BarraEstado.vue'
 </script>
 
 <template>
   <SidebarProvider>
     <SidebarInset>
       <BarraSuperior />
-      <main class="flex-1 overflow-y-auto p-6">
+      <main class="flex-1 overflow-y-auto p-6 pb-12">
         <RouterView />
       </main>
     </SidebarInset>
     <BarraLateral />
   </SidebarProvider>
+  <BarraEstado />
 </template>

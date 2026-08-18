@@ -39,8 +39,7 @@ async function importar(): Promise<void> {
 
 <template>
   <section>
-    <h2 class="text-xl font-semibold">Importar movimientos desde Excel</h2>
-    <p class="text-muted-foreground mt-2">Sube el extracto de tu banco en formato .xls o .xlsx.</p>
+    <p class="text-muted-foreground">Sube el extracto de tu banco en formato .xls o .xlsx.</p>
 
     <form class="mt-4 flex flex-col items-start gap-3" @submit.prevent="importar">
       <ZonaSoltarFichero

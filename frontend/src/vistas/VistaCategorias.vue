@@ -1,28 +1,54 @@
 <script setup lang="ts">
+import { Pencil } from '@lucide/vue'
 import { onMounted, ref } from 'vue'
 
+import type { Categoria } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
+import { Label } from '@/componentes/ui/label'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tienda = useTiendaCategorias()
 const error = ref<string | null>(null)
-const nombreNuevaCategoria = ref('')
+const errorPanel = ref<string | null>(null)
 const subcategoriaNuevaPorCategoria = ref<Record<number, string>>({})
+
+const panelAbierto = ref(false)
+const idEnEdicion = ref<number | null>(null)
+const nombreFormulario = ref('')
 
 onMounted(() => {
   tienda.cargar()
 })
 
-async function crearCategoria(): Promise<void> {
-  error.value = null
+function abrirParaCrear(): void {
+  idEnEdicion.value = null
+  nombreFormulario.value = ''
+  errorPanel.value = null
+  panelAbierto.value = true
+}
+
+function abrirParaEditar(categoria: Categoria): void {
+  idEnEdicion.value = categoria.id
+  nombreFormulario.value = categoria.nombre
+  errorPanel.value = null
+  panelAbierto.value = true
+}
+
+async function guardarCategoria(): Promise<void> {
+  errorPanel.value = null
   try {
-    await tienda.crearCategoria(nombreNuevaCategoria.value)
-    nombreNuevaCategoria.value = ''
+    if (idEnEdicion.value === null) {
+      await tienda.crearCategoria(nombreFormulario.value)
+    } else {
+      await tienda.actualizarCategoria(idEnEdicion.value, nombreFormulario.value)
+    }
+    panelAbierto.value = false
   } catch (motivo) {
-    error.value = (motivo as Error).message
+    errorPanel.value = (motivo as Error).message
   }
 }
 
@@ -59,17 +85,41 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
 
 <template>
   <section>
-    <h2 class="text-xl font-semibold">Categorías</h2>
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold">Categorías</h2>
+      <Button @click="abrirParaCrear">Crear categoría</Button>
+    </div>
 
-    <form class="mt-4 flex gap-2" @submit.prevent="crearCategoria">
-      <Input
-        v-model="nombreNuevaCategoria"
-        placeholder="Nueva categoría"
-        required
-        class="max-w-xs"
-      />
-      <Button type="submit">Crear categoría</Button>
-    </form>
+    <Sheet v-model:open="panelAbierto">
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{{
+            idEnEdicion === null ? 'Crear categoría' : 'Editar categoría'
+          }}</SheetTitle>
+        </SheetHeader>
+
+        <form class="flex flex-col gap-3 px-4" @submit.prevent="guardarCategoria">
+          <div class="flex flex-col gap-1.5">
+            <Label for="nombre-categoria">Nombre</Label>
+            <Input
+              id="nombre-categoria"
+              v-model="nombreFormulario"
+              placeholder="Nueva categoría"
+              required
+            />
+          </div>
+
+          <p v-if="errorPanel" class="text-sm text-destructive" role="alert">{{ errorPanel }}</p>
+
+          <div class="flex gap-2">
+            <Button type="submit">
+              {{ idEnEdicion === null ? 'Crear categoría' : 'Guardar cambios' }}
+            </Button>
+            <Button type="button" variant="outline" @click="panelAbierto = false">Cancelar</Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
 
     <p v-if="error" class="mt-2 text-sm text-destructive" role="alert">{{ error }}</p>
 
@@ -77,11 +127,21 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
       <Card v-for="item in tienda.categorias" :key="item.categoria.id">
         <CardHeader class="flex flex-row items-center justify-between">
           <CardTitle>{{ item.categoria.nombre }}</CardTitle>
-          <DialogoConfirmarEliminacion
-            :descripcion="`la categoría ${item.categoria.nombre}`"
-            texto-boton="Eliminar categoría"
-            @confirmar="eliminarCategoria(item.categoria.id)"
-          />
+          <div class="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Editar"
+              @click="abrirParaEditar(item.categoria)"
+            >
+              <Pencil class="size-4" />
+            </Button>
+            <DialogoConfirmarEliminacion
+              :descripcion="`la categoría ${item.categoria.nombre}`"
+              texto-boton="Eliminar categoría"
+              @confirmar="eliminarCategoria(item.categoria.id)"
+            />
+          </div>
         </CardHeader>
 
         <CardContent>

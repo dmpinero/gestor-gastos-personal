@@ -3,7 +3,7 @@
   "private": true,
   "description": "Herramientas de versionado y release del monorepo (no es la aplicación en sí, ver backend/ y frontend/).",
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.1",

@@ -88,7 +88,7 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Categorías</h2>
-      <Button @click="abrirParaCrear">Crear categoría</Button>
+      <Button variant="success" @click="abrirParaCrear">Crear categoría</Button>
     </div>
 
     <Sheet v-model:open="panelAbierto">
@@ -113,10 +113,12 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
           <p v-if="errorPanel" class="text-sm text-destructive" role="alert">{{ errorPanel }}</p>
 
           <div class="flex gap-2">
-            <Button type="submit">
+            <Button type="submit" variant="success">
               {{ idEnEdicion === null ? 'Crear categoría' : 'Guardar cambios' }}
             </Button>
-            <Button type="button" variant="outline" @click="panelAbierto = false">Cancelar</Button>
+            <Button type="button" variant="destructive" @click="panelAbierto = false"
+              >Cancelar</Button
+            >
           </div>
         </form>
       </SheetContent>
@@ -175,7 +177,7 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
               placeholder="Nueva subcategoría"
               class="max-w-xs"
             />
-            <Button type="submit" variant="outline">Añadir</Button>
+            <Button type="submit" variant="success">Añadir</Button>
           </form>
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Home, LayoutDashboard } from '@lucide/vue'
+import { LayoutDashboard, Settings2 } from '@lucide/vue'
 import { RouterLink, useRoute } from 'vue-router'
 import {
   Sidebar,
@@ -16,11 +16,18 @@ import {
 const ruta = useRoute()
 
 const secciones = [
-  { a: '/', etiqueta: 'Inicio', icono: Home, activa: (ruta: string) => ruta === '/' },
+  {
+    a: '/',
+    etiqueta: 'Inicio',
+    icono: LayoutDashboard,
+    color: 'text-blue-500',
+    activa: (ruta: string) => ruta === '/',
+  },
   {
     a: '/gestion',
     etiqueta: 'Gestión',
-    icono: LayoutDashboard,
+    icono: Settings2,
+    color: 'text-violet-500',
     activa: (ruta: string) => ruta.startsWith('/gestion'),
   },
 ]
@@ -45,7 +52,7 @@ const secciones = [
                   :to="seccion.a"
                   :aria-current="seccion.activa(ruta.path) ? 'page' : undefined"
                 >
-                  <component :is="seccion.icono" />
+                  <component :is="seccion.icono" :class="seccion.color" />
                   <span>{{ seccion.etiqueta }}</span>
                 </RouterLink>
               </SidebarMenuButton>

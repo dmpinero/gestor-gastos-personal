@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { Pencil, Trash2 } from '@lucide/vue'
+import { Coins, Hash, Landmark, Pencil, Search, Tag, Trash2, User } from '@lucide/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import type { CuentaBancaria, DatosCuenta } from '@/api/tipos'
 import { aTextoOULlo } from '@/api/utilidades'
+import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
+import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { useTiendaCuentas } from '@/stores/cuentas'
+import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import { Button } from '@/componentes/ui/button'
 import { Checkbox } from '@/componentes/ui/checkbox'
 import { Input } from '@/componentes/ui/input'
@@ -34,8 +37,29 @@ const formulario = reactive<DatosCuenta>({
   titular: '',
 })
 
+const { busqueda, filasFiltradas } = useBusquedaTabla(
+  computed(() => tienda.cuentas),
+  (c) => [c.numero_cuenta, c.alias, c.entidad_bancaria, c.moneda, c.titular],
+)
+
+function compararTexto(a: string | null, b: string | null): number {
+  return (a ?? '').localeCompare(b ?? '')
+}
+
+const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
+  numero_cuenta: (a: CuentaBancaria, b: CuentaBancaria) =>
+    compararTexto(a.numero_cuenta, b.numero_cuenta),
+  alias: (a: CuentaBancaria, b: CuentaBancaria) => compararTexto(a.alias, b.alias),
+  entidad_bancaria: (a: CuentaBancaria, b: CuentaBancaria) =>
+    compararTexto(a.entidad_bancaria, b.entidad_bancaria),
+  moneda: (a: CuentaBancaria, b: CuentaBancaria) => compararTexto(a.moneda, b.moneda),
+  titular: (a: CuentaBancaria, b: CuentaBancaria) => compararTexto(a.titular, b.titular),
+})
+
 const todasSeleccionadas = computed(
-  () => tienda.cuentas.length > 0 && seleccionadas.value.size === tienda.cuentas.length,
+  () =>
+    filasOrdenadas.value.length > 0 &&
+    filasOrdenadas.value.every((c) => seleccionadas.value.has(c.id)),
 )
 
 onMounted(() => {
@@ -109,7 +133,7 @@ async function eliminarSeleccionadas(): Promise<void> {
 }
 
 function alternarSeleccionTodas(marcado: boolean): void {
-  seleccionadas.value = marcado ? new Set(tienda.cuentas.map((c) => c.id)) : new Set()
+  seleccionadas.value = marcado ? new Set(filasOrdenadas.value.map((c) => c.id)) : new Set()
 }
 
 function alternarSeleccion(id: number, marcado: boolean): void {
@@ -124,7 +148,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Cuentas bancarias</h2>
-      <Button @click="abrirParaCrear">Crear cuenta</Button>
+      <Button variant="success" @click="abrirParaCrear">Crear cuenta</Button>
     </div>
 
     <Sheet v-model:open="panelAbierto">
@@ -170,10 +194,12 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </p>
 
           <div class="flex gap-2">
-            <Button type="submit">
+            <Button type="submit" variant="success">
               {{ idEnEdicion === null ? 'Crear cuenta' : 'Guardar cambios' }}
             </Button>
-            <Button type="button" variant="outline" @click="panelAbierto = false">Cancelar</Button>
+            <Button type="button" variant="destructive" @click="panelAbierto = false"
+              >Cancelar</Button
+            >
           </div>
         </form>
       </SheetContent>
@@ -193,7 +219,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       />
     </div>
 
-    <Table class="mt-6">
+    <div class="mt-6 flex max-w-xs flex-col gap-1.5">
+      <Label for="buscar-cuentas">Buscar</Label>
+      <div class="relative">
+        <Search
+          class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+        />
+        <Input id="buscar-cuentas" v-model="busqueda" placeholder="Buscar cuentas…" class="pl-8" />
+      </div>
+    </div>
+
+    <Table class="mt-4">
       <TableHeader>
         <TableRow>
           <TableHead class="w-8">
@@ -203,16 +239,61 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               @update:model-value="(valor) => alternarSeleccionTodas(valor === true)"
             />
           </TableHead>
-          <TableHead>Número de cuenta</TableHead>
-          <TableHead>Alias</TableHead>
-          <TableHead>Entidad</TableHead>
-          <TableHead>Moneda</TableHead>
-          <TableHead>Titular</TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Hash"
+              color-icono="text-blue-500"
+              :activo="campo === 'numero_cuenta'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('numero_cuenta')"
+              >Número de cuenta</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Tag"
+              color-icono="text-violet-500"
+              :activo="campo === 'alias'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('alias')"
+              >Alias</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Landmark"
+              color-icono="text-amber-500"
+              :activo="campo === 'entidad_bancaria'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('entidad_bancaria')"
+              >Entidad</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Coins"
+              color-icono="text-teal-500"
+              :activo="campo === 'moneda'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('moneda')"
+              >Moneda</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="User"
+              color-icono="text-rose-500"
+              :activo="campo === 'titular'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('titular')"
+              >Titular</CabeceraOrdenable
+            >
+          </TableHead>
           <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-for="cuenta in tienda.cuentas" :key="cuenta.id">
+        <TableRow v-for="cuenta in filasOrdenadas" :key="cuenta.id">
           <TableCell>
             <Checkbox
               :model-value="seleccionadas.has(cuenta.id)"

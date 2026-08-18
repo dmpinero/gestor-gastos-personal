@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { Pencil, Trash2 } from '@lucide/vue'
+import { CalendarDays, Euro, FileText, Pencil, Search, Trash2, Wallet } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import type { DatosMovimiento, Movimiento } from '@/api/tipos'
 import { aTextoOULlo } from '@/api/utilidades'
-import { formatearImporte } from '@/lib/formato'
+import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
+import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
+import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import { Button } from '@/componentes/ui/button'
 import { Checkbox } from '@/componentes/ui/checkbox'
 import { Input } from '@/componentes/ui/input'
@@ -87,10 +90,22 @@ const subcategoriasDeLaCategoria = computed(() => {
   return categoria?.subcategorias ?? []
 })
 
+const { busqueda, filasFiltradas } = useBusquedaTabla(
+  computed(() => tiendaMovimientos.movimientos),
+  (m) => [formatearFecha(m.fecha_valor), m.descripcion, m.importe, m.saldo],
+)
+
+const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
+  fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
+  descripcion: (a: Movimiento, b: Movimiento) => a.descripcion.localeCompare(b.descripcion),
+  importe: (a: Movimiento, b: Movimiento) => Number(a.importe) - Number(b.importe),
+  saldo: (a: Movimiento, b: Movimiento) => Number(a.saldo) - Number(b.saldo),
+})
+
 const todosSeleccionados = computed(
   () =>
-    tiendaMovimientos.movimientos.length > 0 &&
-    seleccionados.value.size === tiendaMovimientos.movimientos.length,
+    filasOrdenadas.value.length > 0 &&
+    filasOrdenadas.value.every((m) => seleccionados.value.has(m.id)),
 )
 
 onMounted(async () => {
@@ -184,9 +199,7 @@ async function eliminarSeleccionados(): Promise<void> {
 }
 
 function alternarSeleccionTodos(marcado: boolean): void {
-  seleccionados.value = marcado
-    ? new Set(tiendaMovimientos.movimientos.map((m) => m.id))
-    : new Set()
+  seleccionados.value = marcado ? new Set(filasOrdenadas.value.map((m) => m.id)) : new Set()
 }
 
 function alternarSeleccion(id: number, marcado: boolean): void {
@@ -201,7 +214,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Movimientos</h2>
-      <Button @click="abrirParaCrear">Crear movimiento</Button>
+      <Button variant="success" @click="abrirParaCrear">Crear movimiento</Button>
     </div>
 
     <div class="mt-4 flex max-w-xs flex-col gap-1.5">
@@ -298,10 +311,12 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
 
           <div class="flex gap-2">
-            <Button type="submit">
+            <Button type="submit" variant="success">
               {{ idEnEdicion === null ? 'Crear movimiento' : 'Guardar cambios' }}
             </Button>
-            <Button type="button" variant="outline" @click="panelAbierto = false">Cancelar</Button>
+            <Button type="button" variant="destructive" @click="panelAbierto = false"
+              >Cancelar</Button
+            >
           </div>
         </form>
       </SheetContent>
@@ -319,7 +334,22 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       />
     </div>
 
-    <Table class="mt-6">
+    <div class="mt-4 flex max-w-xs flex-col gap-1.5">
+      <Label for="buscar-movimientos">Buscar</Label>
+      <div class="relative">
+        <Search
+          class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+        />
+        <Input
+          id="buscar-movimientos"
+          v-model="busqueda"
+          placeholder="Buscar movimientos…"
+          class="pl-8"
+        />
+      </div>
+    </div>
+
+    <Table class="mt-4">
       <TableHeader>
         <TableRow>
           <TableHead class="w-8">
@@ -329,15 +359,51 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               @update:model-value="(valor) => alternarSeleccionTodos(valor === true)"
             />
           </TableHead>
-          <TableHead>Fecha</TableHead>
-          <TableHead>Descripción</TableHead>
-          <TableHead>Importe</TableHead>
-          <TableHead>Saldo</TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="CalendarDays"
+              color-icono="text-blue-500"
+              :activo="campo === 'fecha_valor'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('fecha_valor')"
+              >Fecha</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="FileText"
+              color-icono="text-slate-500"
+              :activo="campo === 'descripcion'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('descripcion')"
+              >Descripción</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Euro"
+              color-icono="text-amber-500"
+              :activo="campo === 'importe'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('importe')"
+              >Importe</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Wallet"
+              color-icono="text-teal-500"
+              :activo="campo === 'saldo'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('saldo')"
+              >Saldo</CabeceraOrdenable
+            >
+          </TableHead>
           <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-for="movimiento in tiendaMovimientos.movimientos" :key="movimiento.id">
+        <TableRow v-for="movimiento in filasOrdenadas" :key="movimiento.id">
           <TableCell>
             <Checkbox
               :model-value="seleccionados.has(movimiento.id)"
@@ -345,7 +411,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               @update:model-value="(valor) => alternarSeleccion(movimiento.id, valor === true)"
             />
           </TableCell>
-          <TableCell>{{ movimiento.fecha_valor }}</TableCell>
+          <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
           <TableCell>{{ movimiento.descripcion }}</TableCell>
           <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
           <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>

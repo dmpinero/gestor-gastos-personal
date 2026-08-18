@@ -70,3 +70,36 @@ test('seleccionar varias cuentas y eliminarlas en bloque', async ({ page }) => {
   await expect(page.locator('tr', { hasText: numeroCuentaA })).toHaveCount(0)
   await expect(page.locator('tr', { hasText: numeroCuentaB })).toHaveCount(0)
 })
+
+test('el buscador filtra las cuentas y las cabeceras permiten ordenar', async ({ page }) => {
+  const sufijo = Date.now()
+  const numeroCuentaA = `ES00 ORDEN-A ${sufijo}`
+  const numeroCuentaB = `ES00 ORDEN-B ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+
+  for (const numero of [numeroCuentaA, numeroCuentaB]) {
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.getByPlaceholder('Número de cuenta').fill(numero)
+    await panel.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.locator('tr', { hasText: numero })).toBeVisible()
+  }
+
+  const buscador = page.getByLabel('Buscar')
+  await buscador.fill(`ORDEN-A ${sufijo}`)
+  await expect(page.locator('tr', { hasText: numeroCuentaA })).toBeVisible()
+  await expect(page.locator('tr', { hasText: numeroCuentaB })).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/capturas/cuentas-08-buscador.png' })
+
+  await buscador.fill(sufijo.toString())
+  await expect(page.locator('tbody tr')).toHaveCount(2)
+
+  const cabeceraNumeroCuenta = page.getByRole('button', { name: 'Número de cuenta' })
+  await cabeceraNumeroCuenta.click()
+  await expect(page.locator('tbody tr').first()).toContainText(numeroCuentaA)
+
+  await cabeceraNumeroCuenta.click()
+  await expect(page.locator('tbody tr').first()).toContainText(numeroCuentaB)
+  await page.screenshot({ path: 'e2e/capturas/cuentas-09-ordenado.png' })
+})

@@ -14,6 +14,11 @@ _CABECERAS_SEGURIDAD = {
     "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
 }
 
+# La documentación interactiva de FastAPI (Swagger UI / ReDoc) carga su CSS y
+# JS desde un CDN externo; el CSP estricto pensado para las respuestas JSON de
+# la API bloquearía esos recursos y dejaría la página en blanco.
+_RUTAS_DOCUMENTACION = {"/docs", "/redoc", "/openapi.json"}
+
 
 class MiddlewareCabecerasSeguridad(BaseHTTPMiddleware):
     """Añade cabeceras HTTP de seguridad a toda respuesta de la API."""
@@ -22,6 +27,9 @@ class MiddlewareCabecerasSeguridad(BaseHTTPMiddleware):
         self, request: Request, siguiente: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         respuesta = await siguiente(request)
+        es_documentacion = request.url.path in _RUTAS_DOCUMENTACION
         for cabecera, valor in _CABECERAS_SEGURIDAD.items():
+            if cabecera == "Content-Security-Policy" and es_documentacion:
+                continue
             respuesta.headers[cabecera] = valor
         return respuesta

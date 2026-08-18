@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 
 import type { DatosMovimiento, Movimiento } from '@/api/tipos'
 import { aTextoOULlo } from '@/api/utilidades'
+import { formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -346,8 +347,8 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </TableCell>
           <TableCell>{{ movimiento.fecha_valor }}</TableCell>
           <TableCell>{{ movimiento.descripcion }}</TableCell>
-          <TableCell>{{ movimiento.importe }}</TableCell>
-          <TableCell>{{ movimiento.saldo }}</TableCell>
+          <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
+          <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
           <TableCell class="text-right">
             <Button
               variant="ghost"

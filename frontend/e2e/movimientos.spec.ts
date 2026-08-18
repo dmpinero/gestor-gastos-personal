@@ -45,7 +45,7 @@ test('gestión completa de un movimiento: crear, editar y eliminar', async ({ pa
   await fila.getByRole('button', { name: 'Editar' }).click()
   await panel.getByPlaceholder('Importe').fill('-50.00')
   await panel.getByRole('button', { name: 'Guardar cambios' }).click()
-  await expect(page.locator('tr', { hasText: descripcion }).getByText('-50.00')).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcion }).getByText('-50,00 €')).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/movimientos-04-tras-editar.png' })
 
   await page

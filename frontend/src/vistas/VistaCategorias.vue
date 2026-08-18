@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Pencil } from '@lucide/vue'
+import { Pencil, X } from '@lucide/vue'
 import { onMounted, ref } from 'vue'
 
 import type { Categoria } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
+import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
@@ -145,21 +146,30 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
         </CardHeader>
 
         <CardContent>
-          <ul class="space-y-1 text-sm">
-            <li
-              v-for="sub in item.subcategorias"
-              :key="sub.id"
-              class="flex items-center justify-between"
-            >
-              <span>{{ sub.nombre }}</span>
-              <DialogoConfirmarEliminacion
-                :descripcion="`la subcategoría ${sub.nombre}`"
-                @confirmar="eliminarSubcategoria(item.categoria.id, sub.id)"
-              />
+          <ul class="flex flex-wrap gap-2">
+            <li v-for="sub in item.subcategorias" :key="sub.id">
+              <Badge variant="secondary" class="gap-1 py-1 pr-1 pl-3 text-sm font-normal">
+                <span>{{ sub.nombre }}</span>
+                <DialogoConfirmarEliminacion
+                  :descripcion="`la subcategoría ${sub.nombre}`"
+                  @confirmar="eliminarSubcategoria(item.categoria.id, sub.id)"
+                >
+                  <template #disparador>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="size-4 rounded-full hover:bg-background/60"
+                      aria-label="Eliminar"
+                    >
+                      <X class="size-3" />
+                    </Button>
+                  </template>
+                </DialogoConfirmarEliminacion>
+              </Badge>
             </li>
           </ul>
 
-          <form class="mt-2 flex gap-2" @submit.prevent="crearSubcategoria(item.categoria.id)">
+          <form class="mt-3 flex gap-2" @submit.prevent="crearSubcategoria(item.categoria.id)">
             <Input
               v-model="subcategoriaNuevaPorCategoria[item.categoria.id]"
               placeholder="Nueva subcategoría"

@@ -27,8 +27,8 @@ const secciones = [
 </script>
 
 <template>
-  <Sidebar side="right" collapsible="icon">
-    <SidebarHeader class="flex flex-row items-center justify-end">
+  <Sidebar side="left" collapsible="icon">
+    <SidebarHeader class="flex flex-row items-center justify-start">
       <SidebarTrigger />
     </SidebarHeader>
     <SidebarContent>

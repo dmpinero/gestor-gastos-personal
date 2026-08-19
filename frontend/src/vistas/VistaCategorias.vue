@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
-import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
+import DialogoConfirmarEliminacion, {
+  type Dependencia,
+} from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tienda = useTiendaCategorias()
 const error = ref<string | null>(null)
@@ -53,10 +55,45 @@ async function guardarCategoria(): Promise<void> {
   }
 }
 
-async function eliminarCategoria(id: number): Promise<void> {
+function etiquetaElemento(cantidad: number, singular: string, plural: string): string {
+  return cantidad === 1 ? singular : plural
+}
+
+async function dependenciasDeCategoria(id: number): Promise<Dependencia[]> {
+  const dependencias = await tienda.obtenerDependenciasCategoria(id)
+  const items: Dependencia[] = []
+  if (dependencias.subcategorias > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(dependencias.subcategorias, 'subcategoría', 'subcategorías'),
+      cantidad: dependencias.subcategorias,
+    })
+  }
+  if (dependencias.movimientos > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(dependencias.movimientos, 'movimiento', 'movimientos'),
+      cantidad: dependencias.movimientos,
+    })
+  }
+  return items
+}
+
+async function dependenciasDeSubcategoria(
+  idCategoria: number,
+  idSubcategoria: number,
+): Promise<Dependencia[]> {
+  const dependencias = await tienda.obtenerDependenciasSubcategoria(idCategoria, idSubcategoria)
+  return [
+    {
+      etiqueta: etiquetaElemento(dependencias.movimientos, 'movimiento', 'movimientos'),
+      cantidad: dependencias.movimientos,
+    },
+  ]
+}
+
+async function eliminarCategoria(id: number, cascada = false): Promise<void> {
   error.value = null
   try {
-    await tienda.eliminarCategoria(id)
+    await tienda.eliminarCategoria(id, cascada)
   } catch (motivo) {
     error.value = (motivo as Error).message
   }
@@ -74,10 +111,14 @@ async function crearSubcategoria(idCategoria: number): Promise<void> {
   }
 }
 
-async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number): Promise<void> {
+async function eliminarSubcategoria(
+  idCategoria: number,
+  idSubcategoria: number,
+  cascada = false,
+): Promise<void> {
   error.value = null
   try {
-    await tienda.eliminarSubcategoria(idCategoria, idSubcategoria)
+    await tienda.eliminarSubcategoria(idCategoria, idSubcategoria, cascada)
   } catch (motivo) {
     error.value = (motivo as Error).message
   }
@@ -142,7 +183,8 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
             <DialogoConfirmarEliminacion
               :descripcion="`la categoría ${item.categoria.nombre}`"
               texto-boton="Eliminar categoría"
-              @confirmar="eliminarCategoria(item.categoria.id)"
+              :obtener-dependencias="() => dependenciasDeCategoria(item.categoria.id)"
+              @confirmar="(cascada) => eliminarCategoria(item.categoria.id, cascada)"
             />
           </div>
         </CardHeader>
@@ -154,7 +196,10 @@ async function eliminarSubcategoria(idCategoria: number, idSubcategoria: number)
                 <span>{{ sub.nombre }}</span>
                 <DialogoConfirmarEliminacion
                   :descripcion="`la subcategoría ${sub.nombre}`"
-                  @confirmar="eliminarSubcategoria(item.categoria.id, sub.id)"
+                  :obtener-dependencias="
+                    () => dependenciasDeSubcategoria(item.categoria.id, sub.id)
+                  "
+                  @confirmar="(cascada) => eliminarSubcategoria(item.categoria.id, sub.id, cascada)"
                 >
                   <template #disparador>
                     <Button

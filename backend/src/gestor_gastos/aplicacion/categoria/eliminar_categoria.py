@@ -10,17 +10,22 @@ class EliminarCategoria:
         self._repositorio = repositorio
         self._repositorio_movimientos = repositorio_movimientos
 
-    def ejecutar(self, id_categoria: int) -> None:
+    def ejecutar(self, id_categoria: int, cascada: bool = False) -> None:
         if self._repositorio.obtener_categoria_por_id(id_categoria) is None:
             raise EntidadNoEncontradaError(f"No existe la categoría con id {id_categoria}")
 
-        if self._repositorio.tiene_subcategorias(id_categoria):
+        num_subcategorias = self._repositorio.contar_subcategorias(id_categoria)
+        num_movimientos = self._repositorio_movimientos.contar_movimientos_por_categoria(
+            id_categoria
+        )
+        if (num_subcategorias > 0 or num_movimientos > 0) and not cascada:
             raise EntidadConDependenciasError(
-                "No se puede eliminar la categoría: tiene subcategorías asociadas"
+                "No se puede eliminar la categoría: tiene subcategorías o movimientos asociados"
             )
-        if self._repositorio_movimientos.existen_movimientos_de_categoria(id_categoria):
-            raise EntidadConDependenciasError(
-                "No se puede eliminar la categoría: tiene movimientos asociados"
-            )
+
+        if num_movimientos > 0:
+            self._repositorio_movimientos.eliminar_movimientos_por_categoria(id_categoria)
+        if num_subcategorias > 0:
+            self._repositorio.eliminar_subcategorias_de(id_categoria)
 
         self._repositorio.eliminar_categoria(id_categoria)

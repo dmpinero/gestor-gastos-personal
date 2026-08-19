@@ -1,12 +1,13 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from gestor_gastos.aplicacion.cuenta.actualizar_cuenta import ActualizarCuenta
 from gestor_gastos.aplicacion.cuenta.crear_cuenta import CrearCuenta
 from gestor_gastos.aplicacion.cuenta.eliminar_cuenta import EliminarCuenta
 from gestor_gastos.aplicacion.cuenta.listar_cuentas import ListarCuentas
+from gestor_gastos.aplicacion.cuenta.obtener_dependencias_cuenta import ObtenerDependenciasCuenta
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_cuentas_sqlalchemy import (
     RepositorioCuentasSqlAlchemy,
@@ -24,6 +25,7 @@ from gestor_gastos.interfaces.api.v1.esquemas.cuenta import (
     CuentaActualizarEsquema,
     CuentaCrearEsquema,
     CuentaSalidaEsquema,
+    DependenciasCuentaEsquema,
 )
 
 enrutador = APIRouter(prefix="/cuentas", tags=["Cuentas"])
@@ -71,7 +73,23 @@ def actualizar(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO},
 )
-def eliminar(id_cuenta: int, sesion: Session = Depends(obtener_sesion)) -> None:
+def eliminar(
+    id_cuenta: int, cascada: bool = Query(False), sesion: Session = Depends(obtener_sesion)
+) -> None:
     EliminarCuenta(
         RepositorioCuentasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+    ).ejecutar(id_cuenta, cascada=cascada)
+
+
+@enrutador.get(
+    "/{id_cuenta:int}/dependencias",
+    response_model=DependenciasCuentaEsquema,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def obtener_dependencias(
+    id_cuenta: int, sesion: Session = Depends(obtener_sesion)
+) -> DependenciasCuentaEsquema:
+    dependencias = ObtenerDependenciasCuenta(
+        RepositorioCuentasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
     ).ejecutar(id_cuenta)
+    return DependenciasCuentaEsquema(**asdict(dependencias))

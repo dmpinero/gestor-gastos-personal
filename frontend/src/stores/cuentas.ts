@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { clienteApi } from '@/api/cliente'
-import type { CuentaBancaria, DatosCuenta } from '@/api/tipos'
+import type { CuentaBancaria, DatosCuenta, DependenciasCuenta } from '@/api/tipos'
 
 export const useTiendaCuentas = defineStore('cuentas', () => {
   const cuentas = ref<CuentaBancaria[]>([])
@@ -32,10 +32,23 @@ export const useTiendaCuentas = defineStore('cuentas', () => {
     if (indice !== -1) cuentas.value[indice] = cuenta
   }
 
-  async function eliminar(id: number): Promise<void> {
-    await clienteApi.eliminar(`/cuentas/${id}`)
+  async function eliminar(id: number, cascada = false): Promise<void> {
+    await clienteApi.eliminar(`/cuentas/${id}${cascada ? '?cascada=true' : ''}`)
     cuentas.value = cuentas.value.filter((c) => c.id !== id)
   }
 
-  return { cuentas, cargando, error, cargar, crear, actualizar, eliminar }
+  async function obtenerDependencias(id: number): Promise<DependenciasCuenta> {
+    return clienteApi.obtener<DependenciasCuenta>(`/cuentas/${id}/dependencias`)
+  }
+
+  return {
+    cuentas,
+    cargando,
+    error,
+    cargar,
+    crear,
+    actualizar,
+    eliminar,
+    obtenerDependencias,
+  }
 })

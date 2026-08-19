@@ -81,3 +81,16 @@ export interface ResumenDashboard {
   gastos_por_categoria: TotalCategoria[]
   ingresos_por_categoria: TotalCategoria[]
 }
+
+export interface DependenciasCuenta {
+  movimientos: number
+}
+
+export interface DependenciasCategoria {
+  subcategorias: number
+  movimientos: number
+}
+
+export interface DependenciasSubcategoria {
+  movimientos: number
+}

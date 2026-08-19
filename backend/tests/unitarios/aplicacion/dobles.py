@@ -69,8 +69,13 @@ class RepositorioCategoriasFalso:
     def eliminar_categoria(self, id_categoria: int) -> None:
         self._categorias.pop(id_categoria, None)
 
-    def tiene_subcategorias(self, id_categoria: int) -> bool:
-        return any(s.categoria_id == id_categoria for s in self._subcategorias.values())
+    def contar_subcategorias(self, id_categoria: int) -> int:
+        return sum(1 for s in self._subcategorias.values() if s.categoria_id == id_categoria)
+
+    def eliminar_subcategorias_de(self, id_categoria: int) -> None:
+        ids = [s.id for s in self._subcategorias.values() if s.categoria_id == id_categoria]
+        for id_subcategoria in ids:
+            self._subcategorias.pop(id_subcategoria, None)
 
     def crear_subcategoria(self, subcategoria: Subcategoria) -> Subcategoria:
         subcategoria.id = self._siguiente_id_subcategoria
@@ -148,14 +153,29 @@ class RepositorioMovimientosFalso:
             for m in self._movimientos.values()
         )
 
-    def existen_movimientos_de_cuenta(self, id_cuenta: int) -> bool:
-        return any(m.cuenta_id == id_cuenta for m in self._movimientos.values())
+    def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int:
+        return sum(1 for m in self._movimientos.values() if m.cuenta_id == id_cuenta)
 
-    def existen_movimientos_de_categoria(self, id_categoria: int) -> bool:
-        return any(m.categoria_id == id_categoria for m in self._movimientos.values())
+    def contar_movimientos_por_categoria(self, id_categoria: int) -> int:
+        return sum(1 for m in self._movimientos.values() if m.categoria_id == id_categoria)
 
-    def existen_movimientos_de_subcategoria(self, id_subcategoria: int) -> bool:
-        return any(m.subcategoria_id == id_subcategoria for m in self._movimientos.values())
+    def contar_movimientos_por_subcategoria(self, id_subcategoria: int) -> int:
+        return sum(1 for m in self._movimientos.values() if m.subcategoria_id == id_subcategoria)
+
+    def eliminar_movimientos_por_cuenta(self, id_cuenta: int) -> None:
+        ids = [m.id for m in self._movimientos.values() if m.cuenta_id == id_cuenta]
+        for id_movimiento in ids:
+            self._movimientos.pop(id_movimiento, None)
+
+    def eliminar_movimientos_por_categoria(self, id_categoria: int) -> None:
+        ids = [m.id for m in self._movimientos.values() if m.categoria_id == id_categoria]
+        for id_movimiento in ids:
+            self._movimientos.pop(id_movimiento, None)
+
+    def eliminar_movimientos_por_subcategoria(self, id_subcategoria: int) -> None:
+        ids = [m.id for m in self._movimientos.values() if m.subcategoria_id == id_subcategoria]
+        for id_movimiento in ids:
+            self._movimientos.pop(id_movimiento, None)
 
     def obtener_ultimo_saldo(self, id_cuenta: int) -> Decimal | None:
         movimientos = [m for m in self._movimientos.values() if m.cuenta_id == id_cuenta]

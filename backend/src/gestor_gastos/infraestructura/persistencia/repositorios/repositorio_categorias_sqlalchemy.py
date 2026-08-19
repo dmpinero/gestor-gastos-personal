@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
@@ -49,13 +49,18 @@ class RepositorioCategoriasSqlAlchemy:
             self._sesion.delete(modelo)
             self._sesion.commit()
 
-    def tiene_subcategorias(self, id_categoria: int) -> bool:
-        return (
-            self._sesion.scalar(
-                select(SubcategoriaModelo).where(SubcategoriaModelo.categoria_id == id_categoria)
-            )
-            is not None
+    def contar_subcategorias(self, id_categoria: int) -> int:
+        return self._sesion.scalar(
+            select(func.count())
+            .select_from(SubcategoriaModelo)
+            .where(SubcategoriaModelo.categoria_id == id_categoria)
         )
+
+    def eliminar_subcategorias_de(self, id_categoria: int) -> None:
+        self._sesion.execute(
+            delete(SubcategoriaModelo).where(SubcategoriaModelo.categoria_id == id_categoria)
+        )
+        self._sesion.commit()
 
     def crear_subcategoria(self, subcategoria: Subcategoria) -> Subcategoria:
         modelo = SubcategoriaModelo(

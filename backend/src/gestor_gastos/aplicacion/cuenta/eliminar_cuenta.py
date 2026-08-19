@@ -10,13 +10,16 @@ class EliminarCuenta:
         self._repositorio = repositorio
         self._repositorio_movimientos = repositorio_movimientos
 
-    def ejecutar(self, id_cuenta: int) -> None:
+    def ejecutar(self, id_cuenta: int, cascada: bool = False) -> None:
         if self._repositorio.obtener_por_id(id_cuenta) is None:
             raise EntidadNoEncontradaError(f"No existe la cuenta con id {id_cuenta}")
 
-        if self._repositorio_movimientos.existen_movimientos_de_cuenta(id_cuenta):
-            raise EntidadConDependenciasError(
-                "No se puede eliminar la cuenta: tiene movimientos asociados"
-            )
+        num_movimientos = self._repositorio_movimientos.contar_movimientos_por_cuenta(id_cuenta)
+        if num_movimientos > 0:
+            if not cascada:
+                raise EntidadConDependenciasError(
+                    "No se puede eliminar la cuenta: tiene movimientos asociados"
+                )
+            self._repositorio_movimientos.eliminar_movimientos_por_cuenta(id_cuenta)
 
         self._repositorio.eliminar(id_cuenta)

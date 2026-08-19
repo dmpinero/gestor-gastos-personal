@@ -31,3 +31,12 @@ class SubcategoriaSalidaEsquema(BaseModel):
 class CategoriaConSubcategoriasSalidaEsquema(BaseModel):
     categoria: CategoriaSalidaEsquema
     subcategorias: list[SubcategoriaSalidaEsquema]
+
+
+class DependenciasCategoriaEsquema(BaseModel):
+    subcategorias: int
+    movimientos: int
+
+
+class DependenciasSubcategoriaEsquema(BaseModel):
+    movimientos: int

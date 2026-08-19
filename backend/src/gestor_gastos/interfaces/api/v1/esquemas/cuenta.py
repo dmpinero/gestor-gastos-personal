@@ -23,3 +23,7 @@ class CuentaSalidaEsquema(BaseModel):
     entidad_bancaria: str | None
     moneda: str | None
     titular: str | None
+
+
+class DependenciasCuentaEsquema(BaseModel):
+    movimientos: int

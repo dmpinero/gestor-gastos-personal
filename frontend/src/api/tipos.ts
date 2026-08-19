@@ -94,3 +94,47 @@ export interface DependenciasCategoria {
 export interface DependenciasSubcategoria {
   movimientos: number
 }
+
+export type Periodicidad = 'mensual' | 'trimestral' | 'semestral' | 'anual'
+
+export interface ConceptoPrevisto {
+  id: number
+  categoria_id: number
+  subcategoria_id: number | null
+  periodicidad: Periodicidad
+  mes_inicio: number | null
+  importe_previsto: string
+}
+
+export interface DatosConceptoPrevisto {
+  categoria_id: number
+  subcategoria_id?: number | null
+  periodicidad: Periodicidad
+  mes_inicio?: number | null
+  importe_previsto: string
+}
+
+export type OrigenValorMensual = 'real' | 'previsto' | 'ajustado'
+
+export interface ValorMensual {
+  mes: number
+  importe: string
+  origen: OrigenValorMensual
+}
+
+export interface FilaResumenAnual {
+  concepto_id: number
+  categoria_id: number
+  subcategoria_id: number | null
+  nombre: string
+  periodicidad: Periodicidad
+  valores: ValorMensual[]
+}
+
+export interface ResumenAnual {
+  anio: number
+  filas_gastos: FilaResumenAnual[]
+  filas_ingresos: FilaResumenAnual[]
+  totales_gastos: string[]
+  totales_ingresos: string[]
+}

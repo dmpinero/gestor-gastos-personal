@@ -10,6 +10,8 @@ def sesion_bd() -> Session:
     """Sesión de base de datos real, con las tablas relevantes vacías al empezar."""
     sesion = FabricaSesiones()
     sesion.execute(modelos.MovimientoModelo.__table__.delete())
+    sesion.execute(modelos.AjustePrevisionMensualModelo.__table__.delete())
+    sesion.execute(modelos.ConceptoPrevistoModelo.__table__.delete())
     sesion.execute(modelos.SubcategoriaModelo.__table__.delete())
     sesion.execute(modelos.CategoriaModelo.__table__.delete())
     sesion.execute(modelos.CuentaBancariaModelo.__table__.delete())

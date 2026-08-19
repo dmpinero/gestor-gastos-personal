@@ -149,6 +149,53 @@ def test_actualizar_categoria_de_movimientos_por_subcategoria(sesion_bd) -> None
     assert repositorio.obtener_por_id(movimiento.id).categoria_id == categoria_destino.id
 
 
+def test_sumar_movimientos_por_mes(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    subcategoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_subcategoria(
+        Subcategoria(nombre="Cafes", categoria_id=categoria.id)
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 3, 5),
+            descripcion="Café 1",
+            importe=Decimal("-3.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 3, 20),
+            descripcion="Café 2",
+            importe=Decimal("-2.50"),
+            saldo=Decimal("97.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2025, 3, 5),
+            descripcion="Otro año",
+            importe=Decimal("-99.00"),
+            saldo=Decimal("1.00"),
+        )
+    )
+
+    totales = repositorio.sumar_movimientos_por_mes(2026)
+
+    assert totales[(categoria.id, subcategoria.id, 3)] == Decimal("-5.50")
+    # El movimiento de 2025 no debe contar (filtrado por año) ni mezclarse
+    # con la clave de la subcategoría (sin subcategoria_id).
+    assert (categoria.id, None, 3) not in totales
+
+
 def test_obtener_ultimo_saldo(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)

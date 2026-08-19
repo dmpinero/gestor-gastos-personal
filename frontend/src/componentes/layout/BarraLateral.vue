@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ArrowLeftRight,
+  CalendarRange,
   ChevronRight,
   History,
   LayoutDashboard,
@@ -251,6 +252,22 @@ watch(
                 </CollapsibleContent>
               </SidebarMenuItem>
             </Collapsible>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as-child
+                :is-active="ruta.path === '/resumen-anual'"
+                tooltip="Resumen anual"
+              >
+                <RouterLink
+                  to="/resumen-anual"
+                  :aria-current="ruta.path === '/resumen-anual' ? 'page' : undefined"
+                >
+                  <CalendarRange class="text-fuchsia-500" />
+                  <span>Resumen anual</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

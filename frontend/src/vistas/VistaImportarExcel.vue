@@ -98,7 +98,11 @@ async function importar(): Promise<void> {
         class="w-full"
         @ficheros-elegidos="onFicherosElegidos"
       />
-      <Button type="submit" :disabled="ficherosSeleccionados.length === 0 || importando">
+      <Button
+        type="submit"
+        variant="success"
+        :disabled="ficherosSeleccionados.length === 0 || importando"
+      >
         {{ importando ? 'Importando…' : 'Importar' }}
       </Button>
     </form>

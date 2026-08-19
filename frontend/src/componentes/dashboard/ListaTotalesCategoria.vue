@@ -29,15 +29,19 @@ function anchoPorcentaje(total: string): number {
         <span class="w-32 shrink-0 truncate text-sm">{{ item.nombre }}</span>
         <div class="bg-muted h-2 flex-1 rounded-full">
           <div
-            :class="
-              cn('h-2 rounded-full', acento === 'gasto' ? 'bg-destructive' : 'bg-emerald-500')
-            "
+            :class="cn('h-2 rounded-full', acento === 'gasto' ? 'bg-destructive' : 'bg-success')"
             :style="{ width: `${anchoPorcentaje(item.total)}%` }"
           />
         </div>
-        <span class="w-24 shrink-0 text-right text-sm tabular-nums">{{
-          formatearImporte(item.total)
-        }}</span>
+        <span
+          :class="
+            cn(
+              'w-24 shrink-0 text-right text-sm font-medium tabular-nums',
+              acento === 'gasto' ? 'text-destructive' : 'text-success dark:text-emerald-500',
+            )
+          "
+          >{{ formatearImporte(item.total) }}</span
+        >
       </li>
     </ul>
   </div>

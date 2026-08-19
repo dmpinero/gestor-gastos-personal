@@ -102,7 +102,32 @@ test('navegar por categoría y subcategoría en el historial muestra solo los ga
   await expect(filas.filter({ hasText: descripcionIngreso })).toHaveCount(0)
   await expect(filas.filter({ hasText: descripcionGastoA })).toContainText(numeroCuentaA)
   await expect(filas.filter({ hasText: descripcionGastoB })).toContainText(numeroCuentaB)
+
+  // Resumen: 15 + 25 + 8 = 48 € gastados en 3 movimientos.
+  const tarjetaTotalGastado = page.locator('[data-slot="card"]', { hasText: 'Total gastado' })
+  const tarjetaMovimientos = page.locator('[data-slot="card"]', { hasText: 'Movimientos' })
+  await expect(tarjetaTotalGastado).toContainText('-48,00 €')
+  await expect(tarjetaMovimientos).toContainText('3')
   await page.screenshot({ path: 'e2e/capturas/historial-01-categoria.png' })
+
+  // Filtrar por mes: enero (el mes de los movimientos creados) los mantiene.
+  await page.getByLabel('Mes', { exact: true }).click()
+  await page.getByRole('option', { name: 'Enero' }).click()
+  await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
+  await expect(tarjetaTotalGastado).toContainText('-48,00 €')
+
+  // Filtrar por un mes sin movimientos: la tabla y el resumen quedan a cero.
+  await page.getByLabel('Mes', { exact: true }).click()
+  await page.getByRole('option', { name: 'Febrero' }).click()
+  await expect(filas.filter({ hasText: descripcionGastoA })).toHaveCount(0)
+  await expect(tarjetaTotalGastado).toContainText('0,00 €')
+  await expect(tarjetaMovimientos).toContainText('0')
+  await expect(page.getByText(`No hay gastos registrados para ${nombreCategoria}.`)).toBeVisible()
+
+  // Volver a "Todos los meses" restaura los datos.
+  await page.getByLabel('Mes', { exact: true }).click()
+  await page.getByRole('option', { name: 'Todos los meses' }).click()
+  await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
 
   const resultadoAxe = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

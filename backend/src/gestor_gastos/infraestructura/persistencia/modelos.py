@@ -82,3 +82,18 @@ class ConceptoPrevistoModelo(Base):
 
     categoria: Mapped[CategoriaModelo] = relationship()
     subcategoria: Mapped[SubcategoriaModelo | None] = relationship()
+
+
+class AjustePrevisionMensualModelo(Base):
+    __tablename__ = "ajustes_prevision_mensual"
+    __table_args__ = (UniqueConstraint("concepto_id", "anio", "mes"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    concepto_id: Mapped[int] = mapped_column(
+        ForeignKey("conceptos_previstos.id", ondelete="CASCADE")
+    )
+    anio: Mapped[int] = mapped_column(Integer)
+    mes: Mapped[int] = mapped_column(Integer)
+    importe: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+
+    concepto: Mapped[ConceptoPrevistoModelo] = relationship()

@@ -27,3 +27,16 @@ class ConceptoPrevisto:
         intervalo = _INTERVALO_MESES[self.periodicidad]
         inicio = self.mes_inicio or 1
         return {((inicio - 1 + i * intervalo) % 12) + 1 for i in range(12 // intervalo)}
+
+
+@dataclass
+class AjusteMensual:
+    """Importe manual que un usuario fija para una celda (concepto, año, mes)
+    concreta, con prioridad sobre el importe real y el previsto en el resumen
+    anual."""
+
+    concepto_id: int
+    anio: int
+    mes: int
+    importe: Decimal
+    id: int | None = None

@@ -51,6 +51,33 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
+  async function ajustarCelda(
+    idConcepto: number,
+    anio: number,
+    mes: number,
+    importe: string,
+  ): Promise<void> {
+    error.value = null
+    try {
+      await clienteApi.actualizar(`/previsiones/${idConcepto}/ajustes/${anio}/${mes}`, {
+        importe,
+      })
+      await cargarResumenAnual(anio)
+    } catch (motivo) {
+      error.value = (motivo as Error).message
+    }
+  }
+
+  async function eliminarAjuste(idConcepto: number, anio: number, mes: number): Promise<void> {
+    error.value = null
+    try {
+      await clienteApi.eliminar(`/previsiones/${idConcepto}/ajustes/${anio}/${mes}`)
+      await cargarResumenAnual(anio)
+    } catch (motivo) {
+      error.value = (motivo as Error).message
+    }
+  }
+
   return {
     conceptos,
     resumenAnual,
@@ -61,5 +88,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     actualizar,
     eliminar,
     cargarResumenAnual,
+    ajustarCelda,
+    eliminarAjuste,
   }
 })

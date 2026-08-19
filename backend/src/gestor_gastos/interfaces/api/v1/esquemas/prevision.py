@@ -29,10 +29,17 @@ class ConceptoPrevistoSalidaEsquema(BaseModel):
     importe_previsto: Decimal
 
 
+OrigenValorMensual = Literal["real", "previsto", "ajustado"]
+
+
 class ValorMensualEsquema(BaseModel):
     mes: int
     importe: Decimal
-    es_previsto: bool
+    origen: OrigenValorMensual
+
+
+class AjusteMensualEsquema(BaseModel):
+    importe: Decimal = Field(max_digits=12, decimal_places=2)
 
 
 class FilaResumenAnualEsquema(BaseModel):

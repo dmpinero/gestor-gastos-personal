@@ -123,4 +123,39 @@ describe('useTiendaPrevisiones', () => {
     expect(tienda.error).toBe('fallo de red')
     expect(tienda.resumenAnual).toBeNull()
   })
+
+  it('ajusta una celda y recarga el resumen del año', async () => {
+    vi.mocked(clienteApi.actualizar).mockResolvedValue(undefined)
+    vi.mocked(clienteApi.obtener).mockResolvedValue(resumenEjemplo)
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.ajustarCelda(1, 2026, 5, '-30.00')
+
+    expect(clienteApi.actualizar).toHaveBeenCalledWith('/previsiones/1/ajustes/2026/5', {
+      importe: '-30.00',
+    })
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
+    expect(tienda.resumenAnual).toEqual(resumenEjemplo)
+  })
+
+  it('guarda el mensaje de error si ajustar una celda falla', async () => {
+    vi.mocked(clienteApi.actualizar).mockRejectedValue(new Error('fallo de red'))
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.ajustarCelda(1, 2026, 5, '-30.00')
+
+    expect(tienda.error).toBe('fallo de red')
+  })
+
+  it('elimina un ajuste y recarga el resumen del año', async () => {
+    vi.mocked(clienteApi.eliminar).mockResolvedValue(undefined)
+    vi.mocked(clienteApi.obtener).mockResolvedValue(resumenEjemplo)
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.eliminarAjuste(1, 2026, 5)
+
+    expect(clienteApi.eliminar).toHaveBeenCalledWith('/previsiones/1/ajustes/2026/5')
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
+    expect(tienda.resumenAnual).toEqual(resumenEjemplo)
+  })
 })

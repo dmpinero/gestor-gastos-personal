@@ -1,12 +1,14 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.orm import Session
 
 from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
     ActualizarConceptoPrevisto,
 )
+from gestor_gastos.aplicacion.prevision.ajustar_valor_mensual import AjustarValorMensual
 from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConceptoPrevisto
+from gestor_gastos.aplicacion.prevision.eliminar_ajuste_mensual import EliminarAjusteMensual
 from gestor_gastos.aplicacion.prevision.eliminar_concepto_previsto import (
     EliminarConceptoPrevisto,
 )
@@ -14,6 +16,9 @@ from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
+    RepositorioAjustesPrevisionSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
@@ -29,6 +34,7 @@ from gestor_gastos.interfaces.api.respuestas_error import (
     RESPUESTA_NO_ENCONTRADO,
 )
 from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
+    AjusteMensualEsquema,
     ConceptoPrevistoActualizarEsquema,
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
@@ -105,5 +111,39 @@ def resumen_anual(
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioCategoriasSqlAlchemy(sesion),
         RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioAjustesPrevisionSqlAlchemy(sesion),
     ).ejecutar(anio)
     return ResumenAnualEsquema(**asdict(resumen))
+
+
+@enrutador.put(
+    "/{id_concepto:int}/ajustes/{anio:int}/{mes:int}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CUERPO_MALFORMADO},
+)
+def ajustar_valor_mensual(
+    id_concepto: int,
+    anio: int,
+    datos: AjusteMensualEsquema,
+    mes: int = Path(ge=1, le=12),
+    sesion: Session = Depends(obtener_sesion),
+) -> None:
+    AjustarValorMensual(
+        RepositorioPrevisionesSqlAlchemy(sesion), RepositorioAjustesPrevisionSqlAlchemy(sesion)
+    ).ejecutar(id_concepto, anio, mes, datos.importe)
+
+
+@enrutador.delete(
+    "/{id_concepto:int}/ajustes/{anio:int}/{mes:int}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def eliminar_ajuste_mensual(
+    id_concepto: int,
+    anio: int,
+    mes: int = Path(ge=1, le=12),
+    sesion: Session = Depends(obtener_sesion),
+) -> None:
+    EliminarAjusteMensual(
+        RepositorioPrevisionesSqlAlchemy(sesion), RepositorioAjustesPrevisionSqlAlchemy(sesion)
+    ).ejecutar(id_concepto, anio, mes)

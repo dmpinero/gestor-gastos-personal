@@ -6,7 +6,7 @@ from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
 
 
 class RepositorioCuentasFalso:
@@ -266,6 +266,31 @@ class RepositorioPrevisionesFalso:
 
     def eliminar(self, id_concepto: int) -> None:
         self._conceptos.pop(id_concepto, None)
+
+
+class RepositorioAjustesPrevisionFalso:
+    """Doble de RepositorioAjustesMensuales en memoria."""
+
+    def __init__(self) -> None:
+        self._ajustes: dict[tuple[int, int, int], AjusteMensual] = {}
+        self._siguiente_id = 1
+
+    def guardar(self, ajuste: AjusteMensual) -> AjusteMensual:
+        clave = (ajuste.concepto_id, ajuste.anio, ajuste.mes)
+        existente = self._ajustes.get(clave)
+        if existente is not None:
+            existente.importe = ajuste.importe
+            return existente
+        ajuste.id = self._siguiente_id
+        self._siguiente_id += 1
+        self._ajustes[clave] = ajuste
+        return ajuste
+
+    def eliminar(self, id_concepto: int, anio: int, mes: int) -> None:
+        self._ajustes.pop((id_concepto, anio, mes), None)
+
+    def listar_por_anio(self, anio: int) -> list[AjusteMensual]:
+        return [a for a in self._ajustes.values() if a.anio == anio]
 
 
 class LectorExcelFalso:

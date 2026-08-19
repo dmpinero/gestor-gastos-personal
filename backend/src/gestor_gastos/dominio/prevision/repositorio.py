@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
 
 
 class RepositorioPrevisiones(Protocol):
@@ -15,3 +15,15 @@ class RepositorioPrevisiones(Protocol):
     def actualizar(self, concepto: ConceptoPrevisto) -> ConceptoPrevisto: ...
 
     def eliminar(self, id_concepto: int) -> None: ...
+
+
+class RepositorioAjustesMensuales(Protocol):
+    """Puerto de persistencia para AjusteMensual."""
+
+    def guardar(self, ajuste: AjusteMensual) -> AjusteMensual:
+        """Crea o actualiza (upsert) el ajuste para su clave (concepto_id, anio, mes)."""
+        ...
+
+    def eliminar(self, id_concepto: int, anio: int, mes: int) -> None: ...
+
+    def listar_por_anio(self, anio: int) -> list[AjusteMensual]: ...

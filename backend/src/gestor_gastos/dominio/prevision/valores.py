@@ -1,14 +1,17 @@
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Literal
 
 from gestor_gastos.dominio.prevision.entidades import Periodicidad
+
+OrigenValorMensual = Literal["real", "previsto", "ajustado"]
 
 
 @dataclass(frozen=True)
 class ValorMensual:
     mes: int
     importe: Decimal
-    es_previsto: bool
+    origen: OrigenValorMensual
 
 
 @dataclass(frozen=True)

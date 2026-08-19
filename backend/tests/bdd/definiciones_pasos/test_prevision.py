@@ -15,15 +15,15 @@ def existe_categoria_con_concepto_mensual(
     cliente: TestClient, nombre_categoria: str, importe: str
 ) -> dict:
     categoria = cliente.post("/api/v1/categorias", json={"nombre": nombre_categoria}).json()
-    cliente.post(
+    concepto = cliente.post(
         "/api/v1/previsiones",
         json={
             "categoria_id": categoria["id"],
             "periodicidad": "mensual",
             "importe_previsto": importe,
         },
-    )
-    return {"categoria_id": categoria["id"]}
+    ).json()
+    return {"categoria_id": categoria["id"], "concepto_id": concepto["id"]}
 
 
 @given(
@@ -49,6 +49,17 @@ def existe_cuenta_con_movimiento(
     )
 
 
+@given(parsers.parse('se ajusta manualmente el importe del mes {mes:d} de {anio:d} a "{importe}"'))
+def se_ajusta_manualmente_el_importe(
+    cliente: TestClient, contexto: dict, mes: int, anio: int, importe: str
+) -> None:
+    respuesta = cliente.put(
+        f"/api/v1/previsiones/{contexto['concepto_id']}/ajustes/{anio}/{mes}",
+        json={"importe": importe},
+    )
+    assert respuesta.status_code == 204
+
+
 @when(parsers.parse("consulto el resumen anual de {anio:d}"), target_fixture="resumen")
 def consulto_resumen_anual(cliente: TestClient, anio: int) -> dict:
     return cliente.get(f"/api/v1/previsiones/resumen-anual?anio={anio}").json()
@@ -59,7 +70,7 @@ def el_concepto_muestra_importe_real(resumen: dict, importe: str, mes: int) -> N
     fila = resumen["filas_gastos"][0]
     valor = next(v for v in fila["valores"] if v["mes"] == mes)
     assert valor["importe"] == importe
-    assert valor["es_previsto"] is False
+    assert valor["origen"] == "real"
 
 
 @then(parsers.parse('el concepto muestra el importe previsto "{importe}" en el mes {mes:d}'))
@@ -67,4 +78,12 @@ def el_concepto_muestra_importe_previsto(resumen: dict, importe: str, mes: int) 
     fila = resumen["filas_gastos"][0]
     valor = next(v for v in fila["valores"] if v["mes"] == mes)
     assert valor["importe"] == importe
-    assert valor["es_previsto"] is True
+    assert valor["origen"] == "previsto"
+
+
+@then(parsers.parse('el concepto muestra el importe ajustado "{importe}" en el mes {mes:d}'))
+def el_concepto_muestra_importe_ajustado(resumen: dict, importe: str, mes: int) -> None:
+    fila = resumen["filas_gastos"][0]
+    valor = next(v for v in fila["valores"] if v["mes"] == mes)
+    assert valor["importe"] == importe
+    assert valor["origen"] == "ajustado"

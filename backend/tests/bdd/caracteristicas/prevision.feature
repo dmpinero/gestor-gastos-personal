@@ -10,3 +10,12 @@ Característica: Resumen anual de previsión
     Cuando consulto el resumen anual de 2026
     Entonces el concepto muestra el importe real "-4.99" en el mes 3
     Y el concepto muestra el importe previsto "-4.99" en el mes 4
+
+  Escenario: Un ajuste manual en una celda tiene prioridad sobre el importe real y el previsto
+    Dado que existe la categoría "Suscripciones" con un concepto previsto mensual de importe "-4.99"
+    Y existe la cuenta "ES00 1234" con un movimiento en esa categoría en la fecha "2026-03-15" e importe "-4.99"
+    Y se ajusta manualmente el importe del mes 3 de 2026 a "-1.00"
+    Y se ajusta manualmente el importe del mes 4 de 2026 a "-2.00"
+    Cuando consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe ajustado "-1.00" en el mes 3
+    Y el concepto muestra el importe ajustado "-2.00" en el mes 4

@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Pencil, Trash2 } from '@lucide/vue'
-import type { FilaResumenAnual, Periodicidad } from '@/api/tipos'
+import type { FilaResumenAnual, OrigenValorMensual, Periodicidad } from '@/api/tipos'
 import { formatearImporte } from '@/lib/formato'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 import { Badge } from '@/componentes/ui/badge'
@@ -53,7 +54,39 @@ defineProps<{
 const emit = defineEmits<{
   editar: [conceptoId: number]
   eliminar: [conceptoId: number]
+  'editar-celda': [conceptoId: number, mes: number, importe: string | null]
 }>()
+
+const celdaEditando = ref<{ conceptoId: number; mes: number } | null>(null)
+const valorEdicion = ref('')
+
+function estaEditando(conceptoId: number, mes: number): boolean {
+  return celdaEditando.value?.conceptoId === conceptoId && celdaEditando.value?.mes === mes
+}
+
+function empezarEdicion(conceptoId: number, mes: number, importeActual: string): void {
+  celdaEditando.value = { conceptoId, mes }
+  valorEdicion.value = importeActual
+}
+
+function confirmarEdicion(): void {
+  if (!celdaEditando.value) return
+  const { conceptoId, mes } = celdaEditando.value
+  const texto = valorEdicion.value.trim()
+  emit('editar-celda', conceptoId, mes, texto === '' ? null : texto)
+  celdaEditando.value = null
+}
+
+function cancelarEdicion(): void {
+  celdaEditando.value = null
+}
+
+function claseCelda(origen: OrigenValorMensual): string {
+  const base = 'p-0 text-right tabular-nums'
+  if (origen === 'previsto') return `${base} text-muted-foreground italic`
+  if (origen === 'ajustado') return `${base} border-b-2 border-dashed border-amber-500`
+  return base
+}
 </script>
 
 <template>
@@ -84,13 +117,28 @@ const emit = defineEmits<{
             <TableCell
               v-for="valor in fila.valores"
               :key="valor.mes"
-              :class="
-                valor.es_previsto
-                  ? 'text-right tabular-nums text-muted-foreground italic'
-                  : 'text-right tabular-nums'
-              "
+              :class="claseCelda(valor.origen)"
             >
-              {{ formatearImporte(valor.importe) }}
+              <input
+                v-if="estaEditando(fila.concepto_id, valor.mes)"
+                :value="valorEdicion"
+                type="text"
+                autofocus
+                class="w-full bg-transparent px-2 py-2 text-right outline-none"
+                :aria-label="`Importe de ${MESES_CORTOS[valor.mes - 1]} para ${fila.nombre}`"
+                @input="valorEdicion = ($event.target as HTMLInputElement).value"
+                @keydown.enter="confirmarEdicion()"
+                @keydown.escape="cancelarEdicion()"
+                @blur="confirmarEdicion()"
+              />
+              <button
+                v-else
+                type="button"
+                class="hover:bg-muted/50 w-full px-2 py-2 text-right"
+                @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
+              >
+                {{ formatearImporte(valor.importe) }}
+              </button>
             </TableCell>
             <TableCell class="text-right whitespace-nowrap">
               <Button

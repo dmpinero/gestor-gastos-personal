@@ -114,10 +114,12 @@ export interface DatosConceptoPrevisto {
   importe_previsto: string
 }
 
+export type OrigenValorMensual = 'real' | 'previsto' | 'ajustado'
+
 export interface ValorMensual {
   mes: number
   importe: string
-  es_previsto: boolean
+  origen: OrigenValorMensual
 }
 
 export interface FilaResumenAnual {

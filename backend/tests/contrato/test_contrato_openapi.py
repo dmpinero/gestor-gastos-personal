@@ -24,6 +24,7 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     # importe_previsto es igualmente un Decimal(12, 2): mismo motivo que arriba.
     "/api/v1/previsiones",
     "/api/v1/previsiones/{id_concepto}",
+    "/api/v1/previsiones/{id_concepto}/ajustes/{anio}/{mes}",
 }
 
 

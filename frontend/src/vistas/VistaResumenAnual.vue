@@ -60,6 +60,7 @@ const formulario = reactive({
   subcategoriaId: SIN_SUBCATEGORIA,
   periodicidad: 'mensual' as Periodicidad,
   mesInicio: '',
+  tipo: 'gasto' as 'gasto' | 'ingreso',
   importePrevisto: '',
 })
 
@@ -76,6 +77,7 @@ function limpiarFormulario(): void {
   formulario.subcategoriaId = SIN_SUBCATEGORIA
   formulario.periodicidad = 'mensual'
   formulario.mesInicio = ''
+  formulario.tipo = 'gasto'
   formulario.importePrevisto = ''
 }
 
@@ -95,13 +97,15 @@ function abrirParaEditar(idConcepto: number): void {
     : SIN_SUBCATEGORIA
   formulario.periodicidad = concepto.periodicidad
   formulario.mesInicio = concepto.mes_inicio ? String(concepto.mes_inicio) : ''
-  formulario.importePrevisto = concepto.importe_previsto
+  formulario.tipo = Number(concepto.importe_previsto) < 0 ? 'gasto' : 'ingreso'
+  formulario.importePrevisto = Math.abs(Number(concepto.importe_previsto)).toFixed(2)
   errorPanel.value = null
   panelAbierto.value = true
 }
 
 async function guardar(): Promise<void> {
   errorPanel.value = null
+  const magnitud = Math.abs(Number(formulario.importePrevisto))
   const datos: DatosConceptoPrevisto = {
     categoria_id: Number(formulario.categoriaId),
     subcategoria_id:
@@ -111,7 +115,7 @@ async function guardar(): Promise<void> {
       formulario.periodicidad === 'mensual' || formulario.mesInicio === ''
         ? null
         : Number(formulario.mesInicio),
-    importe_previsto: formulario.importePrevisto,
+    importe_previsto: (formulario.tipo === 'gasto' ? -magnitud : magnitud).toFixed(2),
   }
   try {
     if (idEnEdicion.value === null) {
@@ -133,6 +137,14 @@ async function eliminar(idConcepto: number): Promise<void> {
     await cargarResumen()
   } catch (motivo) {
     errorPanel.value = (motivo as Error).message
+  }
+}
+
+async function editarCelda(conceptoId: number, mes: number, importe: string | null): Promise<void> {
+  if (importe === null) {
+    await tienda.eliminarAjuste(conceptoId, anio.value, mes)
+  } else {
+    await tienda.ajustarCelda(conceptoId, anio.value, mes, importe)
   }
 }
 </script>
@@ -239,11 +251,24 @@ async function eliminar(idConcepto: number): Promise<void> {
           </div>
 
           <div class="flex flex-col gap-1.5">
+            <Label id="etiqueta-tipo-previsto" for="selector-tipo-previsto">Tipo</Label>
+            <Select v-model="formulario.tipo">
+              <SelectTrigger id="selector-tipo-previsto" aria-labelledby="etiqueta-tipo-previsto">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gasto">Gasto</SelectItem>
+                <SelectItem value="ingreso">Ingreso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
             <Label for="importe-previsto">Importe previsto</Label>
             <Input
               id="importe-previsto"
               v-model="formulario.importePrevisto"
-              placeholder="Importe previsto"
+              placeholder="Importe previsto (positivo)"
               required
             />
           </div>
@@ -274,6 +299,7 @@ async function eliminar(idConcepto: number): Promise<void> {
         mensaje-vacio="No hay conceptos de gasto configurados."
         @editar="abrirParaEditar"
         @eliminar="eliminar"
+        @editar-celda="editarCelda"
       />
       <TablaResumenAnual
         titulo="Ingresos"
@@ -282,6 +308,7 @@ async function eliminar(idConcepto: number): Promise<void> {
         mensaje-vacio="No hay conceptos de ingreso configurados."
         @editar="abrirParaEditar"
         @eliminar="eliminar"
+        @editar-celda="editarCelda"
       />
     </div>
   </section>

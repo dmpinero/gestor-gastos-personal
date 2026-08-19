@@ -64,6 +64,9 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
   // Concepto mensual sobre la subcategoría, con un importe previsto de -50 €.
+  // El Tipo por defecto es "Gasto", y el importe se escribe en positivo: el
+  // signo lo aplica el formulario según el Tipo elegido (regresión del bug
+  // donde un importe positivo terminaba siempre en Ingresos).
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
@@ -71,7 +74,8 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await page.getByRole('option', { name: nombreCategoria }).click()
   await panelConcepto.getByLabel('Subcategoría', { exact: true }).click()
   await page.getByRole('option', { name: nombreSubcategoria }).click()
-  await panelConcepto.getByLabel('Importe previsto').fill('-50.00')
+  await expect(panelConcepto.getByLabel('Tipo', { exact: true })).toHaveText('Gasto')
+  await panelConcepto.getByLabel('Importe previsto').fill('50.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
 
   const filaMensual = page.locator('tbody tr', { hasText: nombreSubcategoria })
@@ -109,7 +113,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await page.getByRole('option', { name: 'Anual' }).click()
   await panelConcepto.getByLabel('Mes de inicio', { exact: true }).click()
   await page.getByRole('option', { name: 'Marzo' }).click()
-  await panelConcepto.getByLabel('Importe previsto').fill('-120.00')
+  await panelConcepto.getByLabel('Importe previsto').fill('120.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
 
   const filaAnual = page.locator('tbody tr', { hasText: nombreCategoria }).filter({
@@ -122,13 +126,71 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   // Editar el concepto mensual: cambia el importe previsto para los meses sin movimiento real.
   await filaMensual.getByRole('button', { name: 'Editar' }).click()
   await expect(panelConcepto.getByRole('heading', { name: 'Editar concepto' })).toBeVisible()
-  await panelConcepto.getByLabel('Importe previsto').fill('-60.00')
+  await panelConcepto.getByLabel('Importe previsto').fill('60.00')
   await panelConcepto.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(celdaMes(filaMensual, otroMes)).toContainText('-60,00 €')
   await expect(celdaMes(filaMensual, mesActualNumero)).toContainText('-30,00 €')
+
+  // Editar en línea una celda prevista: fija un ajuste manual solo para ese mes.
+  await celdaMes(filaMensual, otroMes).getByRole('button').click()
+  const entradaCelda = celdaMes(filaMensual, otroMes).locator('input')
+  await expect(entradaCelda).toHaveValue('-60.00')
+  await entradaCelda.fill('-99.00')
+  await entradaCelda.press('Enter')
+  await expect(celdaMes(filaMensual, otroMes)).toContainText('-99,00 €')
+  await expect(celdaMes(filaMensual, otroMes)).toHaveClass(/border-dashed/)
+  // El resto de meses previstos no se ven afectados por el ajuste puntual.
+  const mesSinTocar = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].find(
+    (mes) => mes !== otroMes && mes !== mesActualNumero,
+  )!
+  await expect(celdaMes(filaMensual, mesSinTocar)).toContainText('-60,00 €')
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-03-celda-ajustada.png' })
+
+  // Añadir un valor bajo demanda en una celda vacía (mes fuera de la periodicidad anual).
+  await celdaMes(filaAnual, 4).getByRole('button').click()
+  const entradaCeldaVacia = celdaMes(filaAnual, 4).locator('input')
+  await entradaCeldaVacia.fill('-20.00')
+  await entradaCeldaVacia.press('Enter')
+  await expect(celdaMes(filaAnual, 4)).toContainText('-20,00 €')
+  await expect(celdaMes(filaAnual, 4)).toHaveClass(/border-dashed/)
+
+  // Revertir el ajuste (vaciar la celda) vuelve al valor calculado (previsto).
+  await celdaMes(filaMensual, otroMes).getByRole('button').click()
+  const entradaReversion = celdaMes(filaMensual, otroMes).locator('input')
+  await entradaReversion.fill('')
+  await entradaReversion.press('Enter')
+  await expect(celdaMes(filaMensual, otroMes)).toContainText('-60,00 €')
+  await expect(celdaMes(filaMensual, otroMes)).not.toHaveClass(/border-dashed/)
 
   // Eliminar el concepto anual.
   await filaAnual.getByRole('button', { name: 'Eliminar' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
   await expect(filaAnual).toHaveCount(0)
+
+  // Regresión del bug: un concepto con Tipo=Ingreso debe aparecer en "Ingresos", no en "Gastos".
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  await panelConcepto.getByLabel('Categoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreCategoria }).click()
+  await panelConcepto.getByLabel('Tipo', { exact: true }).click()
+  await page.getByRole('option', { name: 'Ingreso' }).click()
+  await panelConcepto.getByLabel('Importe previsto').fill('500.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  // Los <section> de Gastos/Ingresos están anidados dentro del <section> de la
+  // vista, así que se localizan por su <h3> directo (no por "hasText", que
+  // también matchearía el contenedor exterior); y la fila se localiza por el
+  // texto EXACTO del nombre (no "hasText", que en modo insensible a mayúsculas
+  // también encontraría "Subcategoría..." como substring de "Categoría...").
+  const seccionIngresos = page.locator('section:has(> h3:text-is("Ingresos"))')
+  const filaIngreso = seccionIngresos
+    .locator('tbody tr')
+    .filter({ has: page.getByText(nombreCategoria, { exact: true }) })
+  await expect(filaIngreso).toBeVisible()
+  await expect(celdaMes(filaIngreso, 1)).toContainText('500,00 €')
+  const seccionGastos = page.locator('section:has(> h3:text-is("Gastos"))')
+  await expect(
+    seccionGastos
+      .locator('tbody tr')
+      .filter({ has: page.getByText(nombreCategoria, { exact: true }) }),
+  ).toHaveCount(0)
 })

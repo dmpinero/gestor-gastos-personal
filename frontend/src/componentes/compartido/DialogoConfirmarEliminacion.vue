@@ -68,10 +68,10 @@ function confirmarBorrado(): void {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>Cancelar</AlertDialogCancel>
         <AlertDialogAction :disabled="comprobandoDependencias" @click="confirmarBorrado"
           >Eliminar</AlertDialogAction
         >
+        <AlertDialogCancel>Cancelar</AlertDialogCancel>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Pencil, X } from '@lucide/vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import type { Categoria } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
+import { Checkbox } from '@/componentes/ui/checkbox'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
@@ -22,6 +23,13 @@ const subcategoriaNuevaPorCategoria = ref<Record<number, string>>({})
 const panelAbierto = ref(false)
 const idEnEdicion = ref<number | null>(null)
 const nombreFormulario = ref('')
+const seleccionadas = ref<Set<number>>(new Set())
+
+const todasSeleccionadas = computed(
+  () =>
+    tienda.categorias.length > 0 &&
+    tienda.categorias.every((c) => seleccionadas.value.has(c.categoria.id)),
+)
 
 onMounted(() => {
   tienda.cargar()
@@ -94,9 +102,53 @@ async function eliminarCategoria(id: number, cascada = false): Promise<void> {
   error.value = null
   try {
     await tienda.eliminarCategoria(id, cascada)
+    seleccionadas.value.delete(id)
   } catch (motivo) {
     error.value = (motivo as Error).message
   }
+}
+
+async function dependenciasDeSeleccionadas(): Promise<Dependencia[]> {
+  const resultados = await Promise.all(
+    [...seleccionadas.value].map((id) => tienda.obtenerDependenciasCategoria(id)),
+  )
+  const totalSubcategorias = resultados.reduce((suma, d) => suma + d.subcategorias, 0)
+  const totalMovimientos = resultados.reduce((suma, d) => suma + d.movimientos, 0)
+  const items: Dependencia[] = []
+  if (totalSubcategorias > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(totalSubcategorias, 'subcategoría', 'subcategorías'),
+      cantidad: totalSubcategorias,
+    })
+  }
+  if (totalMovimientos > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(totalMovimientos, 'movimiento', 'movimientos'),
+      cantidad: totalMovimientos,
+    })
+  }
+  return items
+}
+
+async function eliminarSeleccionadas(cascada = false): Promise<void> {
+  error.value = null
+  try {
+    await Promise.all([...seleccionadas.value].map((id) => tienda.eliminarCategoria(id, cascada)))
+    seleccionadas.value.clear()
+  } catch (motivo) {
+    error.value = (motivo as Error).message
+  }
+}
+
+function alternarSeleccionTodas(marcado: boolean): void {
+  seleccionadas.value = marcado ? new Set(tienda.categorias.map((c) => c.categoria.id)) : new Set()
+}
+
+function alternarSeleccion(id: number, marcado: boolean): void {
+  const nuevaSeleccion = new Set(seleccionadas.value)
+  if (marcado) nuevaSeleccion.add(id)
+  else nuevaSeleccion.delete(id)
+  seleccionadas.value = nuevaSeleccion
 }
 
 async function crearSubcategoria(idCategoria: number): Promise<void> {
@@ -167,10 +219,39 @@ async function eliminarSubcategoria(
 
     <p v-if="error" class="mt-2 text-sm text-destructive" role="alert">{{ error }}</p>
 
-    <div class="mt-6 space-y-4">
+    <div class="mt-6 flex items-center gap-2 text-sm">
+      <Checkbox
+        :model-value="todasSeleccionadas"
+        aria-label="Seleccionar todas las categorías"
+        @update:model-value="(valor) => alternarSeleccionTodas(valor === true)"
+      />
+      <span>Seleccionar todas</span>
+    </div>
+
+    <div
+      v-if="seleccionadas.size > 0"
+      class="mt-2 flex items-center gap-3 rounded-lg border p-2 text-sm"
+    >
+      <span>{{ seleccionadas.size }} seleccionados</span>
+      <DialogoConfirmarEliminacion
+        :descripcion="`${seleccionadas.size} categorías seleccionadas`"
+        texto-boton="Eliminar seleccionados"
+        :obtener-dependencias="dependenciasDeSeleccionadas"
+        @confirmar="(cascada) => eliminarSeleccionadas(cascada)"
+      />
+    </div>
+
+    <div class="mt-4 space-y-4">
       <Card v-for="item in tienda.categorias" :key="item.categoria.id">
         <CardHeader class="flex flex-row items-center justify-between">
-          <CardTitle>{{ item.categoria.nombre }}</CardTitle>
+          <div class="flex items-center gap-2">
+            <Checkbox
+              :model-value="seleccionadas.has(item.categoria.id)"
+              :aria-label="`Seleccionar la categoría ${item.categoria.nombre}`"
+              @update:model-value="(valor) => alternarSeleccion(item.categoria.id, valor === true)"
+            />
+            <CardTitle>{{ item.categoria.nombre }}</CardTitle>
+          </div>
           <div class="flex items-center gap-1">
             <Button
               variant="ghost"

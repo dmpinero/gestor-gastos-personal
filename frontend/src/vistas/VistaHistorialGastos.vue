@@ -11,16 +11,10 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import GraficoEvolucionGastos from '@/componentes/historial/GraficoEvolucionGastos.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/componentes/ui/select'
 import {
   Table,
   TableBody,
@@ -29,23 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/componentes/ui/table'
-
-const TODOS = 'todos'
-
-const MESES = [
-  { valor: '01', etiqueta: 'Enero' },
-  { valor: '02', etiqueta: 'Febrero' },
-  { valor: '03', etiqueta: 'Marzo' },
-  { valor: '04', etiqueta: 'Abril' },
-  { valor: '05', etiqueta: 'Mayo' },
-  { valor: '06', etiqueta: 'Junio' },
-  { valor: '07', etiqueta: 'Julio' },
-  { valor: '08', etiqueta: 'Agosto' },
-  { valor: '09', etiqueta: 'Septiembre' },
-  { valor: '10', etiqueta: 'Octubre' },
-  { valor: '11', etiqueta: 'Noviembre' },
-  { valor: '12', etiqueta: 'Diciembre' },
-]
 
 const ruta = useRoute()
 const tiendaCuentas = useTiendaCuentas()
@@ -96,14 +73,15 @@ onMounted(() => {
   tiendaCategorias.cargar()
 })
 
-const anioSeleccionado = ref(TODOS)
-const mesSeleccionado = ref(TODOS)
+// Rango de periodo "AAAA-MM" (formato nativo de <input type="month">); vacío = sin límite.
+const desde = ref('')
+const hasta = ref('')
 
 watch(
   () => ruta.fullPath,
   () => {
-    anioSeleccionado.value = TODOS
-    mesSeleccionado.value = TODOS
+    desde.value = ''
+    hasta.value = ''
     if (ruta.name === 'historial-categoria') {
       tiendaMovimientos.cargarPorCategoria(Number(ruta.params.id))
     } else if (ruta.name === 'historial-subcategoria') {
@@ -115,18 +93,12 @@ watch(
   { immediate: true },
 )
 
-const aniosDisponibles = computed(() => {
-  const anios = new Set(tiendaMovimientos.movimientos.map((m) => m.fecha_valor.slice(0, 4)))
-  return [...anios].sort((a, b) => b.localeCompare(a))
-})
-
 const movimientosDelPeriodo = computed(() =>
   tiendaMovimientos.movimientos.filter((m) => {
-    const coincideAnio =
-      anioSeleccionado.value === TODOS || m.fecha_valor.slice(0, 4) === anioSeleccionado.value
-    const coincideMes =
-      mesSeleccionado.value === TODOS || m.fecha_valor.slice(5, 7) === mesSeleccionado.value
-    return coincideAnio && coincideMes
+    const periodo = m.fecha_valor.slice(0, 7)
+    const cumpleDesde = !desde.value || periodo >= desde.value
+    const cumpleHasta = !hasta.value || periodo <= hasta.value
+    return cumpleDesde && cumpleHasta
   }),
 )
 
@@ -143,6 +115,20 @@ const { busqueda, filasFiltradas } = useBusquedaTabla(movimientosDelPeriodo, (m)
 const totalGastado = computed(() =>
   filasFiltradas.value.reduce((suma, m) => suma + Number(m.importe), 0),
 )
+
+const datosGrafico = computed(() => {
+  const totalesPorPeriodo = new Map<string, number>()
+  for (const m of filasFiltradas.value) {
+    const periodo = m.fecha_valor.slice(0, 7)
+    totalesPorPeriodo.set(
+      periodo,
+      (totalesPorPeriodo.get(periodo) ?? 0) + Math.abs(Number(m.importe)),
+    )
+  }
+  return [...totalesPorPeriodo.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([periodo, total]) => ({ periodo, total }))
+})
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
@@ -191,34 +177,19 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
       </div>
 
       <div class="mt-4 flex flex-wrap gap-4">
-        <div class="flex max-w-40 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-anio" for="selector-anio">Año</Label>
-          <Select v-model="anioSeleccionado">
-            <SelectTrigger id="selector-anio" aria-labelledby="etiqueta-anio">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="TODOS">Todos los años</SelectItem>
-              <SelectItem v-for="anio in aniosDisponibles" :key="anio" :value="anio">
-                {{ anio }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        <div class="flex max-w-48 flex-1 flex-col gap-1.5">
+          <Label for="periodo-desde">Desde</Label>
+          <Input id="periodo-desde" v-model="desde" type="month" :max="hasta || undefined" />
         </div>
         <div class="flex max-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-mes" for="selector-mes">Mes</Label>
-          <Select v-model="mesSeleccionado">
-            <SelectTrigger id="selector-mes" aria-labelledby="etiqueta-mes">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="TODOS">Todos los meses</SelectItem>
-              <SelectItem v-for="mes in MESES" :key="mes.valor" :value="mes.valor">
-                {{ mes.etiqueta }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Label for="periodo-hasta">Hasta</Label>
+          <Input id="periodo-hasta" v-model="hasta" type="month" :min="desde || undefined" />
         </div>
+      </div>
+
+      <div v-if="datosGrafico.length > 0" class="mt-4">
+        <h3 class="text-muted-foreground text-sm font-medium">Evolución</h3>
+        <GraficoEvolucionGastos :items="datosGrafico" class="mt-3" />
       </div>
 
       <div class="mt-4 flex max-w-xs flex-col gap-1.5">

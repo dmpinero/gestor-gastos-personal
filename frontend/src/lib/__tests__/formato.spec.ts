@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatearFecha, formatearImporte } from '../formato'
+import { formatearFecha, formatearImporte, formatearPeriodo } from '../formato'
 
 describe('formatearFecha', () => {
   it('convierte una fecha ISO a formato dd/mm/aaaa', () => {
@@ -19,5 +19,16 @@ describe('formatearImporte', () => {
 
   it('formatea un importe negativo conservando el signo', () => {
     expect(formatearImporte('-30.00')).toContain('-30,00')
+  })
+})
+
+describe('formatearPeriodo', () => {
+  it('convierte un periodo AAAA-MM en mes abreviado y año', () => {
+    expect(formatearPeriodo('2026-01')).toContain('2026')
+    expect(formatearPeriodo('2026-01')).toMatch(/ene/i)
+  })
+
+  it('distingue diciembre de enero', () => {
+    expect(formatearPeriodo('2026-12')).toMatch(/dic/i)
   })
 })

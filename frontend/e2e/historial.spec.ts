@@ -110,23 +110,40 @@ test('navegar por categoría y subcategoría en el historial muestra solo los ga
   await expect(tarjetaMovimientos).toContainText('3')
   await page.screenshot({ path: 'e2e/capturas/historial-01-categoria.png' })
 
-  // Filtrar por mes: enero (el mes de los movimientos creados) los mantiene.
-  await page.getByLabel('Mes', { exact: true }).click()
-  await page.getByRole('option', { name: 'Enero' }).click()
+  // El gráfico de evolución muestra una barra para el periodo con datos,
+  // y se puede cambiar a visualización de líneas.
+  await expect(page.getByText('Evolución')).toBeVisible()
+  await expect(page.locator('svg[role="img"]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ver como líneas' }).click()
+  await expect(page.locator('svg[role="img"]')).toBeVisible()
+  await expect(page.locator('polygon')).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/capturas/historial-02-grafico-lineas.png' })
+
+  await page.getByRole('button', { name: 'Ver como área' }).click()
+  await expect(page.locator('polygon')).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/historial-03-grafico-area.png' })
+
+  await page.getByRole('button', { name: 'Ver como barras' }).click()
+  await expect(page.locator('svg[role="img"]')).toHaveCount(0)
+
+  // Rango que incluye el periodo de los movimientos (enero 2026): los mantiene.
+  await page.getByLabel('Desde').fill('2026-01')
+  await page.getByLabel('Hasta').fill('2026-01')
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
   await expect(tarjetaTotalGastado).toContainText('-48,00 €')
 
-  // Filtrar por un mes sin movimientos: la tabla y el resumen quedan a cero.
-  await page.getByLabel('Mes', { exact: true }).click()
-  await page.getByRole('option', { name: 'Febrero' }).click()
+  // Rango que no incluye ningún movimiento: la tabla, el resumen y el gráfico quedan a cero.
+  await page.getByLabel('Desde').fill('2026-02')
+  await page.getByLabel('Hasta').fill('2026-03')
   await expect(filas.filter({ hasText: descripcionGastoA })).toHaveCount(0)
   await expect(tarjetaTotalGastado).toContainText('0,00 €')
   await expect(tarjetaMovimientos).toContainText('0')
   await expect(page.getByText(`No hay gastos registrados para ${nombreCategoria}.`)).toBeVisible()
+  await expect(page.getByText('Evolución')).toHaveCount(0)
 
-  // Volver a "Todos los meses" restaura los datos.
-  await page.getByLabel('Mes', { exact: true }).click()
-  await page.getByRole('option', { name: 'Todos los meses' }).click()
+  // Vaciar el rango restaura los datos.
+  await page.getByLabel('Desde').fill('')
+  await page.getByLabel('Hasta').fill('')
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
 
   const resultadoAxe = await new AxeBuilder({ page })

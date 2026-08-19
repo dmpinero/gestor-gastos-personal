@@ -8,7 +8,7 @@ test('el panel de navegación colapsa y expande, y resalta la sección activa', 
 
   await page.goto('/gestion/movimientos')
   await expect(page.getByRole('link', { name: 'Gestión' })).toHaveAttribute('aria-current', 'page')
-  await expect(page.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute(
     'aria-current',
     'page',
   )
@@ -23,6 +23,19 @@ test('el panel de navegación colapsa y expande, y resalta la sección activa', 
   await botonExpandir.click()
   await expect(botonColapsar).toBeVisible()
   await expect(page.getByRole('link', { name: 'Gestión' })).toContainText('Gestión')
+})
+
+test('Importar es un acceso de primer nivel independiente de Gestión', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Importar' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Importar' }).click()
+  await expect(page).toHaveURL(/\/importar$/)
+  await expect(page.getByRole('link', { name: 'Importar' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('link', { name: 'Gestión' })).not.toHaveAttribute(
+    'aria-current',
+    'page',
+  )
 })
 
 test('el modo claro/oscuro se puede alternar y persiste tras recargar', async ({ page }) => {

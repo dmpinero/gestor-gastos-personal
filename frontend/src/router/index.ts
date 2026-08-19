@@ -34,12 +34,12 @@ const router = createRouter({
           name: 'gestion-movimientos',
           component: VistaMovimientos,
         },
-        {
-          path: 'importar',
-          name: 'gestion-importar',
-          component: VistaImportarExcel,
-        },
       ],
+    },
+    {
+      path: '/importar',
+      name: 'importar',
+      component: VistaImportarExcel,
     },
   ],
 })

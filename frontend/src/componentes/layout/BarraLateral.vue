@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LayoutDashboard, Settings2 } from '@lucide/vue'
+import { ArrowLeftRight, LayoutDashboard, Settings2, Tags, Upload, Wallet } from '@lucide/vue'
 import { RouterLink, useRoute } from 'vue-router'
 import {
   Sidebar,
@@ -10,27 +10,28 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarTrigger,
 } from '@/componentes/ui/sidebar'
 
 const ruta = useRoute()
 
-const secciones = [
+const subseccionesGestion = [
+  { a: '/gestion/cuentas', etiqueta: 'Cuentas', icono: Wallet, color: 'text-amber-500' },
+  { a: '/gestion/categorias', etiqueta: 'Categorías', icono: Tags, color: 'text-teal-500' },
   {
-    a: '/',
-    etiqueta: 'Inicio',
-    icono: LayoutDashboard,
-    color: 'text-blue-500',
-    activa: (ruta: string) => ruta === '/',
-  },
-  {
-    a: '/gestion',
-    etiqueta: 'Gestión',
-    icono: Settings2,
-    color: 'text-violet-500',
-    activa: (ruta: string) => ruta.startsWith('/gestion'),
+    a: '/gestion/movimientos',
+    etiqueta: 'Movimientos',
+    icono: ArrowLeftRight,
+    color: 'text-rose-500',
   },
 ]
+
+function gestionActiva(path: string): boolean {
+  return path.startsWith('/gestion')
+}
 </script>
 
 <template>
@@ -42,18 +43,48 @@ const secciones = [
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
-            <SidebarMenuItem v-for="seccion in secciones" :key="seccion.a">
-              <SidebarMenuButton
-                as-child
-                :is-active="seccion.activa(ruta.path)"
-                :tooltip="seccion.etiqueta"
-              >
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child :is-active="ruta.path === '/'" tooltip="Dashboard">
+                <RouterLink to="/" :aria-current="ruta.path === '/' ? 'page' : undefined">
+                  <LayoutDashboard class="text-blue-500" />
+                  <span>Dashboard</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child :is-active="gestionActiva(ruta.path)" tooltip="Gestión">
                 <RouterLink
-                  :to="seccion.a"
-                  :aria-current="seccion.activa(ruta.path) ? 'page' : undefined"
+                  to="/gestion"
+                  :aria-current="gestionActiva(ruta.path) ? 'page' : undefined"
                 >
-                  <component :is="seccion.icono" :class="seccion.color" />
-                  <span>{{ seccion.etiqueta }}</span>
+                  <Settings2 class="text-violet-500" />
+                  <span>Gestión</span>
+                </RouterLink>
+              </SidebarMenuButton>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem v-for="sub in subseccionesGestion" :key="sub.a">
+                  <SidebarMenuSubButton as-child :is-active="ruta.path === sub.a">
+                    <RouterLink
+                      :to="sub.a"
+                      :aria-current="ruta.path === sub.a ? 'page' : undefined"
+                    >
+                      <component :is="sub.icono" :class="sub.color" />
+                      <span>{{ sub.etiqueta }}</span>
+                    </RouterLink>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child :is-active="ruta.path === '/importar'" tooltip="Importar">
+                <RouterLink
+                  to="/importar"
+                  :aria-current="ruta.path === '/importar' ? 'page' : undefined"
+                >
+                  <Upload class="text-indigo-500" />
+                  <span>Importar</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -11,7 +11,7 @@ const RUTA_FICHERO = path.resolve(
 const NOMBRE_BOTON_ZONA = 'Seleccionar o soltar uno o varios archivos Excel'
 
 test('importar un Excel de movimientos muestra el resumen de la importación', async ({ page }) => {
-  await page.goto('/gestion/importar')
+  await page.goto('/importar')
   await page.screenshot({ path: 'e2e/capturas/importar-01-pagina-inicial.png' })
 
   await page.locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
@@ -38,7 +38,7 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
 test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta correcta', async ({
   page,
 }) => {
-  await page.goto('/gestion/importar')
+  await page.goto('/importar')
   await page.locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
   await page.getByRole('button', { name: 'Importar' }).click()
   await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
@@ -56,7 +56,7 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
 })
 
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {
-  await page.goto('/gestion/importar')
+  await page.goto('/importar')
 
   // Fichero .csv generado en memoria (no hace falta uno real en disco).
   await page.locator('input[type="file"]').setInputFiles({
@@ -71,7 +71,7 @@ test('subir un fichero con extensión no soportada muestra un error', async ({ p
 })
 
 test('soltar el fichero sobre la zona de arrastre también permite importarlo', async ({ page }) => {
-  await page.goto('/gestion/importar')
+  await page.goto('/importar')
   const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
 
   const contenido = fs.readFileSync(RUTA_FICHERO)
@@ -99,7 +99,7 @@ test('soltar el fichero sobre la zona de arrastre también permite importarlo', 
 test('soltar un fichero con extensión no soportada sobre la zona de arrastre también lo rechaza', async ({
   page,
 }) => {
-  await page.goto('/gestion/importar')
+  await page.goto('/importar')
   const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
 
   const dataTransfer = await page.evaluateHandle(() => {
@@ -119,7 +119,7 @@ test('soltar un fichero con extensión no soportada sobre la zona de arrastre ta
 test('soltar varios ficheros a la vez los procesa e importa todos ("procesamiento masivo")', async ({
   page,
 }) => {
-  await page.goto('/gestion/importar')
+  await page.goto('/importar')
   const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
 
   const contenido = fs.readFileSync(RUTA_FICHERO)

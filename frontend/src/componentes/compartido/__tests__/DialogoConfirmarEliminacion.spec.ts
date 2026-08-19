@@ -14,9 +14,9 @@ describe('DialogoConfirmarEliminacion', () => {
     })
 
     await wrapper.get('button').trigger('click')
-    const botonCancelar = document.body.querySelector<HTMLButtonElement>(
-      '[role="alertdialog"] button:not([data-slot="alert-dialog-action"])',
-    )
+    const botonCancelar = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button'),
+    ).find((boton) => boton.textContent?.trim() === 'Cancelar')
     botonCancelar?.click()
     await wrapper.vm.$nextTick()
 

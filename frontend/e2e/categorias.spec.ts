@@ -49,6 +49,45 @@ test('gestión de categoría y subcategoría', async ({ page }) => {
   await page.screenshot({ path: 'e2e/capturas/categorias-05-tras-eliminar.png' })
 })
 
+test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) => {
+  const sufijo = Date.now()
+  const nombreCategoriaA = `Categoría BLOQUE-A ${sufijo}`
+  const nombreCategoriaB = `Categoría BLOQUE-B ${sufijo}`
+
+  await page.goto('/gestion/categorias')
+
+  for (const nombre of [nombreCategoriaA, nombreCategoriaB]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panel.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  await page
+    .locator('[data-slot="card"]', { hasText: nombreCategoriaA })
+    .getByRole('checkbox')
+    .click()
+  await page
+    .locator('[data-slot="card"]', { hasText: nombreCategoriaB })
+    .getByRole('checkbox')
+    .click()
+  await expect(page.getByText('2 seleccionados')).toBeVisible()
+
+  // Cancelar no debe eliminar nada ni perder la selección.
+  await page.getByRole('button', { name: 'Eliminar seleccionados' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Cancelar' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })).toBeVisible()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toBeVisible()
+  await expect(page.getByText('2 seleccionados')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Eliminar seleccionados' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
+
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })).toHaveCount(0)
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toHaveCount(0)
+})
+
 test('eliminar una subcategoría con movimientos asociados la borra en cascada al confirmarlo', async ({
   page,
 }) => {

@@ -80,11 +80,11 @@ def test_existe_duplicado(sesion_bd) -> None:
     )
 
 
-def test_existen_movimientos_de_cuenta_categoria_y_subcategoria(sesion_bd) -> None:
+def test_contar_movimientos_por_cuenta_categoria_y_subcategoria(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
 
-    assert repositorio.existen_movimientos_de_cuenta(cuenta.id) is False
+    assert repositorio.contar_movimientos_por_cuenta(cuenta.id) == 0
 
     repositorio.crear(
         Movimiento(
@@ -97,9 +97,28 @@ def test_existen_movimientos_de_cuenta_categoria_y_subcategoria(sesion_bd) -> No
         )
     )
 
-    assert repositorio.existen_movimientos_de_cuenta(cuenta.id) is True
-    assert repositorio.existen_movimientos_de_categoria(categoria.id) is True
-    assert repositorio.existen_movimientos_de_subcategoria(999) is False
+    assert repositorio.contar_movimientos_por_cuenta(cuenta.id) == 1
+    assert repositorio.contar_movimientos_por_categoria(categoria.id) == 1
+    assert repositorio.contar_movimientos_por_subcategoria(999) == 0
+
+
+def test_eliminar_movimientos_por_cuenta_categoria_y_subcategoria(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    movimiento = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Compra",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    repositorio.eliminar_movimientos_por_cuenta(cuenta.id)
+
+    assert repositorio.obtener_por_id(movimiento.id) is None
 
 
 def test_obtener_ultimo_saldo(sesion_bd) -> None:

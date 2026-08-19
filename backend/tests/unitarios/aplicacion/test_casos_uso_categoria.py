@@ -10,6 +10,12 @@ from gestor_gastos.aplicacion.categoria.crear_subcategoria import CrearSubcatego
 from gestor_gastos.aplicacion.categoria.eliminar_categoria import EliminarCategoria
 from gestor_gastos.aplicacion.categoria.eliminar_subcategoria import EliminarSubcategoria
 from gestor_gastos.aplicacion.categoria.listar_categorias import ListarCategorias
+from gestor_gastos.aplicacion.categoria.obtener_dependencias_categoria import (
+    ObtenerDependenciasCategoria,
+)
+from gestor_gastos.aplicacion.categoria.obtener_dependencias_subcategoria import (
+    ObtenerDependenciasSubcategoria,
+)
 from gestor_gastos.dominio.excepciones import (
     EntidadConDependenciasError,
     EntidadNoEncontradaError,
@@ -74,6 +80,30 @@ def test_eliminar_categoria_con_subcategorias_falla() -> None:
 
     with pytest.raises(EntidadConDependenciasError):
         EliminarCategoria(repo, repo_movimientos).ejecutar(categoria.id)
+
+
+def test_eliminar_categoria_con_subcategorias_y_movimientos_y_cascada_borra_todo() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
+    movimiento = repo_movimientos.crear(
+        Movimiento(
+            cuenta_id=1,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Café",
+            importe=Decimal("-3.50"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    EliminarCategoria(repo, repo_movimientos).ejecutar(categoria.id, cascada=True)
+
+    assert repo.obtener_categoria_por_id(categoria.id) is None
+    assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
+    assert repo_movimientos.obtener_por_id(movimiento.id) is None
 
 
 def test_eliminar_categoria_sin_dependencias_la_borra() -> None:
@@ -176,6 +206,90 @@ def test_eliminar_subcategoria_con_movimientos_falla() -> None:
 
     with pytest.raises(EntidadConDependenciasError):
         EliminarSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id)
+
+
+def test_eliminar_subcategoria_con_movimientos_y_cascada_borra_todo() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
+    movimiento = repo_movimientos.crear(
+        Movimiento(
+            cuenta_id=1,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Café",
+            importe=Decimal("-3.50"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    EliminarSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id, cascada=True)
+
+    assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
+    assert repo_movimientos.obtener_por_id(movimiento.id) is None
+    assert repo.obtener_categoria_por_id(categoria.id) is not None
+
+
+def test_obtener_dependencias_de_categoria_inexistente_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+
+    with pytest.raises(EntidadNoEncontradaError):
+        ObtenerDependenciasCategoria(repo, repo_movimientos).ejecutar(999)
+
+
+def test_obtener_dependencias_de_categoria_cuenta_subcategorias_y_movimientos() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
+    repo_movimientos.crear(
+        Movimiento(
+            cuenta_id=1,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Café",
+            importe=Decimal("-3.50"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    dependencias = ObtenerDependenciasCategoria(repo, repo_movimientos).ejecutar(categoria.id)
+
+    assert dependencias.subcategorias == 1
+    assert dependencias.movimientos == 1
+
+
+def test_obtener_dependencias_de_subcategoria_inexistente_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+
+    with pytest.raises(EntidadNoEncontradaError):
+        ObtenerDependenciasSubcategoria(repo, repo_movimientos).ejecutar(999)
+
+
+def test_obtener_dependencias_de_subcategoria_cuenta_sus_movimientos() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
+    repo_movimientos.crear(
+        Movimiento(
+            cuenta_id=1,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Café",
+            importe=Decimal("-3.50"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    dependencias = ObtenerDependenciasSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id)
+
+    assert dependencias.movimientos == 1
 
 
 def test_listar_categorias_con_subcategorias() -> None:

@@ -21,7 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/componentes/ui/table'
-import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
+import DialogoConfirmarEliminacion, {
+  type Dependencia,
+} from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tienda = useTiendaCuentas()
 const errorFormulario = ref<string | null>(null)
@@ -112,20 +114,39 @@ async function guardar(): Promise<void> {
   }
 }
 
-async function eliminar(id: number): Promise<void> {
+function etiquetaMovimientos(cantidad: number): string {
+  return cantidad === 1 ? 'movimiento' : 'movimientos'
+}
+
+async function dependenciasDeCuenta(id: number): Promise<Dependencia[]> {
+  const dependencias = await tienda.obtenerDependencias(id)
+  return [
+    { etiqueta: etiquetaMovimientos(dependencias.movimientos), cantidad: dependencias.movimientos },
+  ]
+}
+
+async function dependenciasDeSeleccionadas(): Promise<Dependencia[]> {
+  const resultados = await Promise.all(
+    [...seleccionadas.value].map((id) => tienda.obtenerDependencias(id)),
+  )
+  const total = resultados.reduce((suma, d) => suma + d.movimientos, 0)
+  return [{ etiqueta: etiquetaMovimientos(total), cantidad: total }]
+}
+
+async function eliminar(id: number, cascada = false): Promise<void> {
   errorFormulario.value = null
   try {
-    await tienda.eliminar(id)
+    await tienda.eliminar(id, cascada)
     seleccionadas.value.delete(id)
   } catch (motivo) {
     errorFormulario.value = (motivo as Error).message
   }
 }
 
-async function eliminarSeleccionadas(): Promise<void> {
+async function eliminarSeleccionadas(cascada = false): Promise<void> {
   errorFormulario.value = null
   try {
-    await Promise.all([...seleccionadas.value].map((id) => tienda.eliminar(id)))
+    await Promise.all([...seleccionadas.value].map((id) => tienda.eliminar(id, cascada)))
     seleccionadas.value.clear()
   } catch (motivo) {
     errorFormulario.value = (motivo as Error).message
@@ -215,7 +236,8 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       <DialogoConfirmarEliminacion
         :descripcion="`${seleccionadas.size} cuentas seleccionadas`"
         texto-boton="Eliminar seleccionados"
-        @confirmar="eliminarSeleccionadas"
+        :obtener-dependencias="dependenciasDeSeleccionadas"
+        @confirmar="(cascada) => eliminarSeleccionadas(cascada)"
       />
     </div>
 
@@ -317,7 +339,8 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             </Button>
             <DialogoConfirmarEliminacion
               :descripcion="`la cuenta ${cuenta.numero_cuenta}`"
-              @confirmar="eliminar(cuenta.id)"
+              :obtener-dependencias="() => dependenciasDeCuenta(cuenta.id)"
+              @confirmar="(cascada) => eliminar(cuenta.id, cascada)"
             >
               <template #disparador>
                 <Button variant="ghost" size="icon" class="text-destructive" aria-label="Eliminar">

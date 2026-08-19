@@ -1,6 +1,6 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from gestor_gastos.aplicacion.categoria.actualizar_categoria import ActualizarCategoria
@@ -10,6 +10,12 @@ from gestor_gastos.aplicacion.categoria.crear_subcategoria import CrearSubcatego
 from gestor_gastos.aplicacion.categoria.eliminar_categoria import EliminarCategoria
 from gestor_gastos.aplicacion.categoria.eliminar_subcategoria import EliminarSubcategoria
 from gestor_gastos.aplicacion.categoria.listar_categorias import ListarCategorias
+from gestor_gastos.aplicacion.categoria.obtener_dependencias_categoria import (
+    ObtenerDependenciasCategoria,
+)
+from gestor_gastos.aplicacion.categoria.obtener_dependencias_subcategoria import (
+    ObtenerDependenciasSubcategoria,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
@@ -27,6 +33,8 @@ from gestor_gastos.interfaces.api.v1.esquemas.categoria import (
     CategoriaConSubcategoriasSalidaEsquema,
     CategoriaCrearEsquema,
     CategoriaSalidaEsquema,
+    DependenciasCategoriaEsquema,
+    DependenciasSubcategoriaEsquema,
     SubcategoriaActualizarEsquema,
     SubcategoriaCrearEsquema,
     SubcategoriaSalidaEsquema,
@@ -83,10 +91,26 @@ def actualizar(
     status_code=status.HTTP_204_NO_CONTENT,
     responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO},
 )
-def eliminar(id_categoria: int, sesion: Session = Depends(obtener_sesion)) -> None:
+def eliminar(
+    id_categoria: int, cascada: bool = Query(False), sesion: Session = Depends(obtener_sesion)
+) -> None:
     EliminarCategoria(
         RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+    ).ejecutar(id_categoria, cascada=cascada)
+
+
+@enrutador.get(
+    "/{id_categoria:int}/dependencias",
+    response_model=DependenciasCategoriaEsquema,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def obtener_dependencias(
+    id_categoria: int, sesion: Session = Depends(obtener_sesion)
+) -> DependenciasCategoriaEsquema:
+    dependencias = ObtenerDependenciasCategoria(
+        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
     ).ejecutar(id_categoria)
+    return DependenciasCategoriaEsquema(**asdict(dependencias))
 
 
 @enrutador.post(
@@ -127,8 +151,25 @@ def actualizar_subcategoria(
     responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO},
 )
 def eliminar_subcategoria(
-    id_categoria: int, id_subcategoria: int, sesion: Session = Depends(obtener_sesion)
+    id_categoria: int,
+    id_subcategoria: int,
+    cascada: bool = Query(False),
+    sesion: Session = Depends(obtener_sesion),
 ) -> None:
     EliminarSubcategoria(
         RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+    ).ejecutar(id_subcategoria, cascada=cascada)
+
+
+@enrutador.get(
+    "/{id_categoria:int}/subcategorias/{id_subcategoria:int}/dependencias",
+    response_model=DependenciasSubcategoriaEsquema,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def obtener_dependencias_subcategoria(
+    id_categoria: int, id_subcategoria: int, sesion: Session = Depends(obtener_sesion)
+) -> DependenciasSubcategoriaEsquema:
+    dependencias = ObtenerDependenciasSubcategoria(
+        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
     ).ejecutar(id_subcategoria)
+    return DependenciasSubcategoriaEsquema(**asdict(dependencias))

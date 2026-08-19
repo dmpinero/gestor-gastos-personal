@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
@@ -93,29 +93,44 @@ class RepositorioMovimientosSqlAlchemy:
             is not None
         )
 
-    def existen_movimientos_de_cuenta(self, id_cuenta: int) -> bool:
-        return (
-            self._sesion.scalar(
-                select(MovimientoModelo).where(MovimientoModelo.cuenta_id == id_cuenta)
-            )
-            is not None
+    def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int:
+        return self._sesion.scalar(
+            select(func.count())
+            .select_from(MovimientoModelo)
+            .where(MovimientoModelo.cuenta_id == id_cuenta)
         )
 
-    def existen_movimientos_de_categoria(self, id_categoria: int) -> bool:
-        return (
-            self._sesion.scalar(
-                select(MovimientoModelo).where(MovimientoModelo.categoria_id == id_categoria)
-            )
-            is not None
+    def contar_movimientos_por_categoria(self, id_categoria: int) -> int:
+        return self._sesion.scalar(
+            select(func.count())
+            .select_from(MovimientoModelo)
+            .where(MovimientoModelo.categoria_id == id_categoria)
         )
 
-    def existen_movimientos_de_subcategoria(self, id_subcategoria: int) -> bool:
-        return (
-            self._sesion.scalar(
-                select(MovimientoModelo).where(MovimientoModelo.subcategoria_id == id_subcategoria)
-            )
-            is not None
+    def contar_movimientos_por_subcategoria(self, id_subcategoria: int) -> int:
+        return self._sesion.scalar(
+            select(func.count())
+            .select_from(MovimientoModelo)
+            .where(MovimientoModelo.subcategoria_id == id_subcategoria)
         )
+
+    def eliminar_movimientos_por_cuenta(self, id_cuenta: int) -> None:
+        self._sesion.execute(
+            delete(MovimientoModelo).where(MovimientoModelo.cuenta_id == id_cuenta)
+        )
+        self._sesion.commit()
+
+    def eliminar_movimientos_por_categoria(self, id_categoria: int) -> None:
+        self._sesion.execute(
+            delete(MovimientoModelo).where(MovimientoModelo.categoria_id == id_categoria)
+        )
+        self._sesion.commit()
+
+    def eliminar_movimientos_por_subcategoria(self, id_subcategoria: int) -> None:
+        self._sesion.execute(
+            delete(MovimientoModelo).where(MovimientoModelo.subcategoria_id == id_subcategoria)
+        )
+        self._sesion.commit()
 
     def obtener_ultimo_saldo(self, id_cuenta: int) -> Decimal | None:
         return self._sesion.scalar(

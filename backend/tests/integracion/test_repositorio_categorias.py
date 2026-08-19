@@ -25,15 +25,22 @@ def test_crear_subcategoria_y_listar_por_categoria(sesion_bd) -> None:
     assert [s.nombre for s in subcategorias] == ["Cafeterías y restaurantes"]
 
 
-def test_tiene_subcategorias(sesion_bd) -> None:
+def test_contar_y_eliminar_subcategorias_de(sesion_bd) -> None:
     repositorio = RepositorioCategoriasSqlAlchemy(sesion_bd)
     categoria = repositorio.crear_categoria(Categoria(nombre="Ocio y viajes"))
 
-    assert repositorio.tiene_subcategorias(categoria.id) is False
+    assert repositorio.contar_subcategorias(categoria.id) == 0
 
-    repositorio.crear_subcategoria(Subcategoria(nombre="Hoteles", categoria_id=categoria.id))
+    subcategoria = repositorio.crear_subcategoria(
+        Subcategoria(nombre="Hoteles", categoria_id=categoria.id)
+    )
 
-    assert repositorio.tiene_subcategorias(categoria.id) is True
+    assert repositorio.contar_subcategorias(categoria.id) == 1
+
+    repositorio.eliminar_subcategorias_de(categoria.id)
+
+    assert repositorio.contar_subcategorias(categoria.id) == 0
+    assert repositorio.obtener_subcategoria_por_id(subcategoria.id) is None
 
 
 def test_actualizar_y_eliminar_categoria(sesion_bd) -> None:

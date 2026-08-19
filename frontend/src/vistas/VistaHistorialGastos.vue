@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CalendarDays, Euro, FileText, Landmark, Search, Tag, Tags, Wallet } from '@lucide/vue'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import type { Movimiento } from '@/api/tipos'
@@ -11,8 +11,16 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/componentes/ui/select'
 import {
   Table,
   TableBody,
@@ -21,6 +29,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/componentes/ui/table'
+
+const TODOS = 'todos'
+
+const MESES = [
+  { valor: '01', etiqueta: 'Enero' },
+  { valor: '02', etiqueta: 'Febrero' },
+  { valor: '03', etiqueta: 'Marzo' },
+  { valor: '04', etiqueta: 'Abril' },
+  { valor: '05', etiqueta: 'Mayo' },
+  { valor: '06', etiqueta: 'Junio' },
+  { valor: '07', etiqueta: 'Julio' },
+  { valor: '08', etiqueta: 'Agosto' },
+  { valor: '09', etiqueta: 'Septiembre' },
+  { valor: '10', etiqueta: 'Octubre' },
+  { valor: '11', etiqueta: 'Noviembre' },
+  { valor: '12', etiqueta: 'Diciembre' },
+]
 
 const ruta = useRoute()
 const tiendaCuentas = useTiendaCuentas()
@@ -71,9 +96,14 @@ onMounted(() => {
   tiendaCategorias.cargar()
 })
 
+const anioSeleccionado = ref(TODOS)
+const mesSeleccionado = ref(TODOS)
+
 watch(
   () => ruta.fullPath,
   () => {
+    anioSeleccionado.value = TODOS
+    mesSeleccionado.value = TODOS
     if (ruta.name === 'historial-categoria') {
       tiendaMovimientos.cargarPorCategoria(Number(ruta.params.id))
     } else if (ruta.name === 'historial-subcategoria') {
@@ -85,17 +115,33 @@ watch(
   { immediate: true },
 )
 
-const { busqueda, filasFiltradas } = useBusquedaTabla(
-  computed(() => tiendaMovimientos.movimientos),
-  (m) => [
-    formatearFecha(m.fecha_valor),
-    nombreCuenta(m.cuenta_id),
-    m.descripcion,
-    nombreCategoria(m.categoria_id),
-    nombreSubcategoria(m.subcategoria_id),
-    m.importe,
-    m.saldo,
-  ],
+const aniosDisponibles = computed(() => {
+  const anios = new Set(tiendaMovimientos.movimientos.map((m) => m.fecha_valor.slice(0, 4)))
+  return [...anios].sort((a, b) => b.localeCompare(a))
+})
+
+const movimientosDelPeriodo = computed(() =>
+  tiendaMovimientos.movimientos.filter((m) => {
+    const coincideAnio =
+      anioSeleccionado.value === TODOS || m.fecha_valor.slice(0, 4) === anioSeleccionado.value
+    const coincideMes =
+      mesSeleccionado.value === TODOS || m.fecha_valor.slice(5, 7) === mesSeleccionado.value
+    return coincideAnio && coincideMes
+  }),
+)
+
+const { busqueda, filasFiltradas } = useBusquedaTabla(movimientosDelPeriodo, (m) => [
+  formatearFecha(m.fecha_valor),
+  nombreCuenta(m.cuenta_id),
+  m.descripcion,
+  nombreCategoria(m.categoria_id),
+  nombreSubcategoria(m.subcategoria_id),
+  m.importe,
+  m.saldo,
+])
+
+const totalGastado = computed(() =>
+  filasFiltradas.value.reduce((suma, m) => suma + Number(m.importe), 0),
 )
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
@@ -124,6 +170,56 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
       <p v-if="tiendaMovimientos.error" class="text-destructive mt-2 text-sm" role="alert">
         {{ tiendaMovimientos.error }}
       </p>
+
+      <div class="mt-4 grid grid-cols-2 gap-4 sm:max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-muted-foreground text-sm font-medium">Total gastado</CardTitle>
+          </CardHeader>
+          <CardContent class="text-destructive text-2xl font-semibold">
+            {{ formatearImporte(totalGastado) }}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+          </CardHeader>
+          <CardContent class="text-2xl font-semibold">
+            {{ filasFiltradas.length }}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-4">
+        <div class="flex max-w-40 flex-1 flex-col gap-1.5">
+          <Label id="etiqueta-anio" for="selector-anio">Año</Label>
+          <Select v-model="anioSeleccionado">
+            <SelectTrigger id="selector-anio" aria-labelledby="etiqueta-anio">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="TODOS">Todos los años</SelectItem>
+              <SelectItem v-for="anio in aniosDisponibles" :key="anio" :value="anio">
+                {{ anio }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div class="flex max-w-48 flex-1 flex-col gap-1.5">
+          <Label id="etiqueta-mes" for="selector-mes">Mes</Label>
+          <Select v-model="mesSeleccionado">
+            <SelectTrigger id="selector-mes" aria-labelledby="etiqueta-mes">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="TODOS">Todos los meses</SelectItem>
+              <SelectItem v-for="mes in MESES" :key="mes.valor" :value="mes.valor">
+                {{ mes.etiqueta }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <div class="mt-4 flex max-w-xs flex-col gap-1.5">
         <Label for="buscar-historial">Buscar</Label>

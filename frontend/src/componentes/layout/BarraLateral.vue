@@ -27,11 +27,10 @@ const subseccionesGestion = [
     icono: ArrowLeftRight,
     color: 'text-rose-500',
   },
-  { a: '/gestion/importar', etiqueta: 'Importar', icono: Upload, color: 'text-indigo-500' },
 ]
 
 function gestionActiva(path: string): boolean {
-  return path.startsWith('/gestion')
+  return path.startsWith('/gestion') && path !== '/gestion/importar'
 }
 </script>
 
@@ -45,10 +44,10 @@ function gestionActiva(path: string): boolean {
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton as-child :is-active="ruta.path === '/'" tooltip="Inicio">
+              <SidebarMenuButton as-child :is-active="ruta.path === '/'" tooltip="Dashboard">
                 <RouterLink to="/" :aria-current="ruta.path === '/' ? 'page' : undefined">
                   <LayoutDashboard class="text-blue-500" />
-                  <span>Inicio</span>
+                  <span>Dashboard</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -76,6 +75,22 @@ function gestionActiva(path: string): boolean {
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               </SidebarMenuSub>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as-child
+                :is-active="ruta.path === '/gestion/importar'"
+                tooltip="Importar"
+              >
+                <RouterLink
+                  to="/gestion/importar"
+                  :aria-current="ruta.path === '/gestion/importar' ? 'page' : undefined"
+                >
+                  <Upload class="text-indigo-500" />
+                  <span>Importar</span>
+                </RouterLink>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>

@@ -19,6 +19,7 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimie
 from gestor_gastos.interfaces.api.dependencias import obtener_sesion
 from gestor_gastos.interfaces.api.respuestas_error import (
     RESPUESTA_CUERPO_MALFORMADO,
+    RESPUESTA_FILTRO_INVALIDO,
     RESPUESTA_NO_ENCONTRADO,
 )
 from gestor_gastos.interfaces.api.v1.esquemas.movimiento import (
@@ -30,11 +31,22 @@ from gestor_gastos.interfaces.api.v1.esquemas.movimiento import (
 enrutador = APIRouter(prefix="/movimientos", tags=["Movimientos"])
 
 
-@enrutador.get("", response_model=list[MovimientoSalidaEsquema])
+@enrutador.get(
+    "", response_model=list[MovimientoSalidaEsquema], responses=RESPUESTA_FILTRO_INVALIDO
+)
 def listar(
-    cuenta_id: int = Query(...), sesion: Session = Depends(obtener_sesion)
+    cuenta_id: int | None = Query(None),
+    categoria_id: int | None = Query(None),
+    subcategoria_id: int | None = Query(None),
+    solo_gastos: bool = Query(False),
+    sesion: Session = Depends(obtener_sesion),
 ) -> list[MovimientoSalidaEsquema]:
-    movimientos = ListarMovimientos(RepositorioMovimientosSqlAlchemy(sesion)).ejecutar(cuenta_id)
+    movimientos = ListarMovimientos(RepositorioMovimientosSqlAlchemy(sesion)).ejecutar(
+        cuenta_id=cuenta_id,
+        categoria_id=categoria_id,
+        subcategoria_id=subcategoria_id,
+        solo_gastos=solo_gastos,
+    )
     return [MovimientoSalidaEsquema(**asdict(m)) for m in movimientos]
 
 

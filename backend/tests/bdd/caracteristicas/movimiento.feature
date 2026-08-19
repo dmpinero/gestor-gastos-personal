@@ -15,3 +15,9 @@ Característica: Gestión de movimientos
     Y esa cuenta tiene un movimiento en la fecha "2026-01-15"
     Cuando consulto el listado de movimientos de esa cuenta
     Entonces el primero de la lista es el de la fecha "2026-01-15"
+
+  Escenario: Los movimientos se pueden consultar por categoría, cruzando todas las cuentas
+    Dado que existen la cuenta "ES00 1234" y la categoría "Alimentación"
+    Y esa cuenta tiene un movimiento en la fecha "2026-01-01"
+    Cuando consulto el listado de movimientos de esa categoría
+    Entonces el movimiento aparece en el listado

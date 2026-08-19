@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from gestor_gastos.dominio.excepciones import (
     EntidadConDependenciasError,
     EntidadNoEncontradaError,
+    FiltroDeListadoInvalidoError,
     NombreDuplicadoError,
 )
 from gestor_gastos.dominio.importacion.excepciones import (
@@ -31,6 +32,10 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
     @aplicacion.exception_handler(EntidadConDependenciasError)
     async def _con_dependencias(_: Request, error: EntidadConDependenciasError) -> JSONResponse:
         return _respuesta(status.HTTP_409_CONFLICT, error)
+
+    @aplicacion.exception_handler(FiltroDeListadoInvalidoError)
+    async def _filtro_invalido(_: Request, error: FiltroDeListadoInvalidoError) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
 
     @aplicacion.exception_handler(ExtensionNoSoportadaError)
     async def _extension_no_soportada(_: Request, error: ExtensionNoSoportadaError) -> JSONResponse:

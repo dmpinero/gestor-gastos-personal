@@ -5,6 +5,7 @@ import VistaCuentas from '@/vistas/VistaCuentas.vue'
 import VistaCategorias from '@/vistas/VistaCategorias.vue'
 import VistaMovimientos from '@/vistas/VistaMovimientos.vue'
 import VistaImportarExcel from '@/vistas/VistaImportarExcel.vue'
+import VistaHistorialGastos from '@/vistas/VistaHistorialGastos.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,6 +41,21 @@ const router = createRouter({
       path: '/importar',
       name: 'importar',
       component: VistaImportarExcel,
+    },
+    {
+      path: '/historial',
+      name: 'historial',
+      component: VistaHistorialGastos,
+    },
+    {
+      path: '/historial/categoria/:id',
+      name: 'historial-categoria',
+      component: VistaHistorialGastos,
+    },
+    {
+      path: '/historial/subcategoria/:id',
+      name: 'historial-subcategoria',
+      component: VistaHistorialGastos,
     },
   ],
 })

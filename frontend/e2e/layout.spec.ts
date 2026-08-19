@@ -30,7 +30,7 @@ test('Importar es un acceso de primer nivel independiente de Gestión', async ({
   await expect(page.getByRole('link', { name: 'Importar' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Importar' }).click()
-  await expect(page).toHaveURL(/\/gestion\/importar$/)
+  await expect(page).toHaveURL(/\/importar$/)
   await expect(page.getByRole('link', { name: 'Importar' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: 'Gestión' })).not.toHaveAttribute(
     'aria-current',

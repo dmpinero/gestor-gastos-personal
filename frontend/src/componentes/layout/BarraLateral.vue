@@ -30,7 +30,7 @@ const subseccionesGestion = [
 ]
 
 function gestionActiva(path: string): boolean {
-  return path.startsWith('/gestion') && path !== '/gestion/importar'
+  return path.startsWith('/gestion')
 }
 </script>
 
@@ -78,14 +78,10 @@ function gestionActiva(path: string): boolean {
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <SidebarMenuButton
-                as-child
-                :is-active="ruta.path === '/gestion/importar'"
-                tooltip="Importar"
-              >
+              <SidebarMenuButton as-child :is-active="ruta.path === '/importar'" tooltip="Importar">
                 <RouterLink
-                  to="/gestion/importar"
-                  :aria-current="ruta.path === '/gestion/importar' ? 'page' : undefined"
+                  to="/importar"
+                  :aria-current="ruta.path === '/importar' ? 'page' : undefined"
                 >
                   <Upload class="text-indigo-500" />
                   <span>Importar</span>

@@ -49,6 +49,79 @@ test('gestión de categoría y subcategoría', async ({ page }) => {
   await page.screenshot({ path: 'e2e/capturas/categorias-05-tras-eliminar.png' })
 })
 
+test('editar una subcategoría cambia su nombre y su categoría, actualizando los movimientos existentes', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 SUBCAT ${sufijo}`
+  const nombreCategoriaOrigen = `Categoría SUBCAT-ORIGEN ${sufijo}`
+  const nombreCategoriaDestino = `Categoría SUBCAT-DESTINO ${sufijo}`
+  const nombreSubcategoria = `Subcategoría SUBCAT ${sufijo}`
+  const nombreSubcategoriaEditada = `Subcategoría SUBCAT editada ${sufijo}`
+  const descripcionMovimiento = `Movimiento SUBCAT ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombre of [nombreCategoriaOrigen, nombreCategoriaDestino]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  const tarjetaOrigen = page.locator('[data-slot="card"]', { hasText: nombreCategoriaOrigen })
+  const tarjetaDestino = page.locator('[data-slot="card"]', { hasText: nombreCategoriaDestino })
+  await tarjetaOrigen.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaOrigen.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaOrigen.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await page.getByLabel('Cuenta', { exact: true }).click()
+  await page.getByRole('option', { name: numeroCuenta }).click()
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panelMovimiento = page.getByRole('dialog')
+  await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
+  await panelMovimiento.getByLabel('Categoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreCategoriaOrigen }).click()
+  await panelMovimiento.getByLabel('Subcategoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreSubcategoria }).click()
+  await panelMovimiento.getByPlaceholder('Descripción').fill(descripcionMovimiento)
+  await panelMovimiento.getByPlaceholder('Importe').fill('-12.00')
+  await panelMovimiento.getByPlaceholder('Saldo').fill('88.00')
+  await panelMovimiento.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: descripcionMovimiento })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await tarjetaOrigen
+    .locator('li', { hasText: nombreSubcategoria })
+    .getByRole('button', { name: 'Editar' })
+    .click()
+  const panelSubcategoria = page.getByRole('dialog')
+  await panelSubcategoria
+    .getByPlaceholder('Nombre de la subcategoría')
+    .fill(nombreSubcategoriaEditada)
+  await panelSubcategoria.getByLabel('Categoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreCategoriaDestino }).click()
+  await panelSubcategoria.getByRole('button', { name: 'Guardar cambios' }).click()
+
+  await expect(tarjetaOrigen.locator('li', { hasText: nombreSubcategoriaEditada })).toHaveCount(0)
+  await expect(tarjetaDestino.locator('li', { hasText: nombreSubcategoriaEditada })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await page.getByLabel('Cuenta', { exact: true }).click()
+  await page.getByRole('option', { name: numeroCuenta }).click()
+  const filaMovimiento = page.locator('tr', { hasText: descripcionMovimiento })
+  await expect(filaMovimiento).toContainText(nombreCategoriaDestino)
+  await expect(filaMovimiento).toContainText(nombreSubcategoriaEditada)
+})
+
 test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) => {
   const sufijo = Date.now()
   const nombreCategoriaA = `Categoría BLOQUE-A ${sufijo}`

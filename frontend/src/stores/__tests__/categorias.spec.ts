@@ -56,4 +56,18 @@ describe('useTiendaCategorias', () => {
     })
     expect(tienda.categorias).toEqual([categoriaEjemplo])
   })
+
+  it('actualiza una subcategoría enviando el nombre y la categoría de destino', async () => {
+    vi.mocked(clienteApi.obtener).mockResolvedValue([categoriaEjemplo])
+    vi.mocked(clienteApi.actualizar).mockResolvedValue(undefined)
+
+    const tienda = useTiendaCategorias()
+    await tienda.actualizarSubcategoria(1, 1, 'Cafeterías', 2)
+
+    expect(clienteApi.actualizar).toHaveBeenCalledWith('/categorias/1/subcategorias/1', {
+      nombre: 'Cafeterías',
+      categoria_id: 2,
+    })
+    expect(tienda.categorias).toEqual([categoriaEjemplo])
+  })
 })

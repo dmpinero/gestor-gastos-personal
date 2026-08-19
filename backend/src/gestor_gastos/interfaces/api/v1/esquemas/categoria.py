@@ -20,6 +20,7 @@ class SubcategoriaCrearEsquema(BaseModel):
 
 class SubcategoriaActualizarEsquema(BaseModel):
     nombre: str = Field(min_length=1, max_length=120)
+    categoria_id: int
 
 
 class SubcategoriaSalidaEsquema(BaseModel):

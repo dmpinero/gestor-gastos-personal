@@ -139,9 +139,9 @@ def actualizar_subcategoria(
     datos: SubcategoriaActualizarEsquema,
     sesion: Session = Depends(obtener_sesion),
 ) -> SubcategoriaSalidaEsquema:
-    subcategoria = ActualizarSubcategoria(RepositorioCategoriasSqlAlchemy(sesion)).ejecutar(
-        id_subcategoria, datos.nombre
-    )
+    subcategoria = ActualizarSubcategoria(
+        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+    ).ejecutar(id_subcategoria, datos.nombre, datos.categoria_id)
     return SubcategoriaSalidaEsquema(**asdict(subcategoria))
 
 

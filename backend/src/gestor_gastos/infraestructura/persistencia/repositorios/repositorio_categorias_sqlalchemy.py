@@ -94,6 +94,7 @@ class RepositorioCategoriasSqlAlchemy:
     def actualizar_subcategoria(self, subcategoria: Subcategoria) -> Subcategoria:
         modelo = self._sesion.get(SubcategoriaModelo, subcategoria.id)
         modelo.nombre = subcategoria.nombre
+        modelo.categoria_id = subcategoria.categoria_id
         self._sesion.commit()
         return _subcategoria_a_entidad(modelo)
 

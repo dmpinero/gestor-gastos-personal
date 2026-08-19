@@ -40,6 +40,7 @@ test('gestión completa de un movimiento: crear, editar y eliminar', async ({ pa
   await panel.getByRole('button', { name: 'Crear movimiento' }).click()
   const fila = page.locator('tr', { hasText: descripcion })
   await expect(fila).toBeVisible()
+  await expect(fila).toContainText(nombreCategoria)
   await page.screenshot({ path: 'e2e/capturas/movimientos-03-tras-crear.png' })
 
   await fila.getByRole('button', { name: 'Editar' }).click()

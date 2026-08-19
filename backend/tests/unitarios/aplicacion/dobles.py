@@ -129,6 +129,26 @@ class RepositorioMovimientosFalso:
         movimientos = [m for m in self._movimientos.values() if m.cuenta_id == id_cuenta]
         return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
 
+    def listar_por_categoria(
+        self, id_categoria: int, solo_gastos: bool = False
+    ) -> list[Movimiento]:
+        movimientos = [
+            m
+            for m in self._movimientos.values()
+            if m.categoria_id == id_categoria and (not solo_gastos or m.importe < 0)
+        ]
+        return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
+
+    def listar_por_subcategoria(
+        self, id_subcategoria: int, solo_gastos: bool = False
+    ) -> list[Movimiento]:
+        movimientos = [
+            m
+            for m in self._movimientos.values()
+            if m.subcategoria_id == id_subcategoria and (not solo_gastos or m.importe < 0)
+        ]
+        return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
+
     def actualizar(self, movimiento: Movimiento) -> Movimiento:
         self._movimientos[movimiento.id] = movimiento
         return movimiento

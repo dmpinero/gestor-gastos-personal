@@ -53,6 +53,28 @@ class RepositorioMovimientosSqlAlchemy:
         ).all()
         return [_a_entidad(m) for m in modelos]
 
+    def listar_por_categoria(
+        self, id_categoria: int, solo_gastos: bool = False
+    ) -> list[Movimiento]:
+        filtro = [MovimientoModelo.categoria_id == id_categoria]
+        if solo_gastos:
+            filtro.append(MovimientoModelo.importe < 0)
+        modelos = self._sesion.scalars(
+            select(MovimientoModelo).where(*filtro).order_by(MovimientoModelo.fecha_valor.desc())
+        ).all()
+        return [_a_entidad(m) for m in modelos]
+
+    def listar_por_subcategoria(
+        self, id_subcategoria: int, solo_gastos: bool = False
+    ) -> list[Movimiento]:
+        filtro = [MovimientoModelo.subcategoria_id == id_subcategoria]
+        if solo_gastos:
+            filtro.append(MovimientoModelo.importe < 0)
+        modelos = self._sesion.scalars(
+            select(MovimientoModelo).where(*filtro).order_by(MovimientoModelo.fecha_valor.desc())
+        ).all()
+        return [_a_entidad(m) for m in modelos]
+
     def actualizar(self, movimiento: Movimiento) -> Movimiento:
         modelo = self._sesion.get(MovimientoModelo, movimiento.id)
         modelo.cuenta_id = movimiento.cuenta_id

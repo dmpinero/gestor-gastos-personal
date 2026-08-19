@@ -9,16 +9,17 @@ export const useTiendaMovimientos = defineStore('movimientos', () => {
   const cargando = ref(false)
   const error = ref<string | null>(null)
 
-  // Evita que una respuesta de una cuenta anterior, si llega tarde, sobrescriba
-  // con datos obsoletos el resultado de una petición de cuenta más reciente.
+  // Evita que una respuesta de una solicitud anterior, si llega tarde, sobrescriba
+  // con datos obsoletos el resultado de una solicitud más reciente (de cuenta,
+  // categoría o subcategoría: comparten el mismo `movimientos` de destino).
   let idSolicitudActual = 0
 
-  async function cargar(cuentaId: number): Promise<void> {
+  async function cargarConFiltro(ruta: string): Promise<void> {
     const idDeEstaSolicitud = ++idSolicitudActual
     cargando.value = true
     error.value = null
     try {
-      const resultado = await clienteApi.obtener<Movimiento[]>(`/movimientos?cuenta_id=${cuentaId}`)
+      const resultado = await clienteApi.obtener<Movimiento[]>(ruta)
       if (idDeEstaSolicitud === idSolicitudActual) {
         movimientos.value = resultado
       }
@@ -31,6 +32,18 @@ export const useTiendaMovimientos = defineStore('movimientos', () => {
         cargando.value = false
       }
     }
+  }
+
+  async function cargar(cuentaId: number): Promise<void> {
+    await cargarConFiltro(`/movimientos?cuenta_id=${cuentaId}`)
+  }
+
+  async function cargarPorCategoria(categoriaId: number): Promise<void> {
+    await cargarConFiltro(`/movimientos?categoria_id=${categoriaId}&solo_gastos=true`)
+  }
+
+  async function cargarPorSubcategoria(subcategoriaId: number): Promise<void> {
+    await cargarConFiltro(`/movimientos?subcategoria_id=${subcategoriaId}&solo_gastos=true`)
   }
 
   async function crear(datos: DatosMovimiento): Promise<void> {
@@ -49,5 +62,22 @@ export const useTiendaMovimientos = defineStore('movimientos', () => {
     movimientos.value = movimientos.value.filter((m) => m.id !== id)
   }
 
-  return { movimientos, cargando, error, cargar, crear, actualizar, eliminar }
+  function limpiar(): void {
+    ++idSolicitudActual
+    movimientos.value = []
+    error.value = null
+  }
+
+  return {
+    movimientos,
+    cargando,
+    error,
+    cargar,
+    cargarPorCategoria,
+    cargarPorSubcategoria,
+    crear,
+    actualizar,
+    eliminar,
+    limpiar,
+  }
 })

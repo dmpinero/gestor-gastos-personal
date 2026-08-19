@@ -64,3 +64,13 @@ def el_movimiento_aparece(cliente: TestClient, respuesta, contexto: dict) -> Non
 @then(parsers.parse('el primero de la lista es el de la fecha "{fecha}"'))
 def el_primero_es_de_la_fecha(listado: list, fecha: str) -> None:
     assert listado[0]["fecha_valor"] == fecha
+
+
+@when("consulto el listado de movimientos de esa categoría", target_fixture="listado")
+def listar_movimientos_por_categoria(cliente: TestClient, contexto: dict) -> list:
+    return cliente.get(f"/api/v1/movimientos?categoria_id={contexto['categoria_id']}").json()
+
+
+@then("el movimiento aparece en el listado")
+def el_movimiento_aparece_en_el_listado(listado: list) -> None:
+    assert len(listado) == 1

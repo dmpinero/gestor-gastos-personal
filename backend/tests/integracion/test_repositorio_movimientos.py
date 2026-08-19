@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from gestor_gastos.dominio.categoria.entidades import Categoria
+from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
@@ -180,3 +180,70 @@ def test_sumar_gastos_e_ingresos_por_categoria(sesion_bd) -> None:
 
     assert repositorio.sumar_gastos_por_categoria() == {categoria.id: Decimal("-10.00")}
     assert repositorio.sumar_ingresos_por_categoria() == {otra_categoria.id: Decimal("1500.00")}
+
+
+def test_listar_por_categoria_cruza_cuentas_y_puede_filtrar_solo_gastos(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    otra_cuenta = RepositorioCuentasSqlAlchemy(sesion_bd).crear(
+        CuentaBancaria(numero_cuenta="ES01")
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Gasto cuenta 1",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=otra_cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 2),
+            descripcion="Gasto cuenta 2",
+            importe=Decimal("-20.00"),
+            saldo=Decimal("200.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 3),
+            descripcion="Ingreso",
+            importe=Decimal("500.00"),
+            saldo=Decimal("600.00"),
+        )
+    )
+
+    todos = repositorio.listar_por_categoria(categoria.id)
+    assert [m.descripcion for m in todos] == ["Ingreso", "Gasto cuenta 2", "Gasto cuenta 1"]
+
+    solo_gastos = repositorio.listar_por_categoria(categoria.id, solo_gastos=True)
+    assert [m.descripcion for m in solo_gastos] == ["Gasto cuenta 2", "Gasto cuenta 1"]
+
+
+def test_listar_por_subcategoria_cruza_cuentas(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    subcategoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_subcategoria(
+        Subcategoria(nombre="Supermercado", categoria_id=categoria.id)
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    movimiento = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Compra súper",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    movimientos = repositorio.listar_por_subcategoria(subcategoria.id)
+
+    assert [m.id for m in movimientos] == [movimiento.id]

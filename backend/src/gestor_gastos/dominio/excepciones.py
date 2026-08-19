@@ -8,3 +8,7 @@ class NombreDuplicadoError(Exception):
 
 class EntidadConDependenciasError(Exception):
     """Se lanza al intentar eliminar una entidad que tiene otras entidades asociadas."""
+
+
+class FiltroDeListadoInvalidoError(Exception):
+    """Se lanza cuando un listado recibe una combinación inválida de filtros."""

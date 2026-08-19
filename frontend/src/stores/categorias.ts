@@ -54,9 +54,11 @@ export const useTiendaCategorias = defineStore('categorias', () => {
     idCategoria: number,
     idSubcategoria: number,
     nombre: string,
+    categoriaId: number,
   ): Promise<void> {
     await clienteApi.actualizar(`/categorias/${idCategoria}/subcategorias/${idSubcategoria}`, {
       nombre,
+      categoria_id: categoriaId,
     })
     await cargar()
   }

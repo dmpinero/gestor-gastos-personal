@@ -145,11 +145,12 @@ def test_mismo_nombre_de_subcategoria_en_categorias_distintas_permitido() -> Non
 
 def test_actualizar_subcategoria_renombra() -> None:
     repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafes")
 
-    actualizada = ActualizarSubcategoria(repo).ejecutar(
-        subcategoria.id, "Cafeterías y restaurantes"
+    actualizada = ActualizarSubcategoria(repo, repo_movimientos).ejecutar(
+        subcategoria.id, "Cafeterías y restaurantes", categoria.id
     )
 
     assert actualizada.nombre == "Cafeterías y restaurantes"
@@ -157,34 +158,102 @@ def test_actualizar_subcategoria_renombra() -> None:
 
 def test_actualizar_subcategoria_con_su_propio_nombre_no_falla() -> None:
     repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafes")
 
-    actualizada = ActualizarSubcategoria(repo).ejecutar(subcategoria.id, "Cafes")
+    actualizada = ActualizarSubcategoria(repo, repo_movimientos).ejecutar(
+        subcategoria.id, "Cafes", categoria.id
+    )
 
     assert actualizada.nombre == "Cafes"
 
 
 def test_actualizar_subcategoria_con_nombre_de_otra_de_la_misma_categoria_falla() -> None:
     repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     CrearSubcategoria(repo).ejecutar(categoria.id, "Cafes")
     hoteles = CrearSubcategoria(repo).ejecutar(categoria.id, "Hoteles")
 
     with pytest.raises(NombreDuplicadoError):
-        ActualizarSubcategoria(repo).ejecutar(hoteles.id, "Cafes")
+        ActualizarSubcategoria(repo, repo_movimientos).ejecutar(hoteles.id, "Cafes", categoria.id)
 
 
 def test_actualizar_subcategoria_con_nombre_de_otra_categoria_no_falla() -> None:
     repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
     compras = CrearCategoria(repo).ejecutar("Compras")
     hogar = CrearCategoria(repo).ejecutar("Hogar")
     CrearSubcategoria(repo).ejecutar(compras.id, "Otros")
     de_hogar = CrearSubcategoria(repo).ejecutar(hogar.id, "Varios")
 
-    actualizada = ActualizarSubcategoria(repo).ejecutar(de_hogar.id, "Otros")
+    actualizada = ActualizarSubcategoria(repo, repo_movimientos).ejecutar(
+        de_hogar.id, "Otros", hogar.id
+    )
 
     assert actualizada.nombre == "Otros"
+
+
+def test_actualizar_subcategoria_con_categoria_destino_inexistente_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafes")
+
+    with pytest.raises(EntidadNoEncontradaError):
+        ActualizarSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id, "Cafes", 999)
+
+
+def test_mover_subcategoria_a_otra_categoria_la_reasigna() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    origen = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    destino = CrearCategoria(repo).ejecutar("Hogar")
+    subcategoria = CrearSubcategoria(repo).ejecutar(origen.id, "Cafes")
+
+    actualizada = ActualizarSubcategoria(repo, repo_movimientos).ejecutar(
+        subcategoria.id, "Cafes", destino.id
+    )
+
+    assert actualizada.categoria_id == destino.id
+
+
+def test_mover_subcategoria_con_nombre_duplicado_en_categoria_destino_falla() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    origen = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    destino = CrearCategoria(repo).ejecutar("Hogar")
+    subcategoria = CrearSubcategoria(repo).ejecutar(origen.id, "Otros")
+    CrearSubcategoria(repo).ejecutar(destino.id, "Otros")
+
+    with pytest.raises(NombreDuplicadoError):
+        ActualizarSubcategoria(repo, repo_movimientos).ejecutar(
+            subcategoria.id, "Otros", destino.id
+        )
+
+
+def test_mover_subcategoria_actualiza_la_categoria_de_sus_movimientos() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    origen = CrearCategoria(repo).ejecutar("Ocio y viajes")
+    destino = CrearCategoria(repo).ejecutar("Hogar")
+    subcategoria = CrearSubcategoria(repo).ejecutar(origen.id, "Cafes")
+    movimiento = repo_movimientos.crear(
+        Movimiento(
+            cuenta_id=1,
+            categoria_id=origen.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Café",
+            importe=Decimal("-3.50"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    ActualizarSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id, "Cafes", destino.id)
+
+    assert repo_movimientos.obtener_por_id(movimiento.id).categoria_id == destino.id
 
 
 def test_eliminar_subcategoria_con_movimientos_falla() -> None:

@@ -43,6 +43,23 @@ def test_contar_y_eliminar_subcategorias_de(sesion_bd) -> None:
     assert repositorio.obtener_subcategoria_por_id(subcategoria.id) is None
 
 
+def test_actualizar_subcategoria_persiste_nombre_y_categoria(sesion_bd) -> None:
+    repositorio = RepositorioCategoriasSqlAlchemy(sesion_bd)
+    origen = repositorio.crear_categoria(Categoria(nombre="Ocio y viajes"))
+    destino = repositorio.crear_categoria(Categoria(nombre="Hogar"))
+    subcategoria = repositorio.crear_subcategoria(
+        Subcategoria(nombre="Cafes", categoria_id=origen.id)
+    )
+
+    subcategoria.nombre = "Cafeterías"
+    subcategoria.categoria_id = destino.id
+    repositorio.actualizar_subcategoria(subcategoria)
+
+    actualizada = repositorio.obtener_subcategoria_por_id(subcategoria.id)
+    assert actualizada.nombre == "Cafeterías"
+    assert actualizada.categoria_id == destino.id
+
+
 def test_actualizar_y_eliminar_categoria(sesion_bd) -> None:
     repositorio = RepositorioCategoriasSqlAlchemy(sesion_bd)
     categoria = repositorio.crear_categoria(Categoria(nombre="Ocio"))

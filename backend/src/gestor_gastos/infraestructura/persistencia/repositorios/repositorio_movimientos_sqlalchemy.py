@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
@@ -151,6 +151,16 @@ class RepositorioMovimientosSqlAlchemy:
     def eliminar_movimientos_por_subcategoria(self, id_subcategoria: int) -> None:
         self._sesion.execute(
             delete(MovimientoModelo).where(MovimientoModelo.subcategoria_id == id_subcategoria)
+        )
+        self._sesion.commit()
+
+    def actualizar_categoria_de_movimientos_por_subcategoria(
+        self, id_subcategoria: int, id_categoria: int
+    ) -> None:
+        self._sesion.execute(
+            update(MovimientoModelo)
+            .where(MovimientoModelo.subcategoria_id == id_subcategoria)
+            .values(categoria_id=id_categoria)
         )
         self._sesion.commit()
 

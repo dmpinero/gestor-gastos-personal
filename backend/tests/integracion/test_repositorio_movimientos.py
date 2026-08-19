@@ -121,6 +121,34 @@ def test_eliminar_movimientos_por_cuenta_categoria_y_subcategoria(sesion_bd) -> 
     assert repositorio.obtener_por_id(movimiento.id) is None
 
 
+def test_actualizar_categoria_de_movimientos_por_subcategoria(sesion_bd) -> None:
+    cuenta, categoria_origen = _preparar_cuenta_y_categoria(sesion_bd)
+    categoria_destino = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_categoria(
+        Categoria(nombre="Hogar")
+    )
+    subcategoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_subcategoria(
+        Subcategoria(nombre="Cafes", categoria_id=categoria_origen.id)
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    movimiento = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria_origen.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Café",
+            importe=Decimal("-3.50"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    repositorio.actualizar_categoria_de_movimientos_por_subcategoria(
+        subcategoria.id, categoria_destino.id
+    )
+
+    assert repositorio.obtener_por_id(movimiento.id).categoria_id == categoria_destino.id
+
+
 def test_obtener_ultimo_saldo(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)

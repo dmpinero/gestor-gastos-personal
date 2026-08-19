@@ -2,7 +2,7 @@
 import { Pencil, X } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 
-import type { Categoria } from '@/api/tipos'
+import type { Categoria, Subcategoria } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
@@ -10,6 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/componentes/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 import DialogoConfirmarEliminacion, {
   type Dependencia,
@@ -24,6 +31,12 @@ const panelAbierto = ref(false)
 const idEnEdicion = ref<number | null>(null)
 const nombreFormulario = ref('')
 const seleccionadas = ref<Set<number>>(new Set())
+
+const panelSubcategoriaAbierto = ref(false)
+const subcategoriaEnEdicion = ref<{ id: number; categoriaOrigenId: number } | null>(null)
+const nombreSubcategoriaFormulario = ref('')
+const categoriaDestinoFormulario = ref<string | undefined>(undefined)
+const errorPanelSubcategoria = ref<string | null>(null)
 
 const todasSeleccionadas = computed(
   () =>
@@ -175,6 +188,32 @@ async function eliminarSubcategoria(
     error.value = (motivo as Error).message
   }
 }
+
+function abrirParaEditarSubcategoria(idCategoria: number, sub: Subcategoria): void {
+  subcategoriaEnEdicion.value = { id: sub.id, categoriaOrigenId: idCategoria }
+  nombreSubcategoriaFormulario.value = sub.nombre
+  categoriaDestinoFormulario.value = String(idCategoria)
+  errorPanelSubcategoria.value = null
+  panelSubcategoriaAbierto.value = true
+}
+
+async function guardarSubcategoria(): Promise<void> {
+  if (subcategoriaEnEdicion.value === null || categoriaDestinoFormulario.value === undefined) {
+    return
+  }
+  errorPanelSubcategoria.value = null
+  try {
+    await tienda.actualizarSubcategoria(
+      subcategoriaEnEdicion.value.categoriaOrigenId,
+      subcategoriaEnEdicion.value.id,
+      nombreSubcategoriaFormulario.value,
+      Number(categoriaDestinoFormulario.value),
+    )
+    panelSubcategoriaAbierto.value = false
+  } catch (motivo) {
+    errorPanelSubcategoria.value = (motivo as Error).message
+  }
+}
 </script>
 
 <template>
@@ -275,6 +314,15 @@ async function eliminarSubcategoria(
             <li v-for="sub in item.subcategorias" :key="sub.id">
               <Badge variant="secondary" class="gap-1 py-1 pr-1 pl-3 text-sm font-normal">
                 <span>{{ sub.nombre }}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="size-4 rounded-full hover:bg-background/60"
+                  aria-label="Editar"
+                  @click="abrirParaEditarSubcategoria(item.categoria.id, sub)"
+                >
+                  <Pencil class="size-3" />
+                </Button>
                 <DialogoConfirmarEliminacion
                   :descripcion="`la subcategoría ${sub.nombre}`"
                   :obtener-dependencias="
@@ -308,5 +356,59 @@ async function eliminarSubcategoria(
         </CardContent>
       </Card>
     </div>
+
+    <Sheet v-model:open="panelSubcategoriaAbierto">
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Editar subcategoría</SheetTitle>
+        </SheetHeader>
+
+        <form class="flex flex-col gap-3 px-4" @submit.prevent="guardarSubcategoria">
+          <div class="flex flex-col gap-1.5">
+            <Label for="nombre-subcategoria">Nombre</Label>
+            <Input
+              id="nombre-subcategoria"
+              v-model="nombreSubcategoriaFormulario"
+              placeholder="Nombre de la subcategoría"
+              required
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label id="etiqueta-categoria-subcategoria" for="selector-categoria-subcategoria"
+              >Categoría</Label
+            >
+            <Select v-model="categoriaDestinoFormulario">
+              <SelectTrigger
+                id="selector-categoria-subcategoria"
+                aria-labelledby="etiqueta-categoria-subcategoria"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="cat in tienda.categorias"
+                  :key="cat.categoria.id"
+                  :value="String(cat.categoria.id)"
+                >
+                  {{ cat.categoria.nombre }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <p v-if="errorPanelSubcategoria" class="text-sm text-destructive" role="alert">
+            {{ errorPanelSubcategoria }}
+          </p>
+
+          <div class="flex gap-2">
+            <Button type="submit" variant="success">Guardar cambios</Button>
+            <Button type="button" variant="destructive" @click="panelSubcategoriaAbierto = false"
+              >Cancelar</Button
+            >
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
   </section>
 </template>

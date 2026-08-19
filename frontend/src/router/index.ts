@@ -6,6 +6,7 @@ import VistaCategorias from '@/vistas/VistaCategorias.vue'
 import VistaMovimientos from '@/vistas/VistaMovimientos.vue'
 import VistaImportarExcel from '@/vistas/VistaImportarExcel.vue'
 import VistaHistorialGastos from '@/vistas/VistaHistorialGastos.vue'
+import VistaResumenAnual from '@/vistas/VistaResumenAnual.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -56,6 +57,11 @@ const router = createRouter({
       path: '/historial/subcategoria/:id',
       name: 'historial-subcategoria',
       component: VistaHistorialGastos,
+    },
+    {
+      path: '/resumen-anual',
+      name: 'resumen-anual',
+      component: VistaResumenAnual,
     },
   ],
 })

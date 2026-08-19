@@ -1,0 +1,52 @@
+from decimal import Decimal
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+Periodicidad = Literal["mensual", "trimestral", "semestral", "anual"]
+
+
+class ConceptoPrevistoCrearEsquema(BaseModel):
+    categoria_id: int
+    subcategoria_id: int | None = None
+    periodicidad: Periodicidad
+    # Si se omite en una periodicidad distinta de "mensual", el dominio
+    # asume el mes 1 (ver ConceptoPrevisto.meses_aplicables).
+    mes_inicio: int | None = Field(default=None, ge=1, le=12)
+    importe_previsto: Decimal = Field(max_digits=12, decimal_places=2)
+
+
+class ConceptoPrevistoActualizarEsquema(ConceptoPrevistoCrearEsquema):
+    pass
+
+
+class ConceptoPrevistoSalidaEsquema(BaseModel):
+    id: int
+    categoria_id: int
+    subcategoria_id: int | None
+    periodicidad: Periodicidad
+    mes_inicio: int | None
+    importe_previsto: Decimal
+
+
+class ValorMensualEsquema(BaseModel):
+    mes: int
+    importe: Decimal
+    es_previsto: bool
+
+
+class FilaResumenAnualEsquema(BaseModel):
+    concepto_id: int
+    categoria_id: int
+    subcategoria_id: int | None
+    nombre: str
+    periodicidad: Periodicidad
+    valores: list[ValorMensualEsquema]
+
+
+class ResumenAnualEsquema(BaseModel):
+    anio: int
+    filas_gastos: list[FilaResumenAnualEsquema]
+    filas_ingresos: list[FilaResumenAnualEsquema]
+    totales_gastos: list[Decimal]
+    totales_ingresos: list[Decimal]

@@ -8,6 +8,7 @@ const RUTAS = [
   '/gestion/movimientos',
   '/importar',
   '/historial',
+  '/resumen-anual',
 ]
 
 async function auditarPagina(page: import('@playwright/test').Page) {

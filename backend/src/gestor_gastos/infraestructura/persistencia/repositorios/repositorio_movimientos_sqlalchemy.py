@@ -189,3 +189,20 @@ class RepositorioMovimientosSqlAlchemy:
                 .group_by(MovimientoModelo.categoria_id)
             ).all()
         )
+
+    def sumar_movimientos_por_mes(self, anio: int) -> dict[tuple[int, int | None, int], Decimal]:
+        mes = func.extract("month", MovimientoModelo.fecha_valor)
+        filas = self._sesion.execute(
+            select(
+                MovimientoModelo.categoria_id,
+                MovimientoModelo.subcategoria_id,
+                mes,
+                func.sum(MovimientoModelo.importe),
+            )
+            .where(func.extract("year", MovimientoModelo.fecha_valor) == anio)
+            .group_by(MovimientoModelo.categoria_id, MovimientoModelo.subcategoria_id, mes)
+        ).all()
+        return {
+            (categoria_id, subcategoria_id, int(mes)): total
+            for categoria_id, subcategoria_id, mes, total in filas
+        }

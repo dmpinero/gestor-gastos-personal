@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from gestor_gastos.infraestructura.persistencia.sesion import Base
@@ -68,3 +68,17 @@ class MovimientoModelo(Base):
     cuenta: Mapped[CuentaBancariaModelo] = relationship(back_populates="movimientos")
     categoria: Mapped[CategoriaModelo] = relationship(back_populates="movimientos")
     subcategoria: Mapped[SubcategoriaModelo | None] = relationship(back_populates="movimientos")
+
+
+class ConceptoPrevistoModelo(Base):
+    __tablename__ = "conceptos_previstos"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    categoria_id: Mapped[int] = mapped_column(ForeignKey("categorias.id"))
+    subcategoria_id: Mapped[int | None] = mapped_column(ForeignKey("subcategorias.id"))
+    periodicidad: Mapped[str] = mapped_column(String(20))
+    mes_inicio: Mapped[int | None] = mapped_column(Integer)
+    importe_previsto: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+
+    categoria: Mapped[CategoriaModelo] = relationship()
+    subcategoria: Mapped[SubcategoriaModelo | None] = relationship()

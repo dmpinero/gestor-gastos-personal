@@ -6,6 +6,7 @@ from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
+from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
 
 
 class RepositorioCuentasFalso:
@@ -225,6 +226,46 @@ class RepositorioMovimientosFalso:
                     totales.get(movimiento.categoria_id, Decimal("0")) + movimiento.importe
                 )
         return totales
+
+    def sumar_movimientos_por_mes(self, anio: int) -> dict[tuple[int, int | None, int], Decimal]:
+        totales: dict[tuple[int, int | None, int], Decimal] = {}
+        for movimiento in self._movimientos.values():
+            if movimiento.fecha_valor.year != anio:
+                continue
+            clave = (
+                movimiento.categoria_id,
+                movimiento.subcategoria_id,
+                movimiento.fecha_valor.month,
+            )
+            totales[clave] = totales.get(clave, Decimal("0")) + movimiento.importe
+        return totales
+
+
+class RepositorioPrevisionesFalso:
+    """Doble de RepositorioPrevisiones en memoria."""
+
+    def __init__(self) -> None:
+        self._conceptos: dict[int, ConceptoPrevisto] = {}
+        self._siguiente_id = 1
+
+    def crear(self, concepto: ConceptoPrevisto) -> ConceptoPrevisto:
+        concepto.id = self._siguiente_id
+        self._conceptos[concepto.id] = concepto
+        self._siguiente_id += 1
+        return concepto
+
+    def obtener_por_id(self, id_concepto: int) -> ConceptoPrevisto | None:
+        return self._conceptos.get(id_concepto)
+
+    def listar(self) -> list[ConceptoPrevisto]:
+        return list(self._conceptos.values())
+
+    def actualizar(self, concepto: ConceptoPrevisto) -> ConceptoPrevisto:
+        self._conceptos[concepto.id] = concepto
+        return concepto
+
+    def eliminar(self, id_concepto: int) -> None:
+        self._conceptos.pop(id_concepto, None)
 
 
 class LectorExcelFalso:

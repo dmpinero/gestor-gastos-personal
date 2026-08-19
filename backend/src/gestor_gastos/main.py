@@ -17,6 +17,7 @@ from gestor_gastos.interfaces.api.v1.enrutadores import (
     dashboard,
     importacion,
     movimientos,
+    prevision,
     salud,
 )
 
@@ -43,6 +44,7 @@ def crear_aplicacion() -> FastAPI:
     aplicacion.include_router(movimientos.enrutador, prefix="/api/v1")
     aplicacion.include_router(importacion.enrutador, prefix="/api/v1")
     aplicacion.include_router(dashboard.enrutador, prefix="/api/v1")
+    aplicacion.include_router(prevision.enrutador, prefix="/api/v1")
 
     Instrumentator().instrument(aplicacion).expose(
         aplicacion, endpoint="/metricas", include_in_schema=False

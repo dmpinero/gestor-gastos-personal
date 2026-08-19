@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { CalendarDays, Euro, FileText, Pencil, Search, Trash2, Wallet } from '@lucide/vue'
+import {
+  CalendarDays,
+  Euro,
+  FileText,
+  Pencil,
+  Search,
+  Tag,
+  Tags,
+  Trash2,
+  Wallet,
+} from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -90,14 +100,44 @@ const subcategoriasDeLaCategoria = computed(() => {
   return categoria?.subcategorias ?? []
 })
 
+function nombreCategoria(idCategoria: number): string {
+  return (
+    tiendaCategorias.categorias.find((c) => c.categoria.id === idCategoria)?.categoria.nombre ?? ''
+  )
+}
+
+function nombreSubcategoria(idSubcategoria: number | null): string {
+  if (idSubcategoria === null) return ''
+  for (const c of tiendaCategorias.categorias) {
+    const sub = c.subcategorias.find((s) => s.id === idSubcategoria)
+    if (sub) return sub.nombre
+  }
+  return ''
+}
+
+function compararTexto(a: string, b: string): number {
+  return a.localeCompare(b)
+}
+
 const { busqueda, filasFiltradas } = useBusquedaTabla(
   computed(() => tiendaMovimientos.movimientos),
-  (m) => [formatearFecha(m.fecha_valor), m.descripcion, m.importe, m.saldo],
+  (m) => [
+    formatearFecha(m.fecha_valor),
+    m.descripcion,
+    nombreCategoria(m.categoria_id),
+    nombreSubcategoria(m.subcategoria_id),
+    m.importe,
+    m.saldo,
+  ],
 )
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
   descripcion: (a: Movimiento, b: Movimiento) => a.descripcion.localeCompare(b.descripcion),
+  categoria_id: (a: Movimiento, b: Movimiento) =>
+    compararTexto(nombreCategoria(a.categoria_id), nombreCategoria(b.categoria_id)),
+  subcategoria_id: (a: Movimiento, b: Movimiento) =>
+    compararTexto(nombreSubcategoria(a.subcategoria_id), nombreSubcategoria(b.subcategoria_id)),
   importe: (a: Movimiento, b: Movimiento) => Number(a.importe) - Number(b.importe),
   saldo: (a: Movimiento, b: Movimiento) => Number(a.saldo) - Number(b.saldo),
 })
@@ -381,6 +421,26 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </TableHead>
           <TableHead>
             <CabeceraOrdenable
+              :icono="Tag"
+              color-icono="text-violet-500"
+              :activo="campo === 'categoria_id'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('categoria_id')"
+              >Categoría</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
+              :icono="Tags"
+              color-icono="text-rose-500"
+              :activo="campo === 'subcategoria_id'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('subcategoria_id')"
+              >Subcategoría</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
               :icono="Euro"
               color-icono="text-amber-500"
               :activo="campo === 'importe'"
@@ -413,6 +473,8 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </TableCell>
           <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
           <TableCell>{{ movimiento.descripcion }}</TableCell>
+          <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
+          <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
           <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
           <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
           <TableCell class="text-right">

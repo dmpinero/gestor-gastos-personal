@@ -58,15 +58,35 @@ function historialActivo(path: string): boolean {
 
 const gestionAbierta = ref(gestionActiva(ruta.path))
 const historialAbierta = ref(historialActivo(ruta.path))
+const categoriasAbiertas = ref<Set<number>>(new Set())
 
-// Al navegar a una sección, se expande automáticamente si estaba colapsada;
-// nunca se contrae sola (para no ocultar de golpe lo que el usuario abrió).
+function categoriaAbierta(idCategoria: number): boolean {
+  return categoriasAbiertas.value.has(idCategoria)
+}
+
+function alternarCategoria(idCategoria: number, abierta: boolean): void {
+  const nuevo = new Set(categoriasAbiertas.value)
+  if (abierta) nuevo.add(idCategoria)
+  else nuevo.delete(idCategoria)
+  categoriasAbiertas.value = nuevo
+}
+
+// Al navegar a una sección (o a la categoría/subcategoría de Historial que
+// corresponda), se expande automáticamente si estaba colapsada; nunca se
+// contrae sola (para no ocultar de golpe lo que el usuario abrió).
 watch(
-  () => ruta.path,
-  (path) => {
+  [() => ruta.path, () => tiendaCategorias.categorias],
+  ([path, categorias]) => {
     if (gestionActiva(path)) gestionAbierta.value = true
     if (historialActivo(path)) historialAbierta.value = true
+    for (const item of categorias) {
+      const enEstaCategoria =
+        path === `/historial/categoria/${item.categoria.id}` ||
+        item.subcategorias.some((sub) => path === `/historial/subcategoria/${sub.id}`)
+      if (enEstaCategoria) alternarCategoria(item.categoria.id, true)
+    }
   },
+  { immediate: true },
 )
 </script>
 
@@ -170,38 +190,62 @@ watch(
                       v-for="item in tiendaCategorias.categorias"
                       :key="item.categoria.id"
                     >
-                      <SidebarMenuSubButton
-                        as-child
-                        :is-active="ruta.path === `/historial/categoria/${item.categoria.id}`"
+                      <Collapsible
+                        :open="categoriaAbierta(item.categoria.id)"
+                        class="relative"
+                        @update:open="(valor) => alternarCategoria(item.categoria.id, valor)"
                       >
-                        <RouterLink
-                          :to="`/historial/categoria/${item.categoria.id}`"
-                          :aria-current="
-                            ruta.path === `/historial/categoria/${item.categoria.id}`
-                              ? 'page'
-                              : undefined
-                          "
+                        <SidebarMenuSubButton
+                          as-child
+                          :is-active="ruta.path === `/historial/categoria/${item.categoria.id}`"
+                          :class="item.subcategorias.length > 0 ? 'pr-7' : ''"
                         >
-                          <Tag class="text-violet-500" />
-                          <span class="truncate">{{ item.categoria.nombre }}</span>
-                        </RouterLink>
-                      </SidebarMenuSubButton>
-                      <ul
-                        v-if="item.subcategorias.length > 0"
-                        class="ml-6 flex flex-col gap-0.5 py-0.5"
-                      >
-                        <li v-for="sub in item.subcategorias" :key="sub.id">
                           <RouterLink
-                            :to="`/historial/subcategoria/${sub.id}`"
+                            :to="`/historial/categoria/${item.categoria.id}`"
                             :aria-current="
-                              ruta.path === `/historial/subcategoria/${sub.id}` ? 'page' : undefined
+                              ruta.path === `/historial/categoria/${item.categoria.id}`
+                                ? 'page'
+                                : undefined
                             "
-                            class="text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground block truncate rounded-md px-2 py-1 text-xs aria-[current=page]:font-medium"
                           >
-                            {{ sub.nombre }}
+                            <Tag class="text-violet-500" />
+                            <span class="truncate">{{ item.categoria.nombre }}</span>
                           </RouterLink>
-                        </li>
-                      </ul>
+                        </SidebarMenuSubButton>
+                        <CollapsibleTrigger v-if="item.subcategorias.length > 0" as-child>
+                          <button
+                            type="button"
+                            :aria-label="
+                              categoriaAbierta(item.categoria.id)
+                                ? `Contraer ${item.categoria.nombre}`
+                                : `Expandir ${item.categoria.nombre}`
+                            "
+                            class="text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground absolute top-0.5 right-0.5 flex size-6 items-center justify-center rounded-md"
+                          >
+                            <ChevronRight
+                              class="size-3.5 transition-transform"
+                              :class="categoriaAbierta(item.categoria.id) ? 'rotate-90' : ''"
+                            />
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent v-if="item.subcategorias.length > 0">
+                          <ul class="ml-6 flex flex-col gap-0.5 py-0.5">
+                            <li v-for="sub in item.subcategorias" :key="sub.id">
+                              <RouterLink
+                                :to="`/historial/subcategoria/${sub.id}`"
+                                :aria-current="
+                                  ruta.path === `/historial/subcategoria/${sub.id}`
+                                    ? 'page'
+                                    : undefined
+                                "
+                                class="text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground block truncate rounded-md px-2 py-1 text-xs aria-[current=page]:font-medium"
+                              >
+                                {{ sub.nombre }}
+                              </RouterLink>
+                            </li>
+                          </ul>
+                        </CollapsibleContent>
+                      </Collapsible>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
                 </CollapsibleContent>

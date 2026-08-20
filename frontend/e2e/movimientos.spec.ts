@@ -122,6 +122,57 @@ test('la fecha se muestra en formato dd/mm/aaaa, y el buscador y las cabeceras o
   await page.screenshot({ path: 'e2e/capturas/movimientos-07-ordenado.png' })
 })
 
+test('la tabla se pagina, permite cambiar el tamaño de página y muestra el total de registros', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-PAG ${sufijo}`
+  const nombreCategoria = `Categoría MOV-PAG ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await page.getByLabel('Cuenta').click()
+  await page.getByRole('option', { name: numeroCuenta }).click()
+
+  for (let i = 1; i <= 11; i++) {
+    const descripcion = `Movimiento PAG-${i} ${sufijo}`
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill('2026-01-01')
+    await panel.getByLabel('Categoría', { exact: true }).click()
+    await page.getByRole('option', { name: nombreCategoria }).click()
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill('-1.00')
+    await panel.getByPlaceholder('Saldo').fill('100.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  await expect(page.getByText('Mostrando 1–10 de 11 movimientos')).toBeVisible()
+  await expect(page.locator('tbody tr')).toHaveCount(10)
+
+  await page.getByRole('button', { name: 'Siguiente' }).click()
+  await expect(page.getByText('Mostrando 11–11 de 11 movimientos')).toBeVisible()
+  await expect(page.locator('tbody tr')).toHaveCount(1)
+
+  await page.getByLabel('Elementos por página').click()
+  await page.getByRole('option', { name: 'Todas' }).click()
+  await expect(page.locator('tbody tr')).toHaveCount(11)
+})
+
 test('seleccionar varios movimientos y eliminarlos en bloque', async ({ page }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 MOV-BLOQUE ${sufijo}`

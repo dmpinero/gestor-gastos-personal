@@ -28,3 +28,14 @@ Característica: Resumen anual de previsión
     Y consulto el resumen anual de 2026
     Entonces la importación actualiza 1 celda
     Y el concepto muestra el importe ajustado "-60.00" en el mes 1
+
+  Escenario: Importar un Excel de conceptos previstos crea categoría, subcategoría y concepto
+    Cuando importo un Excel de conceptos previstos con la fila "Suscripciones" / "Streaming" / "mensual" / "-9.99"
+    Entonces la importación de conceptos previstos crea 1 concepto
+    Y la importación de conceptos previstos crea la categoría "Suscripciones"
+    Y la importación de conceptos previstos crea la subcategoría "Streaming"
+
+  Escenario: Reimportar el mismo Excel de conceptos previstos omite el concepto por duplicado
+    Dado que ya se importó un Excel de conceptos previstos con la fila "Suscripciones" / "Streaming" / "mensual" / "-9.99"
+    Cuando reimporto el mismo Excel de conceptos previstos
+    Entonces la importación de conceptos previstos omite 1 concepto por duplicado

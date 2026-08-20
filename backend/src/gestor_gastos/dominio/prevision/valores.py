@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Literal
 
@@ -55,3 +55,26 @@ class ResumenImportacionResumenAnual:
     celdas_actualizadas: int = 0
     celdas_eliminadas: int = 0
     conceptos_no_encontrados: int = 0
+
+
+@dataclass(frozen=True)
+class FilaConceptoPrevistoExcel:
+    """Una fila leída del Excel de alta masiva de conceptos previstos."""
+
+    categoria: str
+    subcategoria: str | None
+    periodicidad: Periodicidad
+    importe_previsto: Decimal
+
+
+@dataclass(frozen=True)
+class DatosConceptosPrevistosExcelLeidos:
+    filas: list[FilaConceptoPrevistoExcel]
+
+
+@dataclass
+class ResumenImportacionConceptosPrevistos:
+    conceptos_creados: int = 0
+    conceptos_omitidos_por_duplicado: int = 0
+    categorias_creadas: list[str] = field(default_factory=list)
+    subcategorias_creadas: list[str] = field(default_factory=list)

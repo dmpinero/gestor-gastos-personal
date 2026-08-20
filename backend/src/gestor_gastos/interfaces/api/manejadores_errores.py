@@ -12,7 +12,12 @@ from gestor_gastos.dominio.importacion.excepciones import (
     ExtensionNoSoportadaError,
     FicheroSinMovimientosError,
 )
-from gestor_gastos.dominio.prevision.excepciones import HojaExcelNoReconocidaError
+from gestor_gastos.dominio.prevision.excepciones import (
+    FicheroSinConceptosPrevistosError,
+    HojaExcelNoReconocidaError,
+    ImportePrevistoInvalidoError,
+    PeriodicidadNoReconocidaError,
+)
 
 
 def _respuesta(codigo: int, error: Exception) -> JSONResponse:
@@ -54,4 +59,22 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
 
     @aplicacion.exception_handler(HojaExcelNoReconocidaError)
     async def _hoja_no_reconocida(_: Request, error: HojaExcelNoReconocidaError) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(FicheroSinConceptosPrevistosError)
+    async def _fichero_sin_conceptos_previstos(
+        _: Request, error: FicheroSinConceptosPrevistosError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(PeriodicidadNoReconocidaError)
+    async def _periodicidad_no_reconocida(
+        _: Request, error: PeriodicidadNoReconocidaError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(ImportePrevistoInvalidoError)
+    async def _importe_previsto_invalido(
+        _: Request, error: ImportePrevistoInvalidoError
+    ) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)

@@ -136,3 +136,108 @@ def reimporto_excel_editado(cliente: TestClient, excel_resumen_anual: bytes, ani
 @then(parsers.parse("la importación actualiza {cantidad:d} celda"))
 def la_importacion_actualiza_n_celdas(resultado_importacion: dict, cantidad: int) -> None:
     assert resultado_importacion["celdas_actualizadas"] == cantidad
+
+
+def _construir_excel_conceptos_previstos(
+    categoria: str, subcategoria: str, periodicidad: str, importe: str
+) -> bytes:
+    libro = openpyxl.Workbook()
+    hoja = libro.active
+    hoja.append(["Categoría", "Subcategoría", "Periodicidad", "Importe previsto"])
+    hoja.append([categoria, subcategoria, periodicidad, float(importe)])
+    buffer = io.BytesIO()
+    libro.save(buffer)
+    return buffer.getvalue()
+
+
+@when(
+    parsers.parse(
+        'importo un Excel de conceptos previstos con la fila "{categoria}" / "{subcategoria}" '
+        '/ "{periodicidad}" / "{importe}"'
+    ),
+    target_fixture="resultado_importacion_conceptos",
+)
+def importo_excel_conceptos_previstos(
+    cliente: TestClient, categoria: str, subcategoria: str, periodicidad: str, importe: str
+) -> dict:
+    contenido = _construir_excel_conceptos_previstos(categoria, subcategoria, periodicidad, importe)
+    respuesta = cliente.post(
+        "/api/v1/previsiones/importar",
+        files={
+            "fichero": (
+                "conceptos.xlsx",
+                contenido,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@given(
+    parsers.parse(
+        'que ya se importó un Excel de conceptos previstos con la fila "{categoria}" / '
+        '"{subcategoria}" / "{periodicidad}" / "{importe}"'
+    ),
+    target_fixture="excel_conceptos_previstos",
+)
+def ya_se_importo_excel_conceptos_previstos(
+    cliente: TestClient, categoria: str, subcategoria: str, periodicidad: str, importe: str
+) -> bytes:
+    contenido = _construir_excel_conceptos_previstos(categoria, subcategoria, periodicidad, importe)
+    respuesta = cliente.post(
+        "/api/v1/previsiones/importar",
+        files={
+            "fichero": (
+                "conceptos.xlsx",
+                contenido,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert respuesta.status_code == 200
+    return contenido
+
+
+@when(
+    "reimporto el mismo Excel de conceptos previstos",
+    target_fixture="resultado_importacion_conceptos",
+)
+def reimporto_excel_conceptos_previstos(
+    cliente: TestClient, excel_conceptos_previstos: bytes
+) -> dict:
+    respuesta = cliente.post(
+        "/api/v1/previsiones/importar",
+        files={
+            "fichero": (
+                "conceptos.xlsx",
+                excel_conceptos_previstos,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@then(parsers.parse("la importación de conceptos previstos crea {cantidad:d} concepto"))
+def la_importacion_crea_n_conceptos(resultado_importacion_conceptos: dict, cantidad: int) -> None:
+    assert resultado_importacion_conceptos["conceptos_creados"] == cantidad
+
+
+@then(
+    parsers.parse("la importación de conceptos previstos omite {cantidad:d} concepto por duplicado")
+)
+def la_importacion_omite_n_conceptos(resultado_importacion_conceptos: dict, cantidad: int) -> None:
+    assert resultado_importacion_conceptos["conceptos_omitidos_por_duplicado"] == cantidad
+
+
+@then(parsers.parse('la importación de conceptos previstos crea la categoría "{nombre}"'))
+def la_importacion_crea_la_categoria(resultado_importacion_conceptos: dict, nombre: str) -> None:
+    assert nombre in resultado_importacion_conceptos["categorias_creadas"]
+
+
+@then(parsers.parse('la importación de conceptos previstos crea la subcategoría "{nombre}"'))
+def la_importacion_crea_la_subcategoria(resultado_importacion_conceptos: dict, nombre: str) -> None:
+    assert nombre in resultado_importacion_conceptos["subcategorias_creadas"]

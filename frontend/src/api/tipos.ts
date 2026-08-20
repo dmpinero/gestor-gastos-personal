@@ -146,3 +146,10 @@ export interface ResumenImportacionResumenAnual {
   celdas_eliminadas: number
   conceptos_no_encontrados: number
 }
+
+export interface ResumenImportacionConceptosPrevistos {
+  conceptos_creados: number
+  conceptos_omitidos_por_duplicado: number
+  categorias_creadas: string[]
+  subcategorias_creadas: string[]
+}

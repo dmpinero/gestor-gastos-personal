@@ -63,3 +63,10 @@ class ResumenImportacionResumenAnualEsquema(BaseModel):
     celdas_actualizadas: int
     celdas_eliminadas: int
     conceptos_no_encontrados: int
+
+
+class ResumenImportacionConceptosPrevistosEsquema(BaseModel):
+    conceptos_creados: int
+    conceptos_omitidos_por_duplicado: int
+    categorias_creadas: list[str]
+    subcategorias_creadas: list[str]

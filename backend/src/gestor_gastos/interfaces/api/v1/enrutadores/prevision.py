@@ -16,6 +16,9 @@ from gestor_gastos.aplicacion.prevision.eliminar_concepto_previsto import (
 from gestor_gastos.aplicacion.prevision.exportar_resumen_anual_excel import (
     ExportarResumenAnualExcel,
 )
+from gestor_gastos.aplicacion.prevision.importar_conceptos_previstos_excel import (
+    ImportarConceptosPrevistosExcel,
+)
 from gestor_gastos.aplicacion.prevision.importar_resumen_anual_excel import (
     ImportarResumenAnualExcel,
 )
@@ -38,6 +41,9 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_previsi
 from gestor_gastos.infraestructura.prevision.escritor_excel_resumen_anual_openpyxl import (
     EscritorExcelResumenAnualOpenpyxl,
 )
+from gestor_gastos.infraestructura.prevision.lector_excel_conceptos_previstos_openpyxl import (
+    LectorExcelConceptosPrevistosOpenpyxl,
+)
 from gestor_gastos.infraestructura.prevision.lector_excel_resumen_anual_openpyxl import (
     LectorExcelResumenAnualOpenpyxl,
 )
@@ -52,6 +58,7 @@ from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
     ResumenAnualEsquema,
+    ResumenImportacionConceptosPrevistosEsquema,
     ResumenImportacionResumenAnualEsquema,
 )
 
@@ -128,7 +135,7 @@ def eliminar(id_concepto: int, sesion: Session = Depends(obtener_sesion)) -> Non
 
 @enrutador.get("/resumen-anual", response_model=ResumenAnualEsquema)
 def resumen_anual(
-    anio: int = Query(...), sesion: Session = Depends(obtener_sesion)
+    anio: int = Query(ge=1, le=9999), sesion: Session = Depends(obtener_sesion)
 ) -> ResumenAnualEsquema:
     resumen = _construir_obtener_resumen_anual(sesion).ejecutar(anio)
     return ResumenAnualEsquema(**asdict(resumen))
@@ -144,7 +151,7 @@ def resumen_anual(
     },
 )
 def exportar_resumen_anual(
-    anio: int = Query(...), sesion: Session = Depends(obtener_sesion)
+    anio: int = Query(ge=1, le=9999), sesion: Session = Depends(obtener_sesion)
 ) -> Response:
     contenido = ExportarResumenAnualExcel(
         _construir_obtener_resumen_anual(sesion), EscritorExcelResumenAnualOpenpyxl()
@@ -163,7 +170,7 @@ def exportar_resumen_anual(
 )
 async def importar_resumen_anual(
     fichero: UploadFile,
-    anio: int = Query(...),
+    anio: int = Query(ge=1, le=9999),
     sesion: Session = Depends(obtener_sesion),
 ) -> ResumenImportacionResumenAnualEsquema:
     contenido = await fichero.read()
@@ -180,6 +187,23 @@ async def importar_resumen_anual(
     return ResumenImportacionResumenAnualEsquema(**asdict(resumen))
 
 
+@enrutador.post(
+    "/importar",
+    response_model=ResumenImportacionConceptosPrevistosEsquema,
+    responses=RESPUESTA_CUERPO_MALFORMADO,
+)
+async def importar_conceptos_previstos(
+    fichero: UploadFile, sesion: Session = Depends(obtener_sesion)
+) -> ResumenImportacionConceptosPrevistosEsquema:
+    contenido = await fichero.read()
+    resumen = ImportarConceptosPrevistosExcel(
+        RepositorioCategoriasSqlAlchemy(sesion),
+        RepositorioPrevisionesSqlAlchemy(sesion),
+        LectorExcelConceptosPrevistosOpenpyxl(),
+    ).ejecutar(contenido, fichero.filename or "")
+    return ResumenImportacionConceptosPrevistosEsquema(**asdict(resumen))
+
+
 @enrutador.put(
     "/{id_concepto:int}/ajustes/{anio:int}/{mes:int}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -187,8 +211,8 @@ async def importar_resumen_anual(
 )
 def ajustar_valor_mensual(
     id_concepto: int,
-    anio: int,
     datos: AjusteMensualEsquema,
+    anio: int = Path(ge=1, le=9999),
     mes: int = Path(ge=1, le=12),
     sesion: Session = Depends(obtener_sesion),
 ) -> None:
@@ -204,7 +228,7 @@ def ajustar_valor_mensual(
 )
 def eliminar_ajuste_mensual(
     id_concepto: int,
-    anio: int,
+    anio: int = Path(ge=1, le=9999),
     mes: int = Path(ge=1, le=12),
     sesion: Session = Depends(obtener_sesion),
 ) -> None:

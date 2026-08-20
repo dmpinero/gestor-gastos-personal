@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ExcelJS from 'exceljs'
 import { test, expect } from '@playwright/test'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -9,15 +10,29 @@ const RUTA_FICHERO = path.resolve(
   '../../backend/tests/fixtures/movimientos_ejemplo.xlsx',
 )
 const NOMBRE_BOTON_ZONA = 'Seleccionar o soltar uno o varios archivos Excel'
+const NOMBRE_BOTON_ZONA_CONCEPTOS =
+  'Seleccionar o soltar uno o varios archivos Excel de conceptos previstos'
+
+async function construirExcelConceptosPrevistos(
+  filas: [string, string | null, string, string][],
+): Promise<Buffer> {
+  const libro = new ExcelJS.Workbook()
+  const hoja = libro.addWorksheet('Conceptos previstos')
+  hoja.addRow(['Categoría', 'Subcategoría', 'Periodicidad', 'Importe previsto'])
+  for (const fila of filas) hoja.addRow(fila)
+  return Buffer.from(await libro.xlsx.writeBuffer())
+}
 
 test('importar un Excel de movimientos muestra el resumen de la importación', async ({ page }) => {
   await page.goto('/importar')
   await page.screenshot({ path: 'e2e/capturas/importar-01-pagina-inicial.png' })
 
-  await page.locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  await zona.locator('..').locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
   await page.screenshot({ path: 'e2e/capturas/importar-02-fichero-seleccionado.png' })
 
-  await page.getByRole('button', { name: 'Importar' }).click()
+  await formulario.getByRole('button', { name: 'Importar' }).click()
 
   const resumen = page.locator('[data-test="resumen-importacion"]')
   await expect(resumen).toBeVisible()
@@ -42,8 +57,10 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
   page,
 }) => {
   await page.goto('/importar')
-  await page.locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
-  await page.getByRole('button', { name: 'Importar' }).click()
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  await zona.locator('..').locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
+  await formulario.getByRole('button', { name: 'Importar' }).click()
   await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
 
   await page.getByRole('button', { name: 'Ver movimientos importados' }).click()
@@ -62,14 +79,19 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
 
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {
   await page.goto('/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
 
   // Fichero .csv generado en memoria (no hace falta uno real en disco).
-  await page.locator('input[type="file"]').setInputFiles({
-    name: 'movimientos.csv',
-    mimeType: 'text/csv',
-    buffer: Buffer.from('fecha,importe\n2026-01-01,-10'),
-  })
-  await page.getByRole('button', { name: 'Importar' }).click()
+  await zona
+    .locator('..')
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: 'movimientos.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('fecha,importe\n2026-01-01,-10'),
+    })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
 
   await expect(page.getByRole('alert')).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-05-extension-no-soportada.png' })
@@ -77,7 +99,7 @@ test('subir un fichero con extensión no soportada muestra un error', async ({ p
 
 test('soltar el fichero sobre la zona de arrastre también permite importarlo', async ({ page }) => {
   await page.goto('/importar')
-  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
 
   const contenido = fs.readFileSync(RUTA_FICHERO)
   const dataTransfer = await page.evaluateHandle((bytes) => {
@@ -96,7 +118,7 @@ test('soltar el fichero sobre la zona de arrastre también permite importarlo', 
 
   await expect(zona).toContainText('movimientos_ejemplo.xlsx')
 
-  await page.getByRole('button', { name: 'Importar' }).click()
+  await zona.locator('xpath=ancestor::form').getByRole('button', { name: 'Importar' }).click()
   await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-07-resumen-tras-arrastrar.png' })
 })
@@ -105,7 +127,7 @@ test('soltar un fichero con extensión no soportada sobre la zona de arrastre ta
   page,
 }) => {
   await page.goto('/importar')
-  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
 
   const dataTransfer = await page.evaluateHandle(() => {
     const transferencia = new DataTransfer()
@@ -116,7 +138,7 @@ test('soltar un fichero con extensión no soportada sobre la zona de arrastre ta
   })
 
   await zona.dispatchEvent('drop', { dataTransfer })
-  await page.getByRole('button', { name: 'Importar' }).click()
+  await zona.locator('xpath=ancestor::form').getByRole('button', { name: 'Importar' }).click()
 
   await expect(page.getByRole('alert')).toBeVisible()
 })
@@ -125,7 +147,7 @@ test('soltar varios ficheros a la vez los procesa e importa todos ("procesamient
   page,
 }) => {
   await page.goto('/importar')
-  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA })
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
 
   const contenido = fs.readFileSync(RUTA_FICHERO)
   const dataTransfer = await page.evaluateHandle((bytes) => {
@@ -149,7 +171,7 @@ test('soltar varios ficheros a la vez los procesa e importa todos ("procesamient
   await expect(zona).toContainText('lote-2.xlsx')
   await page.screenshot({ path: 'e2e/capturas/importar-08-varios-ficheros-seleccionados.png' })
 
-  await page.getByRole('button', { name: 'Importar' }).click()
+  await zona.locator('xpath=ancestor::form').getByRole('button', { name: 'Importar' }).click()
 
   const resumen = page.locator('[data-test="resumen-importacion"]')
   await expect(resumen).toBeVisible()
@@ -164,4 +186,67 @@ test('soltar varios ficheros a la vez los procesa e importa todos ("procesamient
   const importados = Number(texto.match(/importados: (\d+)/)?.[1])
   const omitidos = Number(texto.match(/duplicado: (\d+)/)?.[1])
   expect(importados + omitidos).toBe(10)
+})
+
+test('importar un Excel de conceptos previstos los crea y aparecen en Resumen anual', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const nombreCategoria = `Categoria E2E ${sufijo}`
+  const nombreSubcategoria = `Sub E2E ${sufijo}`
+  const contenido = await construirExcelConceptosPrevistos([
+    [nombreCategoria, nombreSubcategoria, 'mensual', '-9.99'],
+  ])
+
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA_CONCEPTOS, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+
+  await zona.locator('..').locator('input[type="file"]').setInputFiles({
+    name: 'conceptos.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenido,
+  })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+
+  const resumen = page.locator('[data-test="resumen-importacion-conceptos-previstos"]')
+  await expect(resumen).toBeVisible()
+  await expect(resumen).toContainText('Conceptos creados: 1')
+  await page.screenshot({ path: 'e2e/capturas/importar-11-conceptos-previstos.png' })
+
+  await resumen.getByRole('button', { name: 'Ver en Resumen anual' }).click()
+  await expect(page).toHaveURL('/resumen-anual')
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoria })).toBeVisible()
+})
+
+test('reimportar el mismo Excel de conceptos previstos omite el duplicado', async ({ page }) => {
+  const sufijo = Date.now()
+  const contenido = await construirExcelConceptosPrevistos([
+    [`Categoria Dup ${sufijo}`, `Sub Dup ${sufijo}`, 'mensual', '-9.99'],
+  ])
+
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA_CONCEPTOS, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  const entradaFichero = zona.locator('..').locator('input[type="file"]')
+
+  await entradaFichero.setInputFiles({
+    name: 'conceptos.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenido,
+  })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+  await expect(page.locator('[data-test="resumen-importacion-conceptos-previstos"]')).toContainText(
+    'Conceptos creados: 1',
+  )
+
+  await entradaFichero.setInputFiles({
+    name: 'conceptos.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenido,
+  })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+  const resumenSegundaVez = page.locator('[data-test="resumen-importacion-conceptos-previstos"]')
+  await expect(resumenSegundaVez).toContainText('Conceptos creados: 0')
+  await expect(resumenSegundaVez).toContainText('Conceptos omitidos por duplicado: 1')
 })

@@ -6,6 +6,7 @@ import type {
   ConceptoPrevisto,
   DatosConceptoPrevisto,
   ResumenAnual,
+  ResumenImportacionConceptosPrevistos,
   ResumenImportacionResumenAnual,
 } from '@/api/tipos'
 import { descargarBlob } from '@/lib/descargas'
@@ -113,6 +114,22 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
+  async function importarConceptosPrevistosExcel(
+    fichero: File,
+  ): Promise<ResumenImportacionConceptosPrevistos | null> {
+    error.value = null
+    try {
+      return await clienteApi.subirArchivo<ResumenImportacionConceptosPrevistos>(
+        '/previsiones/importar',
+        'fichero',
+        fichero,
+      )
+    } catch (motivo) {
+      error.value = (motivo as Error).message
+      return null
+    }
+  }
+
   return {
     conceptos,
     resumenAnual,
@@ -127,5 +144,6 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     eliminarAjuste,
     exportarResumenAnual,
     importarResumenAnualExcel,
+    importarConceptosPrevistosExcel,
   }
 })

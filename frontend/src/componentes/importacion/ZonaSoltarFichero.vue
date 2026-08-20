@@ -3,7 +3,10 @@ import { Upload } from '@lucide/vue'
 import { ref } from 'vue'
 import { cn } from '@/lib/utils'
 
-defineProps<{ ficherosSeleccionados: File[] }>()
+const props = withDefaults(
+  defineProps<{ ficherosSeleccionados: File[]; etiqueta?: string; accept?: string }>(),
+  { etiqueta: 'archivos Excel', accept: '.xls,.xlsx' },
+)
 const emit = defineEmits<{ 'ficheros-elegidos': [File[]] }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -31,7 +34,7 @@ function manejarSoltar(evento: DragEvent): void {
     <div
       role="button"
       tabindex="0"
-      aria-label="Seleccionar o soltar uno o varios archivos Excel"
+      :aria-label="`Seleccionar o soltar uno o varios ${props.etiqueta}`"
       :data-dragover="enDragover"
       :class="
         cn(
@@ -61,7 +64,7 @@ function manejarSoltar(evento: DragEvent): void {
     <input
       ref="inputRef"
       type="file"
-      accept=".xls,.xlsx"
+      :accept="props.accept"
       multiple
       tabindex="-1"
       aria-hidden="true"

@@ -29,6 +29,7 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     # el fichero de importación no puede estar vacío (mismo motivo que
     # /api/v1/movimientos/importar).
     "/api/v1/previsiones/resumen-anual/importar",
+    "/api/v1/previsiones/importar",
 }
 
 # FastAPI/Starlette no rechazan un parámetro de query escalar (p.ej.

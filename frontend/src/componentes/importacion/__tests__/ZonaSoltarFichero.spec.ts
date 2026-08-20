@@ -76,4 +76,19 @@ describe('ZonaSoltarFichero', () => {
     expect(wrapper.text()).toContain('a.xlsx')
     expect(wrapper.text()).toContain('b.xlsx')
   })
+
+  it('permite personalizar la etiqueta accesible y las extensiones aceptadas', () => {
+    const wrapper = mount(ZonaSoltarFichero, {
+      props: {
+        ficherosSeleccionados: [],
+        etiqueta: 'archivos Excel de conceptos previstos',
+        accept: '.xlsx',
+      },
+    })
+
+    expect(wrapper.get('[role="button"]').attributes('aria-label')).toBe(
+      'Seleccionar o soltar uno o varios archivos Excel de conceptos previstos',
+    )
+    expect(wrapper.get('input[type="file"]').attributes('accept')).toBe('.xlsx')
+  })
 })

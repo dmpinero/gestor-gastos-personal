@@ -217,4 +217,37 @@ describe('useTiendaPrevisiones', () => {
     expect(tienda.error).toBe('formato no soportado')
     expect(devuelto).toBeNull()
   })
+
+  it('importa un Excel de conceptos previstos sin recargar nada del store', async () => {
+    const resultado = {
+      conceptos_creados: 2,
+      conceptos_omitidos_por_duplicado: 1,
+      categorias_creadas: ['Suscripciones'],
+      subcategorias_creadas: ['Streaming'],
+    }
+    vi.mocked(clienteApi.subirArchivo).mockResolvedValue(resultado)
+    const fichero = new File(['contenido'], 'conceptos.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.importarConceptosPrevistosExcel(fichero)
+
+    expect(clienteApi.subirArchivo).toHaveBeenCalledWith(
+      '/previsiones/importar',
+      'fichero',
+      fichero,
+    )
+    expect(clienteApi.obtener).not.toHaveBeenCalled()
+    expect(devuelto).toEqual(resultado)
+  })
+
+  it('guarda el mensaje de error si importar conceptos previstos falla y devuelve null', async () => {
+    vi.mocked(clienteApi.subirArchivo).mockRejectedValue(new Error('periodicidad no reconocida'))
+    const fichero = new File(['contenido'], 'conceptos.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.importarConceptosPrevistosExcel(fichero)
+
+    expect(tienda.error).toBe('periodicidad no reconocida')
+    expect(devuelto).toBeNull()
+  })
 })

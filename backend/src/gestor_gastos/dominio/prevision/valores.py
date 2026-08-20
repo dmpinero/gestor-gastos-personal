@@ -31,3 +31,27 @@ class ResumenAnual:
     filas_ingresos: list[FilaResumenAnual]
     totales_gastos: list[Decimal]
     totales_ingresos: list[Decimal]
+
+
+@dataclass(frozen=True)
+class CeldaResumenAnualExcel:
+    """Una celda (concepto, mes) leída del Excel de Resumen anual.
+
+    `importe` es None si la celda está vacía en el fichero.
+    """
+
+    concepto_id: int
+    mes: int
+    importe: Decimal | None
+
+
+@dataclass(frozen=True)
+class DatosResumenAnualExcelLeidos:
+    celdas: list[CeldaResumenAnualExcel]
+
+
+@dataclass
+class ResumenImportacionResumenAnual:
+    celdas_actualizadas: int = 0
+    celdas_eliminadas: int = 0
+    conceptos_no_encontrados: int = 0

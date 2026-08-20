@@ -2,7 +2,13 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import { clienteApi } from '@/api/cliente'
-import type { ConceptoPrevisto, DatosConceptoPrevisto, ResumenAnual } from '@/api/tipos'
+import type {
+  ConceptoPrevisto,
+  DatosConceptoPrevisto,
+  ResumenAnual,
+  ResumenImportacionResumenAnual,
+} from '@/api/tipos'
+import { descargarBlob } from '@/lib/descargas'
 
 export const useTiendaPrevisiones = defineStore('previsiones', () => {
   const conceptos = ref<ConceptoPrevisto[]>([])
@@ -78,6 +84,35 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
+  async function exportarResumenAnual(anio: number): Promise<void> {
+    error.value = null
+    try {
+      const blob = await clienteApi.descargar(`/previsiones/resumen-anual/exportar?anio=${anio}`)
+      descargarBlob(blob, `resumen-anual-${anio}.xlsx`)
+    } catch (motivo) {
+      error.value = (motivo as Error).message
+    }
+  }
+
+  async function importarResumenAnualExcel(
+    anio: number,
+    fichero: File,
+  ): Promise<ResumenImportacionResumenAnual | null> {
+    error.value = null
+    try {
+      const resultado = await clienteApi.subirArchivo<ResumenImportacionResumenAnual>(
+        `/previsiones/resumen-anual/importar?anio=${anio}`,
+        'fichero',
+        fichero,
+      )
+      await cargarResumenAnual(anio)
+      return resultado
+    } catch (motivo) {
+      error.value = (motivo as Error).message
+      return null
+    }
+  }
+
   return {
     conceptos,
     resumenAnual,
@@ -90,5 +125,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     cargarResumenAnual,
     ajustarCelda,
     eliminarAjuste,
+    exportarResumenAnual,
+    importarResumenAnualExcel,
   }
 })

@@ -19,3 +19,12 @@ Característica: Resumen anual de previsión
     Cuando consulto el resumen anual de 2026
     Entonces el concepto muestra el importe ajustado "-1.00" en el mes 3
     Y el concepto muestra el importe ajustado "-2.00" en el mes 4
+
+  Escenario: Editar el Excel exportado y reimportarlo actualiza solo la celda cambiada
+    Dado que existe la categoría "Suscripciones" con un concepto previsto mensual de importe "-4.99"
+    Cuando exporto el Excel del resumen anual de 2026
+    Y edito en el Excel exportado el importe del mes 1 a "-60.00"
+    Y reimporto el Excel editado para el resumen anual de 2026
+    Y consulto el resumen anual de 2026
+    Entonces la importación actualiza 1 celda
+    Y el concepto muestra el importe ajustado "-60.00" en el mes 1

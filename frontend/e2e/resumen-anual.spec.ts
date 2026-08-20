@@ -1,4 +1,14 @@
-import { test, expect, type Page, type Locator } from '@playwright/test'
+import ExcelJS from 'exceljs'
+import { test, expect, type Download, type Page, type Locator } from '@playwright/test'
+
+async function bufferDeDescarga(descarga: Download): Promise<Buffer> {
+  const flujo = await descarga.createReadStream()
+  const trozos: Buffer[] = []
+  for await (const trozo of flujo) {
+    trozos.push(trozo as Buffer)
+  }
+  return Buffer.concat(trozos)
+}
 
 async function crearMovimiento(
   page: Page,
@@ -193,4 +203,126 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
       .locator('tbody tr')
       .filter({ has: page.getByText(nombreCategoria, { exact: true }) }),
   ).toHaveCount(0)
+})
+
+test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 XLS ${sufijo}`
+  const nombreCategoria = `Categoría XLS ${sufijo}`
+  const nombreSubcategoria = `Subcategoría XLS ${sufijo}`
+  const anioActual = new Date().getFullYear()
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  const tarjetaCategoria = page.locator('[data-slot="card"]', { hasText: nombreCategoria })
+  await expect(tarjetaCategoria).toBeVisible()
+  await tarjetaCategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  await panelConcepto.getByLabel('Categoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreCategoria }).click()
+  await panelConcepto.getByLabel('Subcategoría', { exact: true }).click()
+  await page.getByRole('option', { name: nombreSubcategoria }).click()
+  await panelConcepto.getByLabel('Importe previsto').fill('50.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  const filaConcepto = page.locator('tbody tr', { hasText: nombreSubcategoria })
+  await expect(filaConcepto).toBeVisible()
+
+  // Exportar: se captura la descarga real y se lee su contenido con exceljs.
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Exportar a Excel' }).click(),
+  ])
+  expect(descarga.suggestedFilename()).toBe(`resumen-anual-${anioActual}.xlsx`)
+  const contenidoOriginal = await bufferDeDescarga(descarga)
+
+  // Se edita el Excel descargado como haría el usuario: se cambia el importe
+  // de enero para nuestro concepto, sin tocar nada más.
+  const libro = new ExcelJS.Workbook()
+  await libro.xlsx.load(contenidoOriginal)
+  const hoja = libro.getWorksheet('Gastos')!
+  let filaEncontrada: number | null = null
+  hoja.eachRow((fila, numeroFila) => {
+    if (fila.getCell(2).value === nombreSubcategoria) filaEncontrada = numeroFila
+  })
+  expect(filaEncontrada).not.toBeNull()
+  hoja.getRow(filaEncontrada!).getCell(4).value = -77 // columna D = enero
+  const contenidoEditado = Buffer.from(await libro.xlsx.writeBuffer())
+
+  // Reimportar: solo la celda de enero cambia; el resto se queda igual.
+  await page.getByRole('button', { name: 'Importar Excel' }).click()
+  const panelImportar = page.getByRole('dialog')
+  await panelImportar.locator('input[type="file"]').setInputFiles({
+    name: `resumen-anual-${anioActual}-editado.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenidoEditado,
+  })
+  await panelImportar.getByRole('button', { name: 'Importar' }).click()
+  await expect(panelImportar.getByText('1 celdas actualizadas.')).toBeVisible()
+  await expect(panelImportar.getByText('0 celdas revertidas al valor calculado.')).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-04-importar-excel.png' })
+
+  // "Cerrar" tiene dos coincidencias en el Sheet: nuestro botón explícito y el
+  // botón "×" de cierre incorporado (mismo texto accesible, sr-only); el
+  // nuestro es el primero en el DOM.
+  await panelImportar.getByRole('button', { name: 'Cerrar' }).first().click()
+  await expect(celdaMes(filaConcepto, 1)).toContainText('-77,00 €')
+  await expect(celdaMes(filaConcepto, 1)).toHaveClass(/border-dashed/)
+  await expect(celdaMes(filaConcepto, 2)).toContainText('-50,00 €')
+
+  // Reexportar el estado actual y reimportarlo tal cual (sin tocar nada) no
+  // tiene ningún efecto: es la garantía central de la importación por diff.
+  const [descargaSinCambios] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Exportar a Excel' }).click(),
+  ])
+  const contenidoSinCambios = await bufferDeDescarga(descargaSinCambios)
+
+  await page.getByRole('button', { name: 'Importar Excel' }).click()
+  await panelImportar.locator('input[type="file"]').setInputFiles({
+    name: `resumen-anual-${anioActual}-sin-cambios.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenidoSinCambios,
+  })
+  await panelImportar.getByRole('button', { name: 'Importar' }).click()
+  await expect(panelImportar.getByText('0 celdas actualizadas.')).toBeVisible()
+  await expect(panelImportar.getByText('0 celdas revertidas al valor calculado.')).toBeVisible()
+  await panelImportar.getByRole('button', { name: 'Cerrar' }).first().click()
+
+  // Vaciar en el Excel la celda ajustada y reimportar revierte al valor
+  // calculado (previsto), igual que vaciarla a mano en la propia tabla.
+  const libroParaRevertir = new ExcelJS.Workbook()
+  await libroParaRevertir.xlsx.load(contenidoSinCambios)
+  const hojaParaRevertir = libroParaRevertir.getWorksheet('Gastos')!
+  hojaParaRevertir.getRow(filaEncontrada!).getCell(4).value = null
+  const contenidoRevertido = Buffer.from(await libroParaRevertir.xlsx.writeBuffer())
+
+  await page.getByRole('button', { name: 'Importar Excel' }).click()
+  await panelImportar.locator('input[type="file"]').setInputFiles({
+    name: `resumen-anual-${anioActual}-revertido.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenidoRevertido,
+  })
+  await panelImportar.getByRole('button', { name: 'Importar' }).click()
+  await expect(panelImportar.getByText('1 celdas revertidas al valor calculado.')).toBeVisible()
+  await panelImportar.getByRole('button', { name: 'Cerrar' }).first().click()
+  await expect(celdaMes(filaConcepto, 1)).toContainText('-50,00 €')
+  await expect(celdaMes(filaConcepto, 1)).not.toHaveClass(/border-dashed/)
 })

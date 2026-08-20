@@ -59,6 +59,16 @@ async function peticion<T>(
   return (await respuesta.json()) as T
 }
 
+async function descargar(ruta: string): Promise<Blob> {
+  const respuesta = await fetch(`${URL_BASE_API}${ruta}`)
+
+  if (!respuesta.ok) {
+    throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))
+  }
+
+  return await respuesta.blob()
+}
+
 async function subirArchivo<T>(ruta: string, campo: string, fichero: File): Promise<T> {
   const formData = new FormData()
   formData.append(campo, fichero)
@@ -83,4 +93,5 @@ export const clienteApi = {
     peticion<T>('PUT', ruta, { cuerpo, token }),
   eliminar: <T>(ruta: string, token?: string | null) => peticion<T>('DELETE', ruta, { token }),
   subirArchivo,
+  descargar,
 }

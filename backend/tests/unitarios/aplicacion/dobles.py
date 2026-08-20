@@ -7,6 +7,7 @@ from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.valores import DatosResumenAnualExcelLeidos
 
 
 class RepositorioCuentasFalso:
@@ -325,3 +326,32 @@ class LectorExcelFalso:
             raise self._error
         assert self._datos is not None
         return self._datos
+
+
+class LectorExcelResumenAnualFalso:
+    """Doble de LectorExcelResumenAnual que devuelve unos datos fijos o lanza un error dado."""
+
+    def __init__(
+        self,
+        datos: DatosResumenAnualExcelLeidos | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self._datos = datos
+        self._error = error
+
+    def leer(self, contenido: bytes, nombre_fichero: str) -> DatosResumenAnualExcelLeidos:
+        if self._error is not None:
+            raise self._error
+        assert self._datos is not None
+        return self._datos
+
+
+class EscritorExcelResumenAnualFalso:
+    """Doble de EscritorExcelResumenAnual que registra el resumen recibido."""
+
+    def __init__(self) -> None:
+        self.resumen_recibido = None
+
+    def escribir(self, resumen) -> bytes:
+        self.resumen_recibido = resumen
+        return b"contenido-falso"

@@ -140,3 +140,9 @@ export interface ResumenAnual {
   totales_gastos: string[]
   totales_ingresos: string[]
 }
+
+export interface ResumenImportacionResumenAnual {
+  celdas_actualizadas: number
+  celdas_eliminadas: number
+  conceptos_no_encontrados: number
+}

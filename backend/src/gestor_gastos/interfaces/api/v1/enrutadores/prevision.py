@@ -1,6 +1,7 @@
 from dataclasses import asdict
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
@@ -11,6 +12,12 @@ from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConc
 from gestor_gastos.aplicacion.prevision.eliminar_ajuste_mensual import EliminarAjusteMensual
 from gestor_gastos.aplicacion.prevision.eliminar_concepto_previsto import (
     EliminarConceptoPrevisto,
+)
+from gestor_gastos.aplicacion.prevision.exportar_resumen_anual_excel import (
+    ExportarResumenAnualExcel,
+)
+from gestor_gastos.aplicacion.prevision.importar_resumen_anual_excel import (
+    ImportarResumenAnualExcel,
 )
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
@@ -28,6 +35,12 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimie
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_previsiones_sqlalchemy import (  # noqa: E501
     RepositorioPrevisionesSqlAlchemy,
 )
+from gestor_gastos.infraestructura.prevision.escritor_excel_resumen_anual_openpyxl import (
+    EscritorExcelResumenAnualOpenpyxl,
+)
+from gestor_gastos.infraestructura.prevision.lector_excel_resumen_anual_openpyxl import (
+    LectorExcelResumenAnualOpenpyxl,
+)
 from gestor_gastos.interfaces.api.dependencias import obtener_sesion
 from gestor_gastos.interfaces.api.respuestas_error import (
     RESPUESTA_CUERPO_MALFORMADO,
@@ -39,9 +52,19 @@ from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
     ResumenAnualEsquema,
+    ResumenImportacionResumenAnualEsquema,
 )
 
 enrutador = APIRouter(prefix="/previsiones", tags=["Previsiones"])
+
+
+def _construir_obtener_resumen_anual(sesion: Session) -> ObtenerResumenAnual:
+    return ObtenerResumenAnual(
+        RepositorioPrevisionesSqlAlchemy(sesion),
+        RepositorioCategoriasSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioAjustesPrevisionSqlAlchemy(sesion),
+    )
 
 
 @enrutador.get("", response_model=list[ConceptoPrevistoSalidaEsquema])
@@ -107,13 +130,54 @@ def eliminar(id_concepto: int, sesion: Session = Depends(obtener_sesion)) -> Non
 def resumen_anual(
     anio: int = Query(...), sesion: Session = Depends(obtener_sesion)
 ) -> ResumenAnualEsquema:
-    resumen = ObtenerResumenAnual(
-        RepositorioPrevisionesSqlAlchemy(sesion),
-        RepositorioCategoriasSqlAlchemy(sesion),
-        RepositorioMovimientosSqlAlchemy(sesion),
-        RepositorioAjustesPrevisionSqlAlchemy(sesion),
-    ).ejecutar(anio)
+    resumen = _construir_obtener_resumen_anual(sesion).ejecutar(anio)
     return ResumenAnualEsquema(**asdict(resumen))
+
+
+@enrutador.get(
+    "/resumen-anual/exportar",
+    responses={
+        200: {
+            "content": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}},
+            "description": "Excel del resumen anual",
+        }
+    },
+)
+def exportar_resumen_anual(
+    anio: int = Query(...), sesion: Session = Depends(obtener_sesion)
+) -> Response:
+    contenido = ExportarResumenAnualExcel(
+        _construir_obtener_resumen_anual(sesion), EscritorExcelResumenAnualOpenpyxl()
+    ).ejecutar(anio)
+    return Response(
+        content=contenido,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="resumen-anual-{anio}.xlsx"'},
+    )
+
+
+@enrutador.post(
+    "/resumen-anual/importar",
+    response_model=ResumenImportacionResumenAnualEsquema,
+    responses=RESPUESTA_CUERPO_MALFORMADO,
+)
+async def importar_resumen_anual(
+    fichero: UploadFile,
+    anio: int = Query(...),
+    sesion: Session = Depends(obtener_sesion),
+) -> ResumenImportacionResumenAnualEsquema:
+    contenido = await fichero.read()
+    resumen = ImportarResumenAnualExcel(
+        LectorExcelResumenAnualOpenpyxl(),
+        _construir_obtener_resumen_anual(sesion),
+        AjustarValorMensual(
+            RepositorioPrevisionesSqlAlchemy(sesion), RepositorioAjustesPrevisionSqlAlchemy(sesion)
+        ),
+        EliminarAjusteMensual(
+            RepositorioPrevisionesSqlAlchemy(sesion), RepositorioAjustesPrevisionSqlAlchemy(sesion)
+        ),
+    ).ejecutar(contenido, fichero.filename or "", anio)
+    return ResumenImportacionResumenAnualEsquema(**asdict(resumen))
 
 
 @enrutador.put(

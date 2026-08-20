@@ -12,6 +12,7 @@ from gestor_gastos.dominio.importacion.excepciones import (
     ExtensionNoSoportadaError,
     FicheroSinMovimientosError,
 )
+from gestor_gastos.dominio.prevision.excepciones import HojaExcelNoReconocidaError
 
 
 def _respuesta(codigo: int, error: Exception) -> JSONResponse:
@@ -49,4 +50,8 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
     async def _fichero_sin_movimientos(
         _: Request, error: FicheroSinMovimientosError
     ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(HojaExcelNoReconocidaError)
+    async def _hoja_no_reconocida(_: Request, error: HojaExcelNoReconocidaError) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)

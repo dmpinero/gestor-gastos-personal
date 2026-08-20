@@ -37,7 +37,9 @@ class CategoriaConSubcategoriasSalidaEsquema(BaseModel):
 class DependenciasCategoriaEsquema(BaseModel):
     subcategorias: int
     movimientos: int
+    conceptos_previstos: int
 
 
 class DependenciasSubcategoriaEsquema(BaseModel):
     movimientos: int
+    conceptos_previstos: int

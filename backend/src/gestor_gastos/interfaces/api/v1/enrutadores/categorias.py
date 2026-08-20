@@ -22,6 +22,9 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categor
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimientos_sqlalchemy import (  # noqa: E501
     RepositorioMovimientosSqlAlchemy,
 )
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_previsiones_sqlalchemy import (  # noqa: E501
+    RepositorioPrevisionesSqlAlchemy,
+)
 from gestor_gastos.interfaces.api.dependencias import obtener_sesion
 from gestor_gastos.interfaces.api.respuestas_error import (
     RESPUESTA_CONFLICTO,
@@ -95,7 +98,9 @@ def eliminar(
     id_categoria: int, cascada: bool = Query(False), sesion: Session = Depends(obtener_sesion)
 ) -> None:
     EliminarCategoria(
-        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+        RepositorioCategoriasSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioPrevisionesSqlAlchemy(sesion),
     ).ejecutar(id_categoria, cascada=cascada)
 
 
@@ -108,7 +113,9 @@ def obtener_dependencias(
     id_categoria: int, sesion: Session = Depends(obtener_sesion)
 ) -> DependenciasCategoriaEsquema:
     dependencias = ObtenerDependenciasCategoria(
-        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+        RepositorioCategoriasSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioPrevisionesSqlAlchemy(sesion),
     ).ejecutar(id_categoria)
     return DependenciasCategoriaEsquema(**asdict(dependencias))
 
@@ -157,7 +164,9 @@ def eliminar_subcategoria(
     sesion: Session = Depends(obtener_sesion),
 ) -> None:
     EliminarSubcategoria(
-        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+        RepositorioCategoriasSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioPrevisionesSqlAlchemy(sesion),
     ).ejecutar(id_subcategoria, cascada=cascada)
 
 
@@ -170,6 +179,8 @@ def obtener_dependencias_subcategoria(
     id_categoria: int, id_subcategoria: int, sesion: Session = Depends(obtener_sesion)
 ) -> DependenciasSubcategoriaEsquema:
     dependencias = ObtenerDependenciasSubcategoria(
-        RepositorioCategoriasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+        RepositorioCategoriasSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioPrevisionesSqlAlchemy(sesion),
     ).ejecutar(id_subcategoria)
     return DependenciasSubcategoriaEsquema(**asdict(dependencias))

@@ -95,6 +95,16 @@ async function dependenciasDeCategoria(id: number): Promise<Dependencia[]> {
       cantidad: dependencias.movimientos,
     })
   }
+  if (dependencias.conceptos_previstos > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(
+        dependencias.conceptos_previstos,
+        'concepto previsto',
+        'conceptos previstos',
+      ),
+      cantidad: dependencias.conceptos_previstos,
+    })
+  }
   return items
 }
 
@@ -103,12 +113,23 @@ async function dependenciasDeSubcategoria(
   idSubcategoria: number,
 ): Promise<Dependencia[]> {
   const dependencias = await tienda.obtenerDependenciasSubcategoria(idCategoria, idSubcategoria)
-  return [
+  const items: Dependencia[] = [
     {
       etiqueta: etiquetaElemento(dependencias.movimientos, 'movimiento', 'movimientos'),
       cantidad: dependencias.movimientos,
     },
   ]
+  if (dependencias.conceptos_previstos > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(
+        dependencias.conceptos_previstos,
+        'concepto previsto',
+        'conceptos previstos',
+      ),
+      cantidad: dependencias.conceptos_previstos,
+    })
+  }
+  return items
 }
 
 async function eliminarCategoria(id: number, cascada = false): Promise<void> {
@@ -127,6 +148,7 @@ async function dependenciasDeSeleccionadas(): Promise<Dependencia[]> {
   )
   const totalSubcategorias = resultados.reduce((suma, d) => suma + d.subcategorias, 0)
   const totalMovimientos = resultados.reduce((suma, d) => suma + d.movimientos, 0)
+  const totalConceptosPrevistos = resultados.reduce((suma, d) => suma + d.conceptos_previstos, 0)
   const items: Dependencia[] = []
   if (totalSubcategorias > 0) {
     items.push({
@@ -138,6 +160,16 @@ async function dependenciasDeSeleccionadas(): Promise<Dependencia[]> {
     items.push({
       etiqueta: etiquetaElemento(totalMovimientos, 'movimiento', 'movimientos'),
       cantidad: totalMovimientos,
+    })
+  }
+  if (totalConceptosPrevistos > 0) {
+    items.push({
+      etiqueta: etiquetaElemento(
+        totalConceptosPrevistos,
+        'concepto previsto',
+        'conceptos previstos',
+      ),
+      cantidad: totalConceptosPrevistos,
     })
   }
   return items

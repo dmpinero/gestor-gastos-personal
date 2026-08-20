@@ -267,6 +267,24 @@ class RepositorioPrevisionesFalso:
     def eliminar(self, id_concepto: int) -> None:
         self._conceptos.pop(id_concepto, None)
 
+    def contar_por_categoria(self, id_categoria: int) -> int:
+        return sum(1 for c in self._conceptos.values() if c.categoria_id == id_categoria)
+
+    def contar_por_subcategoria(self, id_subcategoria: int) -> int:
+        return sum(1 for c in self._conceptos.values() if c.subcategoria_id == id_subcategoria)
+
+    def eliminar_por_categoria(self, id_categoria: int) -> None:
+        for id_concepto in [
+            c.id for c in self._conceptos.values() if c.categoria_id == id_categoria
+        ]:
+            self._conceptos.pop(id_concepto, None)
+
+    def eliminar_por_subcategoria(self, id_subcategoria: int) -> None:
+        for id_concepto in [
+            c.id for c in self._conceptos.values() if c.subcategoria_id == id_subcategoria
+        ]:
+            self._conceptos.pop(id_concepto, None)
+
 
 class RepositorioAjustesPrevisionFalso:
     """Doble de RepositorioAjustesMensuales en memoria."""

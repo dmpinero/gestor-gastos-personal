@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
@@ -55,3 +55,33 @@ class RepositorioPrevisionesSqlAlchemy:
         if modelo is not None:
             self._sesion.delete(modelo)
             self._sesion.commit()
+
+    def contar_por_categoria(self, id_categoria: int) -> int:
+        return self._sesion.scalar(
+            select(func.count())
+            .select_from(ConceptoPrevistoModelo)
+            .where(ConceptoPrevistoModelo.categoria_id == id_categoria)
+        )
+
+    def contar_por_subcategoria(self, id_subcategoria: int) -> int:
+        return self._sesion.scalar(
+            select(func.count())
+            .select_from(ConceptoPrevistoModelo)
+            .where(ConceptoPrevistoModelo.subcategoria_id == id_subcategoria)
+        )
+
+    def eliminar_por_categoria(self, id_categoria: int) -> None:
+        self._sesion.execute(
+            ConceptoPrevistoModelo.__table__.delete().where(
+                ConceptoPrevistoModelo.categoria_id == id_categoria
+            )
+        )
+        self._sesion.commit()
+
+    def eliminar_por_subcategoria(self, id_subcategoria: int) -> None:
+        self._sesion.execute(
+            ConceptoPrevistoModelo.__table__.delete().where(
+                ConceptoPrevistoModelo.subcategoria_id == id_subcategoria
+            )
+        )
+        self._sesion.commit()

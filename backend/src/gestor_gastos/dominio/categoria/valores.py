@@ -5,8 +5,10 @@ from dataclasses import dataclass
 class DependenciasCategoria:
     subcategorias: int
     movimientos: int
+    conceptos_previstos: int
 
 
 @dataclass(frozen=True)
 class DependenciasSubcategoria:
     movimientos: int
+    conceptos_previstos: int

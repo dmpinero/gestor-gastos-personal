@@ -22,9 +22,11 @@ from gestor_gastos.dominio.excepciones import (
     NombreDuplicadoError,
 )
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
+from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
 from tests.unitarios.aplicacion.dobles import (
     RepositorioCategoriasFalso,
     RepositorioMovimientosFalso,
+    RepositorioPrevisionesFalso,
 )
 
 
@@ -75,16 +77,18 @@ def test_actualizar_categoria_con_nombre_de_otra_categoria_falla() -> None:
 def test_eliminar_categoria_con_subcategorias_falla() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
 
     with pytest.raises(EntidadConDependenciasError):
-        EliminarCategoria(repo, repo_movimientos).ejecutar(categoria.id)
+        EliminarCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(categoria.id)
 
 
 def test_eliminar_categoria_con_subcategorias_y_movimientos_y_cascada_borra_todo() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
     movimiento = repo_movimientos.crear(
@@ -99,19 +103,58 @@ def test_eliminar_categoria_con_subcategorias_y_movimientos_y_cascada_borra_todo
         )
     )
 
-    EliminarCategoria(repo, repo_movimientos).ejecutar(categoria.id, cascada=True)
+    EliminarCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(categoria.id, cascada=True)
 
     assert repo.obtener_categoria_por_id(categoria.id) is None
     assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
     assert repo_movimientos.obtener_por_id(movimiento.id) is None
 
 
+def test_eliminar_categoria_con_concepto_previsto_falla_sin_cascada() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
+    categoria = CrearCategoria(repo).ejecutar("Suscripciones")
+    repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=None,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
+
+    with pytest.raises(EntidadConDependenciasError):
+        EliminarCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(categoria.id)
+
+
+def test_eliminar_categoria_con_concepto_previsto_y_cascada_lo_borra() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
+    categoria = CrearCategoria(repo).ejecutar("Suscripciones")
+    concepto = repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=None,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
+
+    EliminarCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(categoria.id, cascada=True)
+
+    assert repo.obtener_categoria_por_id(categoria.id) is None
+    assert repo_previsiones.obtener_por_id(concepto.id) is None
+
+
 def test_eliminar_categoria_sin_dependencias_la_borra() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Hogar")
 
-    EliminarCategoria(repo, repo_movimientos).ejecutar(categoria.id)
+    EliminarCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(categoria.id)
 
     assert repo.obtener_categoria_por_id(categoria.id) is None
 
@@ -259,6 +302,7 @@ def test_mover_subcategoria_actualiza_la_categoria_de_sus_movimientos() -> None:
 def test_eliminar_subcategoria_con_movimientos_falla() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
     repo_movimientos.crear(
@@ -274,12 +318,13 @@ def test_eliminar_subcategoria_con_movimientos_falla() -> None:
     )
 
     with pytest.raises(EntidadConDependenciasError):
-        EliminarSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id)
+        EliminarSubcategoria(repo, repo_movimientos, repo_previsiones).ejecutar(subcategoria.id)
 
 
 def test_eliminar_subcategoria_con_movimientos_y_cascada_borra_todo() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
     movimiento = repo_movimientos.crear(
@@ -294,24 +339,71 @@ def test_eliminar_subcategoria_con_movimientos_y_cascada_borra_todo() -> None:
         )
     )
 
-    EliminarSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id, cascada=True)
+    EliminarSubcategoria(repo, repo_movimientos, repo_previsiones).ejecutar(
+        subcategoria.id, cascada=True
+    )
 
     assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
     assert repo_movimientos.obtener_por_id(movimiento.id) is None
     assert repo.obtener_categoria_por_id(categoria.id) is not None
 
 
+def test_eliminar_subcategoria_con_concepto_previsto_falla_sin_cascada() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
+    categoria = CrearCategoria(repo).ejecutar("Suscripciones")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Streaming")
+    repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
+
+    with pytest.raises(EntidadConDependenciasError):
+        EliminarSubcategoria(repo, repo_movimientos, repo_previsiones).ejecutar(subcategoria.id)
+
+
+def test_eliminar_subcategoria_con_concepto_previsto_y_cascada_lo_borra() -> None:
+    repo = RepositorioCategoriasFalso()
+    repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
+    categoria = CrearCategoria(repo).ejecutar("Suscripciones")
+    subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Streaming")
+    concepto = repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
+
+    EliminarSubcategoria(repo, repo_movimientos, repo_previsiones).ejecutar(
+        subcategoria.id, cascada=True
+    )
+
+    assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
+    assert repo_previsiones.obtener_por_id(concepto.id) is None
+    assert repo.obtener_categoria_por_id(categoria.id) is not None
+
+
 def test_obtener_dependencias_de_categoria_inexistente_falla() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
 
     with pytest.raises(EntidadNoEncontradaError):
-        ObtenerDependenciasCategoria(repo, repo_movimientos).ejecutar(999)
+        ObtenerDependenciasCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(999)
 
 
-def test_obtener_dependencias_de_categoria_cuenta_subcategorias_y_movimientos() -> None:
+def test_obtener_dependencias_de_categoria_cuenta_subcategorias_movimientos_y_conceptos() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
     repo_movimientos.crear(
@@ -324,24 +416,37 @@ def test_obtener_dependencias_de_categoria_cuenta_subcategorias_y_movimientos() 
             saldo=Decimal("100.00"),
         )
     )
+    repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=None,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
 
-    dependencias = ObtenerDependenciasCategoria(repo, repo_movimientos).ejecutar(categoria.id)
+    dependencias = ObtenerDependenciasCategoria(repo, repo_movimientos, repo_previsiones).ejecutar(
+        categoria.id
+    )
 
     assert dependencias.subcategorias == 1
     assert dependencias.movimientos == 1
+    assert dependencias.conceptos_previstos == 1
 
 
 def test_obtener_dependencias_de_subcategoria_inexistente_falla() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
 
     with pytest.raises(EntidadNoEncontradaError):
-        ObtenerDependenciasSubcategoria(repo, repo_movimientos).ejecutar(999)
+        ObtenerDependenciasSubcategoria(repo, repo_movimientos, repo_previsiones).ejecutar(999)
 
 
-def test_obtener_dependencias_de_subcategoria_cuenta_sus_movimientos() -> None:
+def test_obtener_dependencias_de_subcategoria_cuenta_movimientos_y_conceptos() -> None:
     repo = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
+    repo_previsiones = RepositorioPrevisionesFalso()
     categoria = CrearCategoria(repo).ejecutar("Ocio y viajes")
     subcategoria = CrearSubcategoria(repo).ejecutar(categoria.id, "Cafeterías y restaurantes")
     repo_movimientos.crear(
@@ -355,10 +460,21 @@ def test_obtener_dependencias_de_subcategoria_cuenta_sus_movimientos() -> None:
             saldo=Decimal("100.00"),
         )
     )
+    repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
 
-    dependencias = ObtenerDependenciasSubcategoria(repo, repo_movimientos).ejecutar(subcategoria.id)
+    dependencias = ObtenerDependenciasSubcategoria(
+        repo, repo_movimientos, repo_previsiones
+    ).ejecutar(subcategoria.id)
 
     assert dependencias.movimientos == 1
+    assert dependencias.conceptos_previstos == 1
 
 
 def test_listar_categorias_con_subcategorias() -> None:

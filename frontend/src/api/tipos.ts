@@ -89,10 +89,12 @@ export interface DependenciasCuenta {
 export interface DependenciasCategoria {
   subcategorias: number
   movimientos: number
+  conceptos_previstos: number
 }
 
 export interface DependenciasSubcategoria {
   movimientos: number
+  conceptos_previstos: number
 }
 
 export type Periodicidad = 'mensual' | 'trimestral' | 'semestral' | 'anual'

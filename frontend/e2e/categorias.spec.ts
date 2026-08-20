@@ -49,6 +49,41 @@ test('gestión de categoría y subcategoría', async ({ page }) => {
   await page.screenshot({ path: 'e2e/capturas/categorias-05-tras-eliminar.png' })
 })
 
+test('el buscador filtra las categorías por su nombre o el de sus subcategorías', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const nombreCategoriaA = `Categoría BUSCA-A ${sufijo}`
+  const nombreCategoriaB = `Categoría BUSCA-B ${sufijo}`
+  const nombreSubcategoria = `Subcategoría BUSCA ${sufijo}`
+
+  await page.goto('/gestion/categorias')
+
+  for (const nombre of [nombreCategoriaA, nombreCategoriaB]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panel.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  const tarjetaB = page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })
+  await tarjetaB.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaB.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaB.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  const buscador = page.getByLabel('Buscar')
+  await buscador.fill(`BUSCA-A ${sufijo}`)
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })).toBeVisible()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/capturas/categorias-06-buscador.png' })
+
+  // Buscar por el nombre de una subcategoría también encuentra su categoría.
+  await buscador.fill(nombreSubcategoria)
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toBeVisible()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })).toHaveCount(0)
+})
+
 test('editar una subcategoría cambia su nombre y su categoría, actualizando los movimientos existentes', async ({
   page,
 }) => {

@@ -52,6 +52,10 @@ test('seleccionar varias cuentas y eliminarlas en bloque', async ({ page }) => {
     await expect(page.locator('tr', { hasText: numero })).toBeVisible()
   }
 
+  // Se filtra por el sufijo único para que ambas cuentas queden en la misma
+  // página, independientemente de en qué página de la tabla completa caigan.
+  await page.getByLabel('Buscar').fill(sufijo.toString())
+
   await page.locator('tr', { hasText: numeroCuentaA }).getByRole('checkbox').click()
   await page.locator('tr', { hasText: numeroCuentaB }).getByRole('checkbox').click()
   await expect(page.getByText('2 seleccionados')).toBeVisible()
@@ -104,6 +108,58 @@ test('el buscador filtra las cuentas y las cabeceras permiten ordenar', async ({
   await page.screenshot({ path: 'e2e/capturas/cuentas-09-ordenado.png' })
 })
 
+test('la tabla se pagina, permite cambiar el tamaño de página y muestra el total de registros', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numerosCuenta = Array.from({ length: 12 }, (_, i) => `ES00 PAG-${i + 1} ${sufijo}`)
+
+  await page.goto('/gestion/cuentas')
+  for (const numero of numerosCuenta) {
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.getByPlaceholder('Número de cuenta').fill(numero)
+    await panel.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.locator('tr', { hasText: numero })).toBeVisible()
+  }
+
+  // Se filtra por el sufijo único para aislar estas 12 cuentas del resto de
+  // datos ya existentes en la base y poder comprobar la paginación con un
+  // total conocido.
+  await page.getByLabel('Buscar').fill(sufijo.toString())
+
+  await expect(page.getByText('Mostrando 1–10 de 12 cuentas')).toBeVisible()
+  await expect(page.locator('tbody tr')).toHaveCount(10)
+  await expect(page.getByText('Página 1 de 2')).toBeVisible()
+  const botonAnterior = page.getByRole('button', { name: 'Anterior' })
+  const botonSiguiente = page.getByRole('button', { name: 'Siguiente' })
+  await expect(botonAnterior).toBeDisabled()
+  await expect(botonSiguiente).toBeEnabled()
+  await page.screenshot({ path: 'e2e/capturas/cuentas-11-paginada.png' })
+
+  await botonSiguiente.click()
+  await expect(page.getByText('Página 2 de 2')).toBeVisible()
+  await expect(page.locator('tbody tr')).toHaveCount(2)
+  await expect(page.getByText('Mostrando 11–12 de 12 cuentas')).toBeVisible()
+  await expect(botonSiguiente).toBeDisabled()
+
+  await botonAnterior.click()
+  await expect(page.getByText('Página 1 de 2')).toBeVisible()
+
+  await page.getByLabel('Elementos por página').click()
+  await page.getByRole('option', { name: 'Todas' }).click()
+  await expect(page.locator('tbody tr')).toHaveCount(12)
+  await expect(page.getByText('Mostrando 1–12 de 12 cuentas')).toBeVisible()
+  await expect(page.getByText(/^Página \d+ de \d+$/)).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/capturas/cuentas-12-todas.png' })
+
+  // Volver a buscar reinicia a la página 1 (comprobado indirectamente: al
+  // vaciar el buscador aparecen de nuevo todas las cuentas del sistema con
+  // el tamaño de página elegido, "todas", sin paginador).
+  await page.getByLabel('Buscar').fill('')
+  await expect(page.getByText(/^Página \d+ de \d+$/)).toHaveCount(0)
+})
+
 test('eliminar una cuenta con movimientos asociados los borra en cascada al confirmarlo', async ({
   page,
 }) => {
@@ -140,6 +196,9 @@ test('eliminar una cuenta con movimientos asociados los borra en cascada al conf
   await expect(page.locator('tr', { hasText: 'Movimiento cascada' })).toBeVisible()
 
   await page.goto('/gestion/cuentas')
+  // Al volver a esta página se reinicia a la página 1: se busca por su
+  // número para encontrarla sin importar en qué página quede.
+  await page.getByLabel('Buscar').fill(numeroCuenta)
   await page
     .locator('tr', { hasText: numeroCuenta })
     .getByRole('button', { name: 'Eliminar' })

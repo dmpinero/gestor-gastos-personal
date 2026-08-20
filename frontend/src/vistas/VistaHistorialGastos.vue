@@ -6,12 +6,15 @@ import { useRoute } from 'vue-router'
 import type { Movimiento } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
+import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucionGastos from '@/componentes/historial/GraficoEvolucionGastos.vue'
+import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
@@ -142,6 +145,23 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
   importe: (a: Movimiento, b: Movimiento) => Number(a.importe) - Number(b.importe),
   saldo: (a: Movimiento, b: Movimiento) => Number(a.saldo) - Number(b.saldo),
 })
+
+const tamanoPagina = ref<TamanoPagina>(10)
+const {
+  filasPagina,
+  paginaActual,
+  totalPaginas,
+  totalRegistros,
+  primerIndice,
+  ultimoIndice,
+  paginaSiguiente,
+  paginaAnterior,
+} = usePaginacionTabla(filasOrdenadas, tamanoPagina)
+
+// Al buscar se vuelve a la página 1 para ver los resultados desde el principio.
+watch(busqueda, () => {
+  paginaActual.value = 1
+})
 </script>
 
 <template>
@@ -192,19 +212,29 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
         <GraficoEvolucionGastos :items="datosGrafico" class="mt-3" />
       </div>
 
-      <div class="mt-4 flex max-w-xs flex-col gap-1.5">
-        <Label for="buscar-historial">Buscar</Label>
-        <div class="relative">
-          <Search
-            class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
-          />
-          <Input
-            id="buscar-historial"
-            v-model="busqueda"
-            placeholder="Buscar gastos…"
-            class="pl-8"
-          />
+      <div
+        class="bg-muted/40 mt-4 flex flex-wrap items-end justify-between gap-4 rounded-lg border p-4"
+      >
+        <div class="flex flex-wrap items-end gap-4">
+          <div class="flex max-w-xs flex-col gap-1.5">
+            <Label for="buscar-historial">Buscar</Label>
+            <div class="relative">
+              <Search
+                class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+              />
+              <Input
+                id="buscar-historial"
+                v-model="busqueda"
+                placeholder="Buscar gastos…"
+                class="pl-8"
+              />
+            </div>
+          </div>
+          <SelectorTamanoPagina v-model="tamanoPagina" id-base="historial" />
         </div>
+        <p class="text-muted-foreground text-sm">
+          Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} gastos
+        </p>
       </div>
 
       <Table class="mt-4">
@@ -283,7 +313,7 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="movimiento in filasOrdenadas" :key="movimiento.id">
+          <TableRow v-for="movimiento in filasPagina" :key="movimiento.id">
             <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
             <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
             <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
@@ -294,6 +324,14 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
           </TableRow>
         </TableBody>
       </Table>
+
+      <BarraPaginacion
+        v-if="totalPaginas > 1"
+        :pagina-actual="paginaActual"
+        :total-paginas="totalPaginas"
+        @anterior="paginaAnterior"
+        @siguiente="paginaSiguiente"
+      />
 
       <p
         v-if="filasOrdenadas.length === 0 && !tiendaMovimientos.cargando"

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { Coins, Hash, Landmark, Pencil, Search, Tag, Trash2, User } from '@lucide/vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import type { CuentaBancaria, DatosCuenta } from '@/api/tipos'
 import { aTextoOULlo } from '@/api/utilidades'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { useTiendaCuentas } from '@/stores/cuentas'
+import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Button } from '@/componentes/ui/button'
 import { Checkbox } from '@/componentes/ui/checkbox'
 import { Input } from '@/componentes/ui/input'
@@ -58,6 +61,23 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
   titular: (a: CuentaBancaria, b: CuentaBancaria) => compararTexto(a.titular, b.titular),
 })
 
+const tamanoPagina = ref<TamanoPagina>(10)
+const {
+  filasPagina,
+  paginaActual,
+  totalPaginas,
+  totalRegistros,
+  primerIndice,
+  ultimoIndice,
+  paginaSiguiente,
+  paginaAnterior,
+} = usePaginacionTabla(filasOrdenadas, tamanoPagina)
+
+// Al buscar se vuelve a la página 1 para ver los resultados desde el principio.
+watch(busqueda, () => {
+  paginaActual.value = 1
+})
+
 const todasSeleccionadas = computed(
   () =>
     filasOrdenadas.value.length > 0 &&
@@ -104,6 +124,9 @@ async function guardar(): Promise<void> {
   try {
     if (idEnEdicion.value === null) {
       await tienda.crear(datos)
+      // Las cuentas nuevas se añaden al final de la lista: se salta a la
+      // última página para que la recién creada quede visible.
+      paginaActual.value = totalPaginas.value
     } else {
       await tienda.actualizar(idEnEdicion.value, datos)
     }
@@ -241,14 +264,29 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       />
     </div>
 
-    <div class="mt-6 flex max-w-xs flex-col gap-1.5">
-      <Label for="buscar-cuentas">Buscar</Label>
-      <div class="relative">
-        <Search
-          class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
-        />
-        <Input id="buscar-cuentas" v-model="busqueda" placeholder="Buscar cuentas…" class="pl-8" />
+    <div
+      class="bg-muted/40 mt-6 flex flex-wrap items-end justify-between gap-4 rounded-lg border p-4"
+    >
+      <div class="flex flex-wrap items-end gap-4">
+        <div class="flex max-w-xs flex-col gap-1.5">
+          <Label for="buscar-cuentas">Buscar</Label>
+          <div class="relative">
+            <Search
+              class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+            />
+            <Input
+              id="buscar-cuentas"
+              v-model="busqueda"
+              placeholder="Buscar cuentas…"
+              class="pl-8"
+            />
+          </div>
+        </div>
+        <SelectorTamanoPagina v-model="tamanoPagina" id-base="cuentas" />
       </div>
+      <p class="text-muted-foreground text-sm">
+        Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} cuentas
+      </p>
     </div>
 
     <Table class="mt-4">
@@ -315,7 +353,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-for="cuenta in filasOrdenadas" :key="cuenta.id">
+        <TableRow v-for="cuenta in filasPagina" :key="cuenta.id">
           <TableCell>
             <Checkbox
               :model-value="seleccionadas.has(cuenta.id)"
@@ -352,5 +390,13 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         </TableRow>
       </TableBody>
     </Table>
+
+    <BarraPaginacion
+      v-if="totalPaginas > 1"
+      :pagina-actual="paginaActual"
+      :total-paginas="totalPaginas"
+      @anterior="paginaAnterior"
+      @siguiente="paginaSiguiente"
+    />
   </section>
 </template>

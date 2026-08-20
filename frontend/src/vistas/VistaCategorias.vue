@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Pencil, X } from '@lucide/vue'
+import { Pencil, Search, X } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 
 import type { Categoria, Subcategoria } from '@/api/tipos'
+import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
@@ -38,10 +39,15 @@ const nombreSubcategoriaFormulario = ref('')
 const categoriaDestinoFormulario = ref<string | undefined>(undefined)
 const errorPanelSubcategoria = ref<string | null>(null)
 
+const { busqueda, filasFiltradas } = useBusquedaTabla(
+  computed(() => tienda.categorias),
+  (item) => [item.categoria.nombre, ...item.subcategorias.map((s) => s.nombre)],
+)
+
 const todasSeleccionadas = computed(
   () =>
-    tienda.categorias.length > 0 &&
-    tienda.categorias.every((c) => seleccionadas.value.has(c.categoria.id)),
+    filasFiltradas.value.length > 0 &&
+    filasFiltradas.value.every((c) => seleccionadas.value.has(c.categoria.id)),
 )
 
 onMounted(() => {
@@ -186,7 +192,9 @@ async function eliminarSeleccionadas(cascada = false): Promise<void> {
 }
 
 function alternarSeleccionTodas(marcado: boolean): void {
-  seleccionadas.value = marcado ? new Set(tienda.categorias.map((c) => c.categoria.id)) : new Set()
+  seleccionadas.value = marcado
+    ? new Set(filasFiltradas.value.map((c) => c.categoria.id))
+    : new Set()
 }
 
 function alternarSeleccion(id: number, marcado: boolean): void {
@@ -312,8 +320,23 @@ async function guardarSubcategoria(): Promise<void> {
       />
     </div>
 
+    <div class="mt-4 flex max-w-xs flex-col gap-1.5">
+      <Label for="buscar-categorias">Buscar</Label>
+      <div class="relative">
+        <Search
+          class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+        />
+        <Input
+          id="buscar-categorias"
+          v-model="busqueda"
+          placeholder="Buscar categorías…"
+          class="pl-8"
+        />
+      </div>
+    </div>
+
     <div class="mt-4 space-y-4">
-      <Card v-for="item in tienda.categorias" :key="item.categoria.id">
+      <Card v-for="item in filasFiltradas" :key="item.categoria.id">
         <CardHeader class="flex flex-row items-center justify-between">
           <div class="flex items-center gap-2">
             <Checkbox

@@ -31,6 +31,9 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
   expect(importados + omitidos).toBe(5)
 
   await page.goto('/gestion/cuentas')
+  // Con la tabla paginada, se busca por su número para encontrarla
+  // independientemente de en qué página quede entre el resto de cuentas.
+  await page.getByLabel('Buscar').fill('1234 5678 9012 34567890')
   await expect(page.locator('tr', { hasText: '1234 5678 9012 34567890' })).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-04-cuenta-creada.png' })
 })

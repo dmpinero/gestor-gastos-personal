@@ -60,7 +60,16 @@ class ImportarMovimientosExcel:
         cuenta = self._cuentas.obtener_por_numero_cuenta(numero_cuenta)
         if cuenta is not None:
             return cuenta
-        return self._cuentas.crear(CuentaBancaria(numero_cuenta=numero_cuenta, titular=titular))
+        # El alias es el mismo dato que el titular (celda D2 del Excel); la
+        # moneda no viene en el fichero y siempre es euros.
+        return self._cuentas.crear(
+            CuentaBancaria(
+                numero_cuenta=numero_cuenta,
+                titular=titular,
+                alias=titular,
+                moneda="€",
+            )
+        )
 
     def _obtener_o_crear_categoria(
         self,

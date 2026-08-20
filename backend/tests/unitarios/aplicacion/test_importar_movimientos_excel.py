@@ -61,8 +61,27 @@ def test_importa_crea_cuenta_nueva_y_movimientos() -> None:
     cuenta = repo_cuentas.obtener_por_numero_cuenta("ES00 1234")
     assert cuenta is not None
     assert cuenta.titular == "Ana"
+    # El alias es el mismo dato que el titular (celda D2 del Excel), y la
+    # moneda no viene en el fichero: siempre se asume euros.
+    assert cuenta.alias == "Ana"
+    assert cuenta.moneda == "€"
     assert resumen.movimientos_importados == 1
     assert len(repo_movimientos.listar_por_cuenta(cuenta.id)) == 1
+
+
+def test_importa_sin_titular_deja_el_alias_vacio_pero_la_moneda_en_euros() -> None:
+    datos = DatosExcelLeidos(
+        cabecera=CabeceraExcel(numero_cuenta="ES00 1234", titular=None),
+        filas=[_fila(datetime.date(2026, 1, 1))],
+    )
+    caso_de_uso, repo_cuentas, _, _ = _construir_caso_de_uso(LectorExcelFalso(datos=datos))
+
+    caso_de_uso.ejecutar(b"contenido", "movimientos.xlsx")
+
+    cuenta = repo_cuentas.obtener_por_numero_cuenta("ES00 1234")
+    assert cuenta is not None
+    assert cuenta.alias is None
+    assert cuenta.moneda == "€"
 
 
 def test_el_resumen_incluye_el_id_de_la_cuenta_usada() -> None:

@@ -53,7 +53,9 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
     'data-state',
     'active',
   )
-  await expect(page.getByLabel('Cuenta')).toContainText('1234 5678 9012 34567890')
+  // El selector de cuenta muestra el alias (= titular tomado del Excel) en
+  // vez del número de cuenta en bruto, cuando la cuenta tiene alias.
+  await expect(page.getByLabel('Cuenta')).toContainText('PERSONA EJEMPLO')
   await expect(page.locator('tbody tr').first()).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-10-ver-movimientos-importados.png' })
 })

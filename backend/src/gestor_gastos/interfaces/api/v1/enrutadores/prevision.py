@@ -135,7 +135,7 @@ def eliminar(id_concepto: int, sesion: Session = Depends(obtener_sesion)) -> Non
 
 @enrutador.get("/resumen-anual", response_model=ResumenAnualEsquema)
 def resumen_anual(
-    anio: int = Query(...), sesion: Session = Depends(obtener_sesion)
+    anio: int = Query(ge=1, le=9999), sesion: Session = Depends(obtener_sesion)
 ) -> ResumenAnualEsquema:
     resumen = _construir_obtener_resumen_anual(sesion).ejecutar(anio)
     return ResumenAnualEsquema(**asdict(resumen))
@@ -151,7 +151,7 @@ def resumen_anual(
     },
 )
 def exportar_resumen_anual(
-    anio: int = Query(...), sesion: Session = Depends(obtener_sesion)
+    anio: int = Query(ge=1, le=9999), sesion: Session = Depends(obtener_sesion)
 ) -> Response:
     contenido = ExportarResumenAnualExcel(
         _construir_obtener_resumen_anual(sesion), EscritorExcelResumenAnualOpenpyxl()
@@ -170,7 +170,7 @@ def exportar_resumen_anual(
 )
 async def importar_resumen_anual(
     fichero: UploadFile,
-    anio: int = Query(...),
+    anio: int = Query(ge=1, le=9999),
     sesion: Session = Depends(obtener_sesion),
 ) -> ResumenImportacionResumenAnualEsquema:
     contenido = await fichero.read()
@@ -211,8 +211,8 @@ async def importar_conceptos_previstos(
 )
 def ajustar_valor_mensual(
     id_concepto: int,
-    anio: int,
     datos: AjusteMensualEsquema,
+    anio: int = Path(ge=1, le=9999),
     mes: int = Path(ge=1, le=12),
     sesion: Session = Depends(obtener_sesion),
 ) -> None:
@@ -228,7 +228,7 @@ def ajustar_valor_mensual(
 )
 def eliminar_ajuste_mensual(
     id_concepto: int,
-    anio: int,
+    anio: int = Path(ge=1, le=9999),
     mes: int = Path(ge=1, le=12),
     sesion: Session = Depends(obtener_sesion),
 ) -> None:

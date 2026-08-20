@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { clienteApi } from '@/api/cliente'
+import { descargarBlob } from '@/lib/descargas'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 
 vi.mock('@/api/cliente', () => ({
@@ -10,7 +11,13 @@ vi.mock('@/api/cliente', () => ({
     crear: vi.fn<(...args: unknown[]) => unknown>(),
     actualizar: vi.fn<(...args: unknown[]) => unknown>(),
     eliminar: vi.fn<(...args: unknown[]) => unknown>(),
+    subirArchivo: vi.fn<(...args: unknown[]) => unknown>(),
+    descargar: vi.fn<(...args: unknown[]) => unknown>(),
   },
+}))
+
+vi.mock('@/lib/descargas', () => ({
+  descargarBlob: vi.fn<(blob: Blob, nombreFichero: string) => void>(),
 }))
 
 const conceptoEjemplo = {
@@ -157,5 +164,57 @@ describe('useTiendaPrevisiones', () => {
     expect(clienteApi.eliminar).toHaveBeenCalledWith('/previsiones/1/ajustes/2026/5')
     expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
     expect(tienda.resumenAnual).toEqual(resumenEjemplo)
+  })
+
+  it('exporta el resumen anual y dispara la descarga del fichero', async () => {
+    const blob = new Blob(['contenido'])
+    vi.mocked(clienteApi.descargar).mockResolvedValue(blob)
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.exportarResumenAnual(2026)
+
+    expect(clienteApi.descargar).toHaveBeenCalledWith(
+      '/previsiones/resumen-anual/exportar?anio=2026',
+    )
+    expect(descargarBlob).toHaveBeenCalledWith(blob, 'resumen-anual-2026.xlsx')
+  })
+
+  it('guarda el mensaje de error si exportar el resumen falla', async () => {
+    vi.mocked(clienteApi.descargar).mockRejectedValue(new Error('fallo de red'))
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.exportarResumenAnual(2026)
+
+    expect(tienda.error).toBe('fallo de red')
+    expect(descargarBlob).not.toHaveBeenCalled()
+  })
+
+  it('importa un Excel del resumen anual y recarga el resumen del año', async () => {
+    const resultado = { celdas_actualizadas: 2, celdas_eliminadas: 1, conceptos_no_encontrados: 0 }
+    vi.mocked(clienteApi.subirArchivo).mockResolvedValue(resultado)
+    vi.mocked(clienteApi.obtener).mockResolvedValue(resumenEjemplo)
+    const fichero = new File(['contenido'], 'resumen-anual-2026.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.importarResumenAnualExcel(2026, fichero)
+
+    expect(clienteApi.subirArchivo).toHaveBeenCalledWith(
+      '/previsiones/resumen-anual/importar?anio=2026',
+      'fichero',
+      fichero,
+    )
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
+    expect(devuelto).toEqual(resultado)
+  })
+
+  it('guarda el mensaje de error si importar el Excel falla y devuelve null', async () => {
+    vi.mocked(clienteApi.subirArchivo).mockRejectedValue(new Error('formato no soportado'))
+    const fichero = new File(['contenido'], 'resumen-anual-2026.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.importarResumenAnualExcel(2026, fichero)
+
+    expect(tienda.error).toBe('formato no soportado')
+    expect(devuelto).toBeNull()
   })
 })

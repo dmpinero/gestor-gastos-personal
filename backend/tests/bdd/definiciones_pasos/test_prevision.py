@@ -1,3 +1,6 @@
+import io
+
+import openpyxl
 from fastapi.testclient import TestClient
 from pytest_bdd import given, parsers, scenarios, then, when
 
@@ -87,3 +90,49 @@ def el_concepto_muestra_importe_ajustado(resumen: dict, importe: str, mes: int) 
     valor = next(v for v in fila["valores"] if v["mes"] == mes)
     assert valor["importe"] == importe
     assert valor["origen"] == "ajustado"
+
+
+@when(
+    parsers.parse("exporto el Excel del resumen anual de {anio:d}"),
+    target_fixture="excel_resumen_anual",
+)
+def exporto_excel_resumen_anual(cliente: TestClient, anio: int) -> bytes:
+    respuesta = cliente.get(f"/api/v1/previsiones/resumen-anual/exportar?anio={anio}")
+    assert respuesta.status_code == 200
+    return respuesta.content
+
+
+@when(
+    parsers.parse('edito en el Excel exportado el importe del mes {mes:d} a "{importe}"'),
+    target_fixture="excel_resumen_anual",
+)
+def edito_el_excel_exportado(excel_resumen_anual: bytes, mes: int, importe: str) -> bytes:
+    libro = openpyxl.load_workbook(io.BytesIO(excel_resumen_anual))
+    libro["Gastos"].cell(row=2, column=3 + mes, value=float(importe))
+    buffer = io.BytesIO()
+    libro.save(buffer)
+    return buffer.getvalue()
+
+
+@when(
+    parsers.parse("reimporto el Excel editado para el resumen anual de {anio:d}"),
+    target_fixture="resultado_importacion",
+)
+def reimporto_excel_editado(cliente: TestClient, excel_resumen_anual: bytes, anio: int) -> dict:
+    respuesta = cliente.post(
+        f"/api/v1/previsiones/resumen-anual/importar?anio={anio}",
+        files={
+            "fichero": (
+                "resumen-anual.xlsx",
+                excel_resumen_anual,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@then(parsers.parse("la importación actualiza {cantidad:d} celda"))
+def la_importacion_actualiza_n_celdas(resultado_importacion: dict, cantidad: int) -> None:
+    assert resultado_importacion["celdas_actualizadas"] == cantidad

@@ -25,6 +25,9 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     "/api/v1/previsiones",
     "/api/v1/previsiones/{id_concepto}",
     "/api/v1/previsiones/{id_concepto}/ajustes/{anio}/{mes}",
+    # el fichero de importación no puede estar vacío (mismo motivo que
+    # /api/v1/movimientos/importar).
+    "/api/v1/previsiones/resumen-anual/importar",
 }
 
 

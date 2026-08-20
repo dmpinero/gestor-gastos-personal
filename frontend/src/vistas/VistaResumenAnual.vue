@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import { Download, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-import type { DatosConceptoPrevisto, Periodicidad } from '@/api/tipos'
+import type {
+  DatosConceptoPrevisto,
+  Periodicidad,
+  ResumenImportacionResumenAnual,
+} from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
+import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import TablaResumenAnual from '@/componentes/prevision/TablaResumenAnual.vue'
 import { Button } from '@/componentes/ui/button'
 import { Input } from '@/componentes/ui/input'
@@ -147,13 +153,51 @@ async function editarCelda(conceptoId: number, mes: number, importe: string | nu
     await tienda.ajustarCelda(conceptoId, anio.value, mes, importe)
   }
 }
+
+async function exportar(): Promise<void> {
+  await tienda.exportarResumenAnual(anio.value)
+}
+
+const panelImportarAbierto = ref(false)
+const ficherosParaImportar = ref<File[]>([])
+const importando = ref(false)
+const resultadoImportacion = ref<ResumenImportacionResumenAnual | null>(null)
+
+function abrirImportar(): void {
+  ficherosParaImportar.value = []
+  resultadoImportacion.value = null
+  tienda.error = null
+  panelImportarAbierto.value = true
+}
+
+function ficherosElegidosParaImportar(ficheros: File[]): void {
+  ficherosParaImportar.value = ficheros.slice(0, 1)
+}
+
+async function importar(): Promise<void> {
+  const fichero = ficherosParaImportar.value[0]
+  if (!fichero) return
+  importando.value = true
+  resultadoImportacion.value = await tienda.importarResumenAnualExcel(anio.value, fichero)
+  importando.value = false
+}
 </script>
 
 <template>
   <section>
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-xl font-semibold">Resumen anual</h2>
-      <Button variant="success" @click="abrirParaCrear">Añadir concepto</Button>
+      <div class="flex gap-2">
+        <Button variant="outline" @click="abrirImportar">
+          <Upload class="size-4" />
+          Importar Excel
+        </Button>
+        <Button variant="outline" @click="exportar">
+          <Download class="size-4" />
+          Exportar a Excel
+        </Button>
+        <Button variant="success" @click="abrirParaCrear">Añadir concepto</Button>
+      </div>
     </div>
 
     <div class="mt-4 flex max-w-32 flex-col gap-1.5">
@@ -284,6 +328,55 @@ async function editarCelda(conceptoId: number, mes: number, importe: string | nu
             >
           </div>
         </form>
+      </SheetContent>
+    </Sheet>
+
+    <Sheet v-model:open="panelImportarAbierto">
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Importar Excel</SheetTitle>
+        </SheetHeader>
+
+        <div class="flex flex-col gap-4 px-4">
+          <p class="text-muted-foreground text-sm">
+            Sube el Excel exportado del resumen anual (editado con los importes que quieras cambiar)
+            para el año {{ anio }}. Solo se actualizan las celdas que hayan cambiado.
+          </p>
+
+          <ZonaSoltarFichero
+            :ficheros-seleccionados="ficherosParaImportar"
+            @ficheros-elegidos="ficherosElegidosParaImportar"
+          />
+
+          <p v-if="tienda.error" class="text-sm text-destructive" role="alert">
+            {{ tienda.error }}
+          </p>
+
+          <div v-if="resultadoImportacion" data-test="resumen-importacion-anual" class="text-sm">
+            <p>{{ resultadoImportacion.celdas_actualizadas }} celdas actualizadas.</p>
+            <p>
+              {{ resultadoImportacion.celdas_eliminadas }} celdas revertidas al valor calculado.
+            </p>
+            <p v-if="resultadoImportacion.conceptos_no_encontrados > 0">
+              {{ resultadoImportacion.conceptos_no_encontrados }} conceptos del fichero ya no
+              existen y se han ignorado.
+            </p>
+          </div>
+
+          <div class="flex gap-2">
+            <Button
+              type="button"
+              variant="success"
+              :disabled="ficherosParaImportar.length === 0 || importando"
+              @click="importar"
+            >
+              Importar
+            </Button>
+            <Button type="button" variant="destructive" @click="panelImportarAbierto = false"
+              >Cerrar</Button
+            >
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
 

@@ -57,3 +57,9 @@ class ResumenAnualEsquema(BaseModel):
     filas_ingresos: list[FilaResumenAnualEsquema]
     totales_gastos: list[Decimal]
     totales_ingresos: list[Decimal]
+
+
+class ResumenImportacionResumenAnualEsquema(BaseModel):
+    celdas_actualizadas: int
+    celdas_eliminadas: int
+    conceptos_no_encontrados: int

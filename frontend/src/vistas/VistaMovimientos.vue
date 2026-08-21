@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   CalendarDays,
+  ChevronRight,
   Euro,
   FileText,
   Pencil,
@@ -25,9 +26,12 @@ import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
+import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Button } from '@/componentes/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import {
@@ -209,6 +213,42 @@ function limpiarFiltros(): void {
   saldoMin.value = ''
   saldoMax.value = ''
 }
+
+const filtrosAbiertos = ref(true)
+
+// Resumen de gastos e ingresos (sobre las filas ya filtradas, antes de
+// ordenar/paginar), igual que en VistaHistorialGastos.vue pero separando
+// por signo del importe en vez de estar ya restringido a "gastos".
+const movimientosGastados = computed(() =>
+  filasFiltradas.value.filter((m) => Number(m.importe) < 0),
+)
+const movimientosIngresados = computed(() =>
+  filasFiltradas.value.filter((m) => Number(m.importe) > 0),
+)
+
+const totalGastado = computed(() =>
+  movimientosGastados.value.reduce((suma, m) => suma + Number(m.importe), 0),
+)
+const totalIngresado = computed(() =>
+  movimientosIngresados.value.reduce((suma, m) => suma + Number(m.importe), 0),
+)
+
+function datosGraficoDe(movimientos: Movimiento[]): { periodo: string; total: number }[] {
+  const totalesPorPeriodo = new Map<string, number>()
+  for (const m of movimientos) {
+    const periodo = m.fecha_valor.slice(0, 7)
+    totalesPorPeriodo.set(
+      periodo,
+      (totalesPorPeriodo.get(periodo) ?? 0) + Math.abs(Number(m.importe)),
+    )
+  }
+  return [...totalesPorPeriodo.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([periodo, total]) => ({ periodo, total }))
+}
+
+const datosGraficoGastos = computed(() => datosGraficoDe(movimientosGastados.value))
+const datosGraficoIngresos = computed(() => datosGraficoDe(movimientosIngresados.value))
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
@@ -467,109 +507,121 @@ function alternarSeleccion(id: number, marcado: boolean): void {
     </div>
 
     <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
-      <div class="flex flex-wrap items-end gap-4">
-        <div class="flex max-w-xs flex-col gap-1.5">
-          <Label id="etiqueta-cuenta" for="selector-cuenta">Cuenta</Label>
-          <Select v-model="cuentaSeleccionadaTexto">
-            <SelectTrigger id="selector-cuenta" aria-labelledby="etiqueta-cuenta">
-              <SelectValue placeholder="Selecciona una cuenta" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="cuenta in tiendaCuentas.cuentas"
-                :key="cuenta.id"
-                :value="String(cuenta.id)"
-              >
-                {{ cuenta.alias ?? cuenta.numero_cuenta }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div class="flex max-w-xs flex-col gap-1.5">
-          <Label for="buscar-movimientos">Buscar</Label>
-          <div class="relative">
-            <Search
-              class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
-            />
-            <Input
-              id="buscar-movimientos"
-              v-model="busqueda"
-              placeholder="Buscar movimientos…"
-              class="pl-8"
-            />
+      <Collapsible v-model:open="filtrosAbiertos">
+        <CollapsibleTrigger
+          class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+          :aria-label="filtrosAbiertos ? 'Contraer filtros' : 'Expandir filtros'"
+        >
+          <ChevronRight
+            class="size-4 transition-transform"
+            :class="filtrosAbiertos ? 'rotate-90' : ''"
+          />
+          Filtros
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
+          <div class="flex max-w-xs flex-col gap-1.5">
+            <Label id="etiqueta-cuenta" for="selector-cuenta">Cuenta</Label>
+            <Select v-model="cuentaSeleccionadaTexto">
+              <SelectTrigger id="selector-cuenta" aria-labelledby="etiqueta-cuenta">
+                <SelectValue placeholder="Selecciona una cuenta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="cuenta in tiendaCuentas.cuentas"
+                  :key="cuenta.id"
+                  :value="String(cuenta.id)"
+                >
+                  {{ cuenta.alias ?? cuenta.numero_cuenta }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
 
-        <div class="flex flex-col gap-1.5">
-          <Label for="filtro-fecha-desde">Fecha desde</Label>
-          <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <Label for="filtro-fecha-hasta">Fecha hasta</Label>
-          <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
-        </div>
+          <div class="flex max-w-xs flex-col gap-1.5">
+            <Label for="buscar-movimientos">Buscar</Label>
+            <div class="relative">
+              <Search
+                class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+              />
+              <Input
+                id="buscar-movimientos"
+                v-model="busqueda"
+                placeholder="Buscar movimientos…"
+                class="pl-8"
+              />
+            </div>
+          </div>
 
-        <div class="flex flex-col gap-1.5">
-          <Label id="etiqueta-filtro-categoria" for="selector-filtro-categoria"
-            >Filtrar por categoría</Label
-          >
-          <Select v-model="categoriaFiltroTexto">
-            <SelectTrigger
-              id="selector-filtro-categoria"
-              aria-labelledby="etiqueta-filtro-categoria"
+          <div class="flex flex-col gap-1.5">
+            <Label for="filtro-fecha-desde">Fecha desde</Label>
+            <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="filtro-fecha-hasta">Fecha hasta</Label>
+            <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label id="etiqueta-filtro-categoria" for="selector-filtro-categoria"
+              >Filtrar por categoría</Label
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
-              <SelectItem
-                v-for="c in tiendaCategorias.categorias"
-                :key="c.categoria.id"
-                :value="String(c.categoria.id)"
+            <Select v-model="categoriaFiltroTexto">
+              <SelectTrigger
+                id="selector-filtro-categoria"
+                aria-labelledby="etiqueta-filtro-categoria"
               >
-                {{ c.categoria.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
+                <SelectItem
+                  v-for="c in tiendaCategorias.categorias"
+                  :key="c.categoria.id"
+                  :value="String(c.categoria.id)"
+                >
+                  {{ c.categoria.nombre }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div class="flex flex-col gap-1.5">
-          <Label id="etiqueta-filtro-subcategoria" for="selector-filtro-subcategoria"
-            >Filtrar por subcategoría</Label
-          >
-          <Select v-model="subcategoriaFiltroTexto">
-            <SelectTrigger
-              id="selector-filtro-subcategoria"
-              aria-labelledby="etiqueta-filtro-subcategoria"
+          <div class="flex flex-col gap-1.5">
+            <Label id="etiqueta-filtro-subcategoria" for="selector-filtro-subcategoria"
+              >Filtrar por subcategoría</Label
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
-              <SelectItem :value="SIN_SUBCATEGORIA_FILTRO">(sin subcategoría)</SelectItem>
-              <SelectItem v-for="s in subcategoriasDelFiltro" :key="s.id" :value="String(s.id)">
-                {{ s.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <Select v-model="subcategoriaFiltroTexto">
+              <SelectTrigger
+                id="selector-filtro-subcategoria"
+                aria-labelledby="etiqueta-filtro-subcategoria"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
+                <SelectItem :value="SIN_SUBCATEGORIA_FILTRO">(sin subcategoría)</SelectItem>
+                <SelectItem v-for="s in subcategoriasDelFiltro" :key="s.id" :value="String(s.id)">
+                  {{ s.nombre }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <FiltroRangoNumero
-          label="Importe"
-          id-base="filtro-importe"
-          v-model:min="importeMin"
-          v-model:max="importeMax"
-        />
-        <FiltroRangoNumero
-          label="Saldo"
-          id-base="filtro-saldo"
-          v-model:min="saldoMin"
-          v-model:max="saldoMax"
-        />
+          <FiltroRangoNumero
+            label="Importe"
+            id-base="filtro-importe"
+            v-model:min="importeMin"
+            v-model:max="importeMax"
+          />
+          <FiltroRangoNumero
+            label="Saldo"
+            id-base="filtro-saldo"
+            v-model:min="saldoMin"
+            v-model:max="saldoMax"
+          />
 
-        <Button type="button" variant="outline" @click="limpiarFiltros">Limpiar filtros</Button>
-      </div>
+          <Button type="button" variant="outline" @click="limpiarFiltros">Limpiar filtros</Button>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div class="flex flex-wrap items-end justify-between gap-4">
         <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
@@ -577,6 +629,52 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
         </p>
       </div>
+    </div>
+
+    <div v-if="movimientosGastados.length > 0" class="mt-6">
+      <div class="grid grid-cols-2 gap-4 sm:max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-muted-foreground text-sm font-medium">Total gastado</CardTitle>
+          </CardHeader>
+          <CardContent class="text-destructive text-2xl font-semibold">
+            {{ formatearImporte(totalGastado) }}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+          </CardHeader>
+          <CardContent class="text-2xl font-semibold">
+            {{ movimientosGastados.length }}
+          </CardContent>
+        </Card>
+      </div>
+      <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de gastos</h3>
+      <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
+    </div>
+
+    <div v-if="movimientosIngresados.length > 0" class="mt-6">
+      <div class="grid grid-cols-2 gap-4 sm:max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-muted-foreground text-sm font-medium">Total ingresado</CardTitle>
+          </CardHeader>
+          <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
+            {{ formatearImporte(totalIngresado) }}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+          </CardHeader>
+          <CardContent class="text-2xl font-semibold">
+            {{ movimientosIngresados.length }}
+          </CardContent>
+        </Card>
+      </div>
+      <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
+      <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
     </div>
 
     <Table class="mt-4">

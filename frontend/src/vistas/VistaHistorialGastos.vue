@@ -13,7 +13,7 @@ import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
-import GraficoEvolucionGastos from '@/componentes/historial/GraficoEvolucionGastos.vue'
+import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Input } from '@/componentes/ui/input'
@@ -209,7 +209,7 @@ watch(busqueda, () => {
 
       <div v-if="datosGrafico.length > 0" class="mt-4">
         <h3 class="text-muted-foreground text-sm font-medium">Evolución</h3>
-        <GraficoEvolucionGastos :items="datosGrafico" class="mt-3" />
+        <GraficoEvolucion :items="datosGrafico" acento="gasto" class="mt-3" />
       </div>
 
       <div

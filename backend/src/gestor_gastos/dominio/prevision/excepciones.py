@@ -16,3 +16,9 @@ class PeriodicidadNoReconocidaError(Exception):
 class ImportePrevistoInvalidoError(Exception):
     """Se lanza cuando la columna Importe previsto de una fila está vacía o
     no es un número."""
+
+
+class FormatoDeIdConceptoInvalidoError(Exception):
+    """Se lanza cuando la columna A (ID de concepto) de una fila de datos no
+    es un número entero (p. ej. si se ha subido al importador equivocado un
+    Excel que no es el propio formato de exportación del resumen anual)."""

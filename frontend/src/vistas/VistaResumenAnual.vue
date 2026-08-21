@@ -9,6 +9,7 @@ import type {
 } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
+import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import TablaResumenAnual from '@/componentes/prevision/TablaResumenAnual.vue'
 import { Button } from '@/componentes/ui/button'
@@ -350,6 +351,7 @@ async function importar(): Promise<void> {
 
           <p v-if="tienda.error" class="text-sm text-destructive" role="alert">
             {{ tienda.error }}
+            <DialogoDetalleError :mensaje="tienda.error" :traza="tienda.errorTraza" />
           </p>
 
           <div v-if="resultadoImportacion" data-test="resumen-importacion-anual" class="text-sm">

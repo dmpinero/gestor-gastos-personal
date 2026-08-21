@@ -2,8 +2,9 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { clienteApi } from '@/api/cliente'
+import { clienteApi, ErrorApi } from '@/api/cliente'
 import type { ResumenImportacion, ResumenImportacionConceptosPrevistos } from '@/api/tipos'
+import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import { Button } from '@/componentes/ui/button'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
@@ -15,6 +16,7 @@ interface ResultadoImportacionFichero {
   nombreFichero: string
   resumen?: ResumenImportacion
   error?: string
+  traza?: string
 }
 
 const ficherosSeleccionados = ref<File[]>([])
@@ -81,7 +83,11 @@ async function importar(): Promise<void> {
       )
       resultados.value.push({ nombreFichero: fichero.name, resumen })
     } catch (motivo) {
-      resultados.value.push({ nombreFichero: fichero.name, error: (motivo as Error).message })
+      resultados.value.push({
+        nombreFichero: fichero.name,
+        error: (motivo as Error).message,
+        traza: motivo instanceof ErrorApi ? motivo.traza : undefined,
+      })
     }
   }
   importando.value = false
@@ -91,6 +97,7 @@ interface ResultadoImportacionConceptosFichero {
   nombreFichero: string
   resumen?: ResumenImportacionConceptosPrevistos
   error?: string
+  traza?: string
 }
 
 const ficherosSeleccionadosConceptos = ref<File[]>([])
@@ -140,6 +147,7 @@ async function importarConceptos(): Promise<void> {
       resultadosConceptos.value.push({
         nombreFichero: fichero.name,
         error: tiendaPrevisiones.error ?? 'Error desconocido',
+        traza: tiendaPrevisiones.errorTraza ?? undefined,
       })
     }
   }
@@ -176,6 +184,7 @@ function verResumenAnual(): void {
     <div v-if="ficherosConError.length > 0" class="mt-4 text-sm text-destructive" role="alert">
       <p v-for="resultado in ficherosConError" :key="resultado.nombreFichero">
         {{ resultado.nombreFichero }}: {{ resultado.error }}
+        <DialogoDetalleError :mensaje="resultado.error ?? ''" :traza="resultado.traza" />
       </p>
     </div>
 
@@ -240,6 +249,7 @@ function verResumenAnual(): void {
       >
         <p v-for="resultado in ficherosConErrorConceptos" :key="resultado.nombreFichero">
           {{ resultado.nombreFichero }}: {{ resultado.error }}
+          <DialogoDetalleError :mensaje="resultado.error ?? ''" :traza="resultado.traza" />
         </p>
       </div>
 

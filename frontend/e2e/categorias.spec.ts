@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test'
+import { elegirOpcion, seleccionarCuenta } from './utilidades'
 
 test('gestión de categoría y subcategoría', async ({ page }) => {
-  const nombreCategoria = `Categoría E2E ${Date.now()}`
-  const nombreCategoriaEditada = `Categoría E2E editada ${Date.now()}`
-  const nombreSubcategoria = `Subcategoría E2E ${Date.now()}`
+  const nombreCategoria = `Categoria E2E ${Date.now()}`
+  const nombreCategoriaEditada = `Categoria E2E editada ${Date.now()}`
+  const nombreSubcategoria = `Subcategoria E2E ${Date.now()}`
 
   await page.goto('/gestion/categorias')
   await page.screenshot({ path: 'e2e/capturas/categorias-01-listado-inicial.png' })
@@ -53,9 +54,9 @@ test('el buscador filtra las categorías por su nombre o el de sus subcategoría
   page,
 }) => {
   const sufijo = Date.now()
-  const nombreCategoriaA = `Categoría BUSCA-A ${sufijo}`
-  const nombreCategoriaB = `Categoría BUSCA-B ${sufijo}`
-  const nombreSubcategoria = `Subcategoría BUSCA ${sufijo}`
+  const nombreCategoriaA = `Categoria BUSCA-A ${sufijo}`
+  const nombreCategoriaB = `Categoria BUSCA-B ${sufijo}`
+  const nombreSubcategoria = `Subcategoria BUSCA ${sufijo}`
 
   await page.goto('/gestion/categorias')
 
@@ -89,10 +90,10 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 SUBCAT ${sufijo}`
-  const nombreCategoriaOrigen = `Categoría SUBCAT-ORIGEN ${sufijo}`
-  const nombreCategoriaDestino = `Categoría SUBCAT-DESTINO ${sufijo}`
-  const nombreSubcategoria = `Subcategoría SUBCAT ${sufijo}`
-  const nombreSubcategoriaEditada = `Subcategoría SUBCAT editada ${sufijo}`
+  const nombreCategoriaOrigen = `Categoria SUBCAT-ORIGEN ${sufijo}`
+  const nombreCategoriaDestino = `Categoria SUBCAT-DESTINO ${sufijo}`
+  const nombreSubcategoria = `Subcategoria SUBCAT ${sufijo}`
+  const nombreSubcategoriaEditada = `Subcategoria SUBCAT editada ${sufijo}`
   const descripcionMovimiento = `Movimiento SUBCAT ${sufijo}`
 
   await page.goto('/gestion/cuentas')
@@ -118,15 +119,20 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
   await expect(tarjetaOrigen.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
   await page.goto('/gestion/movimientos')
-  await page.getByLabel('Cuenta', { exact: true }).click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await panelMovimiento.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoriaOrigen }).click()
-  await panelMovimiento.getByLabel('Subcategoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreSubcategoria }).click()
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaOrigen,
+  )
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Subcategoría', { exact: true }),
+    nombreSubcategoria,
+  )
   await panelMovimiento.getByPlaceholder('Descripción').fill(descripcionMovimiento)
   await panelMovimiento.getByPlaceholder('Importe').fill('-12.00')
   await panelMovimiento.getByPlaceholder('Saldo').fill('88.00')
@@ -142,16 +148,18 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
   await panelSubcategoria
     .getByPlaceholder('Nombre de la subcategoría')
     .fill(nombreSubcategoriaEditada)
-  await panelSubcategoria.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoriaDestino }).click()
+  await elegirOpcion(
+    page,
+    panelSubcategoria.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaDestino,
+  )
   await panelSubcategoria.getByRole('button', { name: 'Guardar cambios' }).click()
 
   await expect(tarjetaOrigen.locator('li', { hasText: nombreSubcategoriaEditada })).toHaveCount(0)
   await expect(tarjetaDestino.locator('li', { hasText: nombreSubcategoriaEditada })).toBeVisible()
 
   await page.goto('/gestion/movimientos')
-  await page.getByLabel('Cuenta', { exact: true }).click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   const filaMovimiento = page.locator('tr', { hasText: descripcionMovimiento })
   await expect(filaMovimiento).toContainText(nombreCategoriaDestino)
   await expect(filaMovimiento).toContainText(nombreSubcategoriaEditada)
@@ -159,8 +167,8 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
 
 test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) => {
   const sufijo = Date.now()
-  const nombreCategoriaA = `Categoría BLOQUE-A ${sufijo}`
-  const nombreCategoriaB = `Categoría BLOQUE-B ${sufijo}`
+  const nombreCategoriaA = `Categoria BLOQUE-A ${sufijo}`
+  const nombreCategoriaB = `Categoria BLOQUE-B ${sufijo}`
 
   await page.goto('/gestion/categorias')
 
@@ -201,8 +209,8 @@ test('eliminar una subcategoría con movimientos asociados la borra en cascada a
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 CAT-CASCADA ${sufijo}`
-  const nombreCategoria = `Categoría CAT-CASCADA ${sufijo}`
-  const nombreSubcategoria = `Subcategoría CAT-CASCADA ${sufijo}`
+  const nombreCategoria = `Categoria CAT-CASCADA ${sufijo}`
+  const nombreSubcategoria = `Subcategoria CAT-CASCADA ${sufijo}`
 
   await page.goto('/gestion/cuentas')
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
@@ -224,15 +232,20 @@ test('eliminar una subcategoría con movimientos asociados la borra en cascada a
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
   await page.goto('/gestion/movimientos')
-  await page.getByLabel('Cuenta').click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await panelMovimiento.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
-  await panelMovimiento.getByLabel('Subcategoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreSubcategoria }).click()
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Subcategoría', { exact: true }),
+    nombreSubcategoria,
+  )
   await panelMovimiento.getByPlaceholder('Descripción').fill('Movimiento subcategoría cascada')
   await panelMovimiento.getByPlaceholder('Importe').fill('-8.00')
   await panelMovimiento.getByPlaceholder('Saldo').fill('92.00')
@@ -256,8 +269,8 @@ test('eliminar una categoría con subcategorías y movimientos asociados los bor
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 CAT-CASCADA2 ${sufijo}`
-  const nombreCategoria = `Categoría CAT-CASCADA2 ${sufijo}`
-  const nombreSubcategoria = `Subcategoría CAT-CASCADA2 ${sufijo}`
+  const nombreCategoria = `Categoria CAT-CASCADA2 ${sufijo}`
+  const nombreSubcategoria = `Subcategoria CAT-CASCADA2 ${sufijo}`
 
   await page.goto('/gestion/cuentas')
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
@@ -279,13 +292,15 @@ test('eliminar una categoría con subcategorías y movimientos asociados los bor
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
   await page.goto('/gestion/movimientos')
-  await page.getByLabel('Cuenta').click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await panelMovimiento.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelMovimiento.getByPlaceholder('Descripción').fill('Movimiento categoría cascada')
   await panelMovimiento.getByPlaceholder('Importe').fill('-6.00')
   await panelMovimiento.getByPlaceholder('Saldo').fill('94.00')

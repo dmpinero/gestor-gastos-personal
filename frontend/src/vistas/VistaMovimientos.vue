@@ -24,6 +24,7 @@ import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Button } from '@/componentes/ui/button'
 import { Checkbox } from '@/componentes/ui/checkbox'
@@ -103,6 +104,52 @@ const subcategoriasDeLaCategoria = computed(() => {
   return categoria?.subcategorias ?? []
 })
 
+// Filtros avanzados de la barra de búsqueda (independientes del formulario
+// de alta/edición): fecha desde/hasta, categoría, subcategoría, e importe y
+// saldo por rango. '' en fecha/importe/saldo significa "sin límite".
+const fechaDesde = ref('')
+const fechaHasta = ref('')
+
+const FILTRO_TODAS = 'todas'
+const SIN_SUBCATEGORIA_FILTRO = 'sin-subcategoria-filtro'
+
+const categoriaFiltro = ref<number | null>(null)
+const subcategoriaFiltro = ref<number | typeof FILTRO_TODAS | typeof SIN_SUBCATEGORIA_FILTRO>(
+  FILTRO_TODAS,
+)
+
+const importeMin = ref('')
+const importeMax = ref('')
+const saldoMin = ref('')
+const saldoMax = ref('')
+
+const categoriaFiltroTexto = computed<string>({
+  get: () => (categoriaFiltro.value === null ? FILTRO_TODAS : String(categoriaFiltro.value)),
+  set: (valor) => {
+    categoriaFiltro.value = valor === FILTRO_TODAS ? null : Number(valor)
+    subcategoriaFiltro.value = FILTRO_TODAS
+  },
+})
+
+const subcategoriaFiltroTexto = computed<string>({
+  get: () => String(subcategoriaFiltro.value),
+  set: (valor) => {
+    subcategoriaFiltro.value =
+      valor === FILTRO_TODAS
+        ? FILTRO_TODAS
+        : valor === SIN_SUBCATEGORIA_FILTRO
+          ? SIN_SUBCATEGORIA_FILTRO
+          : Number(valor)
+  },
+})
+
+const subcategoriasDelFiltro = computed(() =>
+  categoriaFiltro.value === null
+    ? tiendaCategorias.categorias.flatMap((c) => c.subcategorias)
+    : (tiendaCategorias.categorias.find((c) => c.categoria.id === categoriaFiltro.value)
+        ?.subcategorias ?? []),
+)
+
 function nombreCategoria(idCategoria: number): string {
   return (
     tiendaCategorias.categorias.find((c) => c.categoria.id === idCategoria)?.categoria.nombre ?? ''
@@ -122,17 +169,46 @@ function compararTexto(a: string, b: string): number {
   return a.localeCompare(b)
 }
 
-const { busqueda, filasFiltradas } = useBusquedaTabla(
-  computed(() => tiendaMovimientos.movimientos),
-  (m) => [
-    formatearFecha(m.fecha_valor),
-    m.descripcion,
-    nombreCategoria(m.categoria_id),
-    nombreSubcategoria(m.subcategoria_id),
-    m.importe,
-    m.saldo,
-  ],
+const filasConFiltrosAvanzados = computed(() =>
+  tiendaMovimientos.movimientos.filter((m) => {
+    if (fechaDesde.value && m.fecha_valor < fechaDesde.value) return false
+    if (fechaHasta.value && m.fecha_valor > fechaHasta.value) return false
+    if (categoriaFiltro.value !== null && m.categoria_id !== categoriaFiltro.value) return false
+    if (subcategoriaFiltro.value !== FILTRO_TODAS) {
+      const coincide =
+        subcategoriaFiltro.value === SIN_SUBCATEGORIA_FILTRO
+          ? m.subcategoria_id === null
+          : m.subcategoria_id === subcategoriaFiltro.value
+      if (!coincide) return false
+    }
+    if (importeMin.value !== '' && Number(m.importe) < Number(importeMin.value)) return false
+    if (importeMax.value !== '' && Number(m.importe) > Number(importeMax.value)) return false
+    if (saldoMin.value !== '' && Number(m.saldo) < Number(saldoMin.value)) return false
+    if (saldoMax.value !== '' && Number(m.saldo) > Number(saldoMax.value)) return false
+    return true
+  }),
 )
+
+const { busqueda, filasFiltradas } = useBusquedaTabla(filasConFiltrosAvanzados, (m) => [
+  formatearFecha(m.fecha_valor),
+  m.descripcion,
+  nombreCategoria(m.categoria_id),
+  nombreSubcategoria(m.subcategoria_id),
+  m.importe,
+  m.saldo,
+])
+
+function limpiarFiltros(): void {
+  busqueda.value = ''
+  fechaDesde.value = ''
+  fechaHasta.value = ''
+  categoriaFiltro.value = null
+  subcategoriaFiltro.value = FILTRO_TODAS
+  importeMin.value = ''
+  importeMax.value = ''
+  saldoMin.value = ''
+  saldoMax.value = ''
+}
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
@@ -157,10 +233,24 @@ const {
   paginaAnterior,
 } = usePaginacionTabla(filasOrdenadas, tamanoPagina)
 
-// Al buscar se vuelve a la página 1 para ver los resultados desde el principio.
-watch(busqueda, () => {
-  paginaActual.value = 1
-})
+// Al cambiar cualquier filtro se vuelve a la página 1 para ver los
+// resultados desde el principio.
+watch(
+  [
+    busqueda,
+    fechaDesde,
+    fechaHasta,
+    categoriaFiltro,
+    subcategoriaFiltro,
+    importeMin,
+    importeMax,
+    saldoMin,
+    saldoMax,
+  ],
+  () => {
+    paginaActual.value = 1
+  },
+)
 
 const todosSeleccionados = computed(
   () =>
@@ -277,24 +367,6 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       <Button variant="success" @click="abrirParaCrear">Crear movimiento</Button>
     </div>
 
-    <div class="mt-4 flex max-w-xs flex-col gap-1.5">
-      <Label id="etiqueta-cuenta" for="selector-cuenta">Cuenta</Label>
-      <Select v-model="cuentaSeleccionadaTexto">
-        <SelectTrigger id="selector-cuenta" aria-labelledby="etiqueta-cuenta">
-          <SelectValue placeholder="Selecciona una cuenta" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem
-            v-for="cuenta in tiendaCuentas.cuentas"
-            :key="cuenta.id"
-            :value="String(cuenta.id)"
-          >
-            {{ cuenta.alias ?? cuenta.numero_cuenta }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
     <Sheet v-model:open="panelAbierto">
       <SheetContent>
         <SheetHeader>
@@ -394,10 +466,26 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       />
     </div>
 
-    <div
-      class="bg-muted/40 mt-4 flex flex-wrap items-end justify-between gap-4 rounded-lg border p-4"
-    >
+    <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
       <div class="flex flex-wrap items-end gap-4">
+        <div class="flex max-w-xs flex-col gap-1.5">
+          <Label id="etiqueta-cuenta" for="selector-cuenta">Cuenta</Label>
+          <Select v-model="cuentaSeleccionadaTexto">
+            <SelectTrigger id="selector-cuenta" aria-labelledby="etiqueta-cuenta">
+              <SelectValue placeholder="Selecciona una cuenta" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="cuenta in tiendaCuentas.cuentas"
+                :key="cuenta.id"
+                :value="String(cuenta.id)"
+              >
+                {{ cuenta.alias ?? cuenta.numero_cuenta }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div class="flex max-w-xs flex-col gap-1.5">
           <Label for="buscar-movimientos">Buscar</Label>
           <div class="relative">
@@ -412,11 +500,83 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             />
           </div>
         </div>
-        <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
+
+        <div class="flex flex-col gap-1.5">
+          <Label for="filtro-fecha-desde">Fecha desde</Label>
+          <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="filtro-fecha-hasta">Fecha hasta</Label>
+          <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <Label id="etiqueta-filtro-categoria" for="selector-filtro-categoria"
+            >Filtrar por categoría</Label
+          >
+          <Select v-model="categoriaFiltroTexto">
+            <SelectTrigger
+              id="selector-filtro-categoria"
+              aria-labelledby="etiqueta-filtro-categoria"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
+              <SelectItem
+                v-for="c in tiendaCategorias.categorias"
+                :key="c.categoria.id"
+                :value="String(c.categoria.id)"
+              >
+                {{ c.categoria.nombre }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <Label id="etiqueta-filtro-subcategoria" for="selector-filtro-subcategoria"
+            >Filtrar por subcategoría</Label
+          >
+          <Select v-model="subcategoriaFiltroTexto">
+            <SelectTrigger
+              id="selector-filtro-subcategoria"
+              aria-labelledby="etiqueta-filtro-subcategoria"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
+              <SelectItem :value="SIN_SUBCATEGORIA_FILTRO">(sin subcategoría)</SelectItem>
+              <SelectItem v-for="s in subcategoriasDelFiltro" :key="s.id" :value="String(s.id)">
+                {{ s.nombre }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <FiltroRangoNumero
+          label="Importe"
+          id-base="filtro-importe"
+          v-model:min="importeMin"
+          v-model:max="importeMax"
+        />
+        <FiltroRangoNumero
+          label="Saldo"
+          id-base="filtro-saldo"
+          v-model:min="saldoMin"
+          v-model:max="saldoMax"
+        />
+
+        <Button type="button" variant="outline" @click="limpiarFiltros">Limpiar filtros</Button>
       </div>
-      <p class="text-muted-foreground text-sm">
-        Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
-      </p>
+
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
+        <p class="text-muted-foreground text-sm">
+          Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
+        </p>
+      </div>
     </div>
 
     <Table class="mt-4">

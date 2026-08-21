@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { elegirOpcion, seleccionarCuenta } from './utilidades'
 
 test('gestión completa de una cuenta bancaria: crear, editar y eliminar', async ({ page }) => {
   const numeroCuenta = `ES00 TEST ${Date.now()}`
@@ -165,7 +166,7 @@ test('eliminar una cuenta con movimientos asociados los borra en cascada al conf
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 CASCADA ${sufijo}`
-  const nombreCategoria = `Categoría CASCADA ${sufijo}`
+  const nombreCategoria = `Categoria CASCADA ${sufijo}`
 
   await page.goto('/gestion/cuentas')
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
@@ -182,13 +183,15 @@ test('eliminar una cuenta con movimientos asociados los borra en cascada al conf
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
   await page.goto('/gestion/movimientos')
-  await page.getByLabel('Cuenta').click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await panelMovimiento.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelMovimiento.getByPlaceholder('Descripción').fill('Movimiento cascada')
   await panelMovimiento.getByPlaceholder('Importe').fill('-10.00')
   await panelMovimiento.getByPlaceholder('Saldo').fill('90.00')

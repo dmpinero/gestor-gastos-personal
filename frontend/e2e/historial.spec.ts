@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { elegirOpcion, seleccionarCuenta } from './utilidades'
 
 async function crearMovimiento(
   page: Page,
@@ -9,13 +10,11 @@ async function crearMovimiento(
   descripcion: string,
   importe: string,
 ): Promise<void> {
-  await page.getByLabel('Cuenta', { exact: true }).click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-01')
-  await panel.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
   await seleccionarSubcategoriaSiAplica(page, panel, subcategoria)
   await panel.getByPlaceholder('Descripción').fill(descripcion)
   await panel.getByPlaceholder('Importe').fill(importe)
@@ -30,8 +29,7 @@ async function seleccionarSubcategoriaSiAplica(
   subcategoria: string | null,
 ): Promise<void> {
   if (!subcategoria) return
-  await panel.getByLabel('Subcategoría', { exact: true }).click()
-  await page.getByRole('option', { name: subcategoria }).click()
+  await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
 }
 
 test('sin selección muestra un mensaje para elegir categoría o subcategoría', async ({ page }) => {
@@ -49,8 +47,8 @@ test('navegar por categoría y subcategoría en el historial muestra solo los ga
   const sufijo = Date.now()
   const numeroCuentaA = `ES00 HIST-A ${sufijo}`
   const numeroCuentaB = `ES00 HIST-B ${sufijo}`
-  const nombreCategoria = `Categoría HIST ${sufijo}`
-  const nombreSubcategoria = `Subcategoría HIST ${sufijo}`
+  const nombreCategoria = `Categoria HIST ${sufijo}`
+  const nombreSubcategoria = `Subcategoria HIST ${sufijo}`
   const descripcionGastoA = `Gasto cuenta A ${sufijo}`
   const descripcionGastoB = `Gasto cuenta B ${sufijo}`
   const descripcionIngreso = `Ingreso ${sufijo}`

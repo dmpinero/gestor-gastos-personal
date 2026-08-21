@@ -1,20 +1,24 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { clienteApi } from '@/api/cliente'
+import { clienteApi, ErrorApi } from '@/api/cliente'
 import { descargarBlob } from '@/lib/descargas'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 
-vi.mock('@/api/cliente', () => ({
-  clienteApi: {
-    obtener: vi.fn<(...args: unknown[]) => unknown>(),
-    crear: vi.fn<(...args: unknown[]) => unknown>(),
-    actualizar: vi.fn<(...args: unknown[]) => unknown>(),
-    eliminar: vi.fn<(...args: unknown[]) => unknown>(),
-    subirArchivo: vi.fn<(...args: unknown[]) => unknown>(),
-    descargar: vi.fn<(...args: unknown[]) => unknown>(),
-  },
-}))
+vi.mock('@/api/cliente', async (importarOriginal) => {
+  const original = await importarOriginal<typeof import('@/api/cliente')>()
+  return {
+    ErrorApi: original.ErrorApi,
+    clienteApi: {
+      obtener: vi.fn<(...args: unknown[]) => unknown>(),
+      crear: vi.fn<(...args: unknown[]) => unknown>(),
+      actualizar: vi.fn<(...args: unknown[]) => unknown>(),
+      eliminar: vi.fn<(...args: unknown[]) => unknown>(),
+      subirArchivo: vi.fn<(...args: unknown[]) => unknown>(),
+      descargar: vi.fn<(...args: unknown[]) => unknown>(),
+    },
+  }
+})
 
 vi.mock('@/lib/descargas', () => ({
   descargarBlob: vi.fn<(blob: Blob, nombreFichero: string) => void>(),
@@ -249,5 +253,41 @@ describe('useTiendaPrevisiones', () => {
 
     expect(tienda.error).toBe('periodicidad no reconocida')
     expect(devuelto).toBeNull()
+  })
+
+  it('guarda la traza si importar el resumen anual falla con un ErrorApi con traza', async () => {
+    vi.mocked(clienteApi.subirArchivo).mockRejectedValue(
+      new ErrorApi(500, 'boom inesperado', 'Traceback...'),
+    )
+    const fichero = new File(['contenido'], 'resumen-anual-2026.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.importarResumenAnualExcel(2026, fichero)
+
+    expect(tienda.error).toBe('boom inesperado')
+    expect(tienda.errorTraza).toBe('Traceback...')
+  })
+
+  it('guarda la traza si importar conceptos previstos falla con un ErrorApi con traza', async () => {
+    vi.mocked(clienteApi.subirArchivo).mockRejectedValue(
+      new ErrorApi(500, 'boom inesperado', 'Traceback...'),
+    )
+    const fichero = new File(['contenido'], 'conceptos.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.importarConceptosPrevistosExcel(fichero)
+
+    expect(tienda.error).toBe('boom inesperado')
+    expect(tienda.errorTraza).toBe('Traceback...')
+  })
+
+  it('deja errorTraza a null cuando el error no es un ErrorApi con traza', async () => {
+    vi.mocked(clienteApi.subirArchivo).mockRejectedValue(new Error('fallo de red'))
+    const fichero = new File(['contenido'], 'conceptos.xlsx')
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.importarConceptosPrevistosExcel(fichero)
+
+    expect(tienda.errorTraza).toBeNull()
   })
 })

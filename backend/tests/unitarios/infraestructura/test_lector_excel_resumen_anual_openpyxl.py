@@ -5,7 +5,10 @@ import openpyxl
 import pytest
 
 from gestor_gastos.dominio.importacion.excepciones import ExtensionNoSoportadaError
-from gestor_gastos.dominio.prevision.excepciones import HojaExcelNoReconocidaError
+from gestor_gastos.dominio.prevision.excepciones import (
+    FormatoDeIdConceptoInvalidoError,
+    HojaExcelNoReconocidaError,
+)
 from gestor_gastos.infraestructura.prevision.lector_excel_resumen_anual_openpyxl import (
     LectorExcelResumenAnualOpenpyxl,
 )
@@ -64,6 +67,25 @@ def test_lee_las_celdas_de_gastos_e_ingresos_ignorando_la_fila_de_totales() -> N
     assert all(c.importe == Decimal("-9.99") for c in celdas_concepto_1)
     assert all(c.importe == Decimal("2000.00") for c in celdas_concepto_2)
     assert {c.mes for c in celdas_concepto_1} == set(range(1, 13))
+
+
+def test_id_concepto_no_numerico_lanza_error_controlado() -> None:
+    """Reproduce el caso real: subir al importador de Resumen anual un Excel
+    con otro formato (p. ej. el de carga masiva de conceptos previstos, cuya
+    columna A trae el nombre de la categoría en vez de un ID numérico)."""
+    libro = openpyxl.Workbook()
+    libro.remove(libro.active)
+    hoja_gastos = libro.create_sheet("Gastos")
+    hoja_gastos.append(["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]])
+    hoja_gastos.append(["Amazon Prime", "Ocio", "mensual", *[-4.99] * 12])
+    libro.create_sheet("Ingresos").append(
+        ["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]]
+    )
+    buffer = io.BytesIO()
+    libro.save(buffer)
+
+    with pytest.raises(FormatoDeIdConceptoInvalidoError):
+        LectorExcelResumenAnualOpenpyxl().leer(buffer.getvalue(), "resumen-anual-2026.xlsx")
 
 
 def test_celda_vacia_se_lee_como_importe_none() -> None:

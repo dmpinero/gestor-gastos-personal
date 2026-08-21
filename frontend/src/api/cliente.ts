@@ -4,6 +4,7 @@ export class ErrorApi extends Error {
   constructor(
     public readonly estado: number,
     mensaje: string,
+    public readonly traza?: string,
   ) {
     super(mensaje)
     this.name = 'ErrorApi'
@@ -15,18 +16,27 @@ interface OpcionesPeticion {
   token?: string | null
 }
 
-async function extraerMensajeDeError(respuesta: Response): Promise<string> {
+interface DetalleError {
+  mensaje: string
+  traza?: string
+}
+
+async function extraerDetalleError(respuesta: Response): Promise<DetalleError> {
   try {
     const datos = await respuesta.clone().json()
-    if (typeof datos.detalle === 'string') return datos.detalle
-    if (typeof datos.detail === 'string') return datos.detail
+    const traza = typeof datos.traza === 'string' ? datos.traza : undefined
+    if (typeof datos.detalle === 'string') return { mensaje: datos.detalle, traza }
+    if (typeof datos.detail === 'string') return { mensaje: datos.detail, traza }
     if (Array.isArray(datos.detail)) {
-      return datos.detail.map((error: { msg?: string }) => error.msg).join('; ')
+      return {
+        mensaje: datos.detail.map((error: { msg?: string }) => error.msg).join('; '),
+        traza,
+      }
     }
   } catch {
     // El cuerpo no era JSON; se usa el texto del estado HTTP como mensaje.
   }
-  return respuesta.statusText
+  return { mensaje: respuesta.statusText }
 }
 
 async function peticion<T>(
@@ -49,7 +59,8 @@ async function peticion<T>(
   const respuesta = await fetch(`${URL_BASE_API}${ruta}`, opcionesFetch)
 
   if (!respuesta.ok) {
-    throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))
+    const { mensaje, traza } = await extraerDetalleError(respuesta)
+    throw new ErrorApi(respuesta.status, mensaje, traza)
   }
 
   if (respuesta.status === 204) {
@@ -63,7 +74,8 @@ async function descargar(ruta: string): Promise<Blob> {
   const respuesta = await fetch(`${URL_BASE_API}${ruta}`)
 
   if (!respuesta.ok) {
-    throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))
+    const { mensaje, traza } = await extraerDetalleError(respuesta)
+    throw new ErrorApi(respuesta.status, mensaje, traza)
   }
 
   return await respuesta.blob()
@@ -79,7 +91,8 @@ async function subirArchivo<T>(ruta: string, campo: string, fichero: File): Prom
   })
 
   if (!respuesta.ok) {
-    throw new ErrorApi(respuesta.status, await extraerMensajeDeError(respuesta))
+    const { mensaje, traza } = await extraerDetalleError(respuesta)
+    throw new ErrorApi(respuesta.status, mensaje, traza)
   }
 
   return (await respuesta.json()) as T

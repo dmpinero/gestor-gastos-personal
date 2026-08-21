@@ -1,3 +1,5 @@
+import traceback
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
@@ -14,6 +16,7 @@ from gestor_gastos.dominio.importacion.excepciones import (
 )
 from gestor_gastos.dominio.prevision.excepciones import (
     FicheroSinConceptosPrevistosError,
+    FormatoDeIdConceptoInvalidoError,
     HojaExcelNoReconocidaError,
     ImportePrevistoInvalidoError,
     PeriodicidadNoReconocidaError,
@@ -61,6 +64,12 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
     async def _hoja_no_reconocida(_: Request, error: HojaExcelNoReconocidaError) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
 
+    @aplicacion.exception_handler(FormatoDeIdConceptoInvalidoError)
+    async def _formato_id_invalido(
+        _: Request, error: FormatoDeIdConceptoInvalidoError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
     @aplicacion.exception_handler(FicheroSinConceptosPrevistosError)
     async def _fichero_sin_conceptos_previstos(
         _: Request, error: FicheroSinConceptosPrevistosError
@@ -78,3 +87,10 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
         _: Request, error: ImportePrevistoInvalidoError
     ) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(Exception)
+    async def _error_no_controlado(_: Request, error: Exception) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detalle": str(error), "traza": traceback.format_exc()},
+        )

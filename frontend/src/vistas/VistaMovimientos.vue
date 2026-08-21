@@ -380,11 +380,21 @@ async function eliminar(id: number): Promise<void> {
 
 async function eliminarSeleccionados(): Promise<void> {
   error.value = null
-  try {
-    await Promise.all([...seleccionados.value].map((id) => tiendaMovimientos.eliminar(id)))
-    seleccionados.value.clear()
-  } catch (motivo) {
-    error.value = (motivo as Error).message
+  const idsSeleccionados = [...seleccionados.value]
+  const resultados = await Promise.allSettled(
+    idsSeleccionados.map((id) => tiendaMovimientos.eliminar(id)),
+  )
+  // Se recarga siempre desde el servidor al terminar, aunque haya fallado
+  // algún borrado: con Promise.all, un único fallo abortaba el resto sin
+  // volver a sincronizar, dejando la tabla desajustada respecto al backend
+  // aunque otros movimientos sí se hubieran borrado.
+  if (cuentaSeleccionada.value !== null) {
+    await tiendaMovimientos.cargar(cuentaSeleccionada.value)
+  }
+  seleccionados.value = new Set()
+  const fallidos = resultados.filter((r) => r.status === 'rejected')
+  if (fallidos.length > 0) {
+    error.value = `No se pudieron eliminar ${fallidos.length} de ${idsSeleccionados.length} movimientos seleccionados.`
   }
 }
 

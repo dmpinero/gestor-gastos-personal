@@ -8,11 +8,20 @@ export interface TotalPeriodo {
   total: number
 }
 
-const props = defineProps<{
-  items: TotalPeriodo[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    items: TotalPeriodo[]
+    acento?: 'gasto' | 'ingreso'
+  }>(),
+  { acento: 'gasto' },
+)
 
 const modo = ref<'barras' | 'lineas' | 'area'>('barras')
+
+const claseBarra = computed(() => (props.acento === 'gasto' ? 'bg-destructive' : 'bg-success'))
+const colorTrazo = computed(() =>
+  props.acento === 'gasto' ? 'var(--destructive)' : 'var(--success)',
+)
 
 const maximo = computed(() => Math.max(1, ...props.items.map((item) => item.total)))
 
@@ -106,7 +115,7 @@ const descripcionAccesible = computed(() =>
         }}</span>
         <div class="bg-muted flex h-32 w-8 items-end overflow-hidden rounded-t-md">
           <div
-            class="bg-destructive w-full rounded-t-md transition-all"
+            :class="[claseBarra, 'w-full rounded-t-md transition-all']"
             :style="{ height: `${alturaPorcentaje(item.total)}%` }"
           />
         </div>
@@ -127,10 +136,10 @@ const descripcionAccesible = computed(() =>
         <polygon
           v-if="modo === 'area'"
           :points="puntosArea"
-          fill="var(--destructive)"
+          :fill="colorTrazo"
           fill-opacity="0.15"
         />
-        <polyline :points="puntosLinea" fill="none" stroke="var(--destructive)" stroke-width="2" />
+        <polyline :points="puntosLinea" fill="none" :stroke="colorTrazo" stroke-width="2" />
         <template v-for="punto in puntos" :key="punto.periodo">
           <text
             :x="punto.x"
@@ -141,7 +150,7 @@ const descripcionAccesible = computed(() =>
           >
             {{ formatearImporte(punto.total) }}
           </text>
-          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--destructive)" />
+          <circle :cx="punto.x" :cy="punto.y" r="4" :fill="colorTrazo" />
         </template>
       </svg>
       <div class="flex" :style="{ width: `${anchoTotal}px` }">

@@ -346,3 +346,81 @@ test('los filtros de fecha, importe, categoría y subcategoría se combinan entr
   await expect(page.locator('tr', { hasText: descripcionFueraImporte })).toBeVisible()
   await expect(page.locator('tr', { hasText: descripcionFueraFecha })).toBeVisible()
 })
+
+test('el área de filtros se puede contraer y expandir', async ({ page }) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-COLAPSO ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  await expect(page.getByLabel('Buscar')).toBeVisible()
+  await expect(page.getByLabel('Fecha desde')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Contraer filtros' }).click()
+  await expect(page.getByLabel('Buscar')).toBeHidden()
+  await expect(page.getByLabel('Fecha desde')).toBeHidden()
+
+  await page.getByRole('button', { name: 'Expandir filtros' }).click()
+  await expect(page.getByLabel('Buscar')).toBeVisible()
+  await expect(page.getByLabel('Fecha desde')).toBeVisible()
+})
+
+test('el resumen muestra el total y la evolución de gastos e ingresos por separado', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-RESUMEN ${sufijo}`
+  const nombreCategoria = `Categoria MOV-RESUMEN ${sufijo}`
+  const descripcionGasto = `Gasto resumen ${sufijo}`
+  const descripcionIngreso = `Ingreso resumen ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  for (const [descripcion, importe] of [
+    [descripcionGasto, '-30.00'],
+    [descripcionIngreso, '1000.00'],
+  ]) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill('2026-01-15')
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill(importe)
+    await panel.getByPlaceholder('Saldo').fill('970.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  await expect(page.getByText('Total gastado')).toBeVisible()
+  const tarjetaGastado = page.locator('[data-slot="card"]', { hasText: 'Total gastado' })
+  await expect(tarjetaGastado).toContainText('-30,00 €')
+
+  const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
+  await expect(tarjetaIngresado).toContainText('1000,00 €')
+
+  await expect(page.getByText('Evolución de gastos')).toBeVisible()
+  await expect(page.getByText('Evolución de ingresos')).toBeVisible()
+})

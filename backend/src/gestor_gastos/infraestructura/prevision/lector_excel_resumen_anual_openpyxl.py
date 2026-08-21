@@ -4,7 +4,10 @@ from decimal import Decimal
 import openpyxl
 
 from gestor_gastos.dominio.importacion.excepciones import ExtensionNoSoportadaError
-from gestor_gastos.dominio.prevision.excepciones import HojaExcelNoReconocidaError
+from gestor_gastos.dominio.prevision.excepciones import (
+    FormatoDeIdConceptoInvalidoError,
+    HojaExcelNoReconocidaError,
+)
 from gestor_gastos.dominio.prevision.valores import (
     CeldaResumenAnualExcel,
     DatosResumenAnualExcelLeidos,
@@ -48,7 +51,15 @@ class LectorExcelResumenAnualOpenpyxl:
             id_concepto = fila[0].value
             if id_concepto is None:
                 continue  # fila de totales u otra fila sin concepto
-            concepto_id = int(id_concepto)
+            try:
+                concepto_id = int(id_concepto)
+            except (TypeError, ValueError) as error:
+                raise FormatoDeIdConceptoInvalidoError(
+                    f"La celda de identificador en la hoja '{hoja.title}' no es un número "
+                    f"válido ('{id_concepto}'). ¿Has subido el Excel al importador correcto? "
+                    "Este panel espera el fichero exportado desde 'Resumen anual', no un "
+                    "Excel de conceptos previstos u otro formato."
+                ) from error
             for indice_mes in range(12):
                 valor_celda = fila[_PRIMERA_COLUMNA_MES - 1 + indice_mes].value
                 importe = (

@@ -250,3 +250,34 @@ test('reimportar el mismo Excel de conceptos previstos omite el duplicado', asyn
   await expect(resumenSegundaVez).toContainText('Conceptos creados: 0')
   await expect(resumenSegundaVez).toContainText('Conceptos omitidos por duplicado: 1')
 })
+
+test('un error 500 real muestra "Más detalle" con la traza y permite copiarla', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/importar')
+
+  await page.route('**/api/v1/movimientos/importar', (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        detalle: 'boom inesperado',
+        traza: 'Traceback (most recent call last):\n  File "x.py", line 1\nValueError: boom',
+      }),
+    }),
+  )
+
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  await zona.locator('..').locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('boom inesperado')
+  await page.getByRole('button', { name: 'Más detalle' }).click()
+  await expect(page.getByRole('dialog')).toContainText('Traceback')
+
+  await page.getByRole('button', { name: 'Copiar' }).click()
+  await expect(page.getByRole('button', { name: 'Copiado' })).toBeVisible()
+})

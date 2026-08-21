@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import { clienteApi } from '@/api/cliente'
+import { clienteApi, ErrorApi } from '@/api/cliente'
 import type {
   ConceptoPrevisto,
   DatosConceptoPrevisto,
@@ -16,14 +16,21 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
   const resumenAnual = ref<ResumenAnual | null>(null)
   const cargando = ref(false)
   const error = ref<string | null>(null)
+  const errorTraza = ref<string | null>(null)
+
+  function _guardarError(motivo: unknown): void {
+    error.value = (motivo as Error).message
+    errorTraza.value = motivo instanceof ErrorApi ? (motivo.traza ?? null) : null
+  }
 
   async function cargar(): Promise<void> {
     cargando.value = true
     error.value = null
+    errorTraza.value = null
     try {
       conceptos.value = await clienteApi.obtener<ConceptoPrevisto[]>('/previsiones')
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
     } finally {
       cargando.value = false
     }
@@ -47,12 +54,13 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
   async function cargarResumenAnual(anio: number): Promise<void> {
     cargando.value = true
     error.value = null
+    errorTraza.value = null
     try {
       resumenAnual.value = await clienteApi.obtener<ResumenAnual>(
         `/previsiones/resumen-anual?anio=${anio}`,
       )
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
     } finally {
       cargando.value = false
     }
@@ -65,33 +73,36 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     importe: string,
   ): Promise<void> {
     error.value = null
+    errorTraza.value = null
     try {
       await clienteApi.actualizar(`/previsiones/${idConcepto}/ajustes/${anio}/${mes}`, {
         importe,
       })
       await cargarResumenAnual(anio)
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
     }
   }
 
   async function eliminarAjuste(idConcepto: number, anio: number, mes: number): Promise<void> {
     error.value = null
+    errorTraza.value = null
     try {
       await clienteApi.eliminar(`/previsiones/${idConcepto}/ajustes/${anio}/${mes}`)
       await cargarResumenAnual(anio)
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
     }
   }
 
   async function exportarResumenAnual(anio: number): Promise<void> {
     error.value = null
+    errorTraza.value = null
     try {
       const blob = await clienteApi.descargar(`/previsiones/resumen-anual/exportar?anio=${anio}`)
       descargarBlob(blob, `resumen-anual-${anio}.xlsx`)
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
     }
   }
 
@@ -100,6 +111,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     fichero: File,
   ): Promise<ResumenImportacionResumenAnual | null> {
     error.value = null
+    errorTraza.value = null
     try {
       const resultado = await clienteApi.subirArchivo<ResumenImportacionResumenAnual>(
         `/previsiones/resumen-anual/importar?anio=${anio}`,
@@ -109,7 +121,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
       await cargarResumenAnual(anio)
       return resultado
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
       return null
     }
   }
@@ -118,6 +130,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     fichero: File,
   ): Promise<ResumenImportacionConceptosPrevistos | null> {
     error.value = null
+    errorTraza.value = null
     try {
       return await clienteApi.subirArchivo<ResumenImportacionConceptosPrevistos>(
         '/previsiones/importar',
@@ -125,7 +138,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
         fichero,
       )
     } catch (motivo) {
-      error.value = (motivo as Error).message
+      _guardarError(motivo)
       return null
     }
   }
@@ -135,6 +148,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     resumenAnual,
     cargando,
     error,
+    errorTraza,
     cargar,
     crear,
     actualizar,

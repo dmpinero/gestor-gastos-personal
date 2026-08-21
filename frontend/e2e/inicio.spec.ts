@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test'
+import { elegirOpcion, seleccionarCuenta } from './utilidades'
 
 test('la página de inicio muestra el panel principal con saldos y totales por categoría', async ({
   page,
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 DASH ${sufijo}`
-  const nombreCategoriaGasto = `Categoría gasto ${sufijo}`
-  const nombreCategoriaIngreso = `Categoría ingreso ${sufijo}`
+  const nombreCategoriaGasto = `Categoria gasto ${sufijo}`
+  const nombreCategoriaIngreso = `Categoria ingreso ${sufijo}`
 
   await page.goto('/gestion/cuentas')
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
@@ -25,14 +26,12 @@ test('la página de inicio muestra el panel principal con saldos y totales por c
   }
 
   await page.goto('/gestion/movimientos')
-  await page.getByLabel('Cuenta').click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
 
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   let panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-01')
-  await panel.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoriaGasto }).click()
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoriaGasto)
   await panel.getByPlaceholder('Descripción').fill('Gasto de prueba')
   await panel.getByPlaceholder('Importe').fill('-30.00')
   await panel.getByPlaceholder('Saldo').fill('970.00')
@@ -42,8 +41,7 @@ test('la página de inicio muestra el panel principal con saldos y totales por c
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-02')
-  await panel.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoriaIngreso }).click()
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoriaIngreso)
   await panel.getByPlaceholder('Descripción').fill('Ingreso de prueba')
   await panel.getByPlaceholder('Importe').fill('1500.00')
   await panel.getByPlaceholder('Saldo').fill('2470.00')

@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs'
 import { test, expect, type Download, type Page, type Locator } from '@playwright/test'
+import { elegirOpcion, seleccionarCuenta } from './utilidades'
 
 async function bufferDeDescarga(descarga: Download): Promise<Buffer> {
   const flujo = await descarga.createReadStream()
@@ -19,16 +20,13 @@ async function crearMovimiento(
   importe: string,
   fecha: string,
 ): Promise<void> {
-  await page.getByLabel('Cuenta', { exact: true }).click()
-  await page.getByRole('option', { name: numeroCuenta }).click()
+  await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill(fecha)
-  await panel.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
   if (subcategoria) {
-    await panel.getByLabel('Subcategoría', { exact: true }).click()
-    await page.getByRole('option', { name: subcategoria }).click()
+    await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
   }
   await panel.getByPlaceholder('Descripción').fill(descripcion)
   await panel.getByPlaceholder('Importe').fill(importe)
@@ -46,8 +44,8 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 RESU ${sufijo}`
-  const nombreCategoria = `Categoría RESU ${sufijo}`
-  const nombreSubcategoria = `Subcategoría RESU ${sufijo}`
+  const nombreCategoria = `Categoria RESU ${sufijo}`
+  const nombreSubcategoria = `Subcategoria RESU ${sufijo}`
   const descripcionMovimiento = `Gasto mensual ${sufijo}`
 
   const hoy = new Date()
@@ -80,10 +78,12 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await panelConcepto.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
-  await panelConcepto.getByLabel('Subcategoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreSubcategoria }).click()
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcion(
+    page,
+    panelConcepto.getByLabel('Subcategoría', { exact: true }),
+    nombreSubcategoria,
+  )
   await expect(panelConcepto.getByLabel('Tipo', { exact: true })).toHaveText('Gasto')
   await panelConcepto.getByLabel('Importe previsto').fill('50.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
@@ -117,8 +117,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
 
   // Concepto anual con mes de inicio marzo: solo aparece en marzo.
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
-  await panelConcepto.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
   await panelConcepto.getByLabel('Periodicidad', { exact: true }).click()
   await page.getByRole('option', { name: 'Anual' }).click()
   await panelConcepto.getByLabel('Mes de inicio', { exact: true }).click()
@@ -179,8 +178,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
 
   // Regresión del bug: un concepto con Tipo=Ingreso debe aparecer en "Ingresos", no en "Gastos".
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
-  await panelConcepto.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
   await panelConcepto.getByLabel('Tipo', { exact: true }).click()
   await page.getByRole('option', { name: 'Ingreso' }).click()
   await panelConcepto.getByLabel('Importe previsto').fill('500.00')
@@ -210,8 +208,8 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 XLS ${sufijo}`
-  const nombreCategoria = `Categoría XLS ${sufijo}`
-  const nombreSubcategoria = `Subcategoría XLS ${sufijo}`
+  const nombreCategoria = `Categoria XLS ${sufijo}`
+  const nombreSubcategoria = `Subcategoria XLS ${sufijo}`
   const anioActual = new Date().getFullYear()
 
   await page.goto('/gestion/cuentas')
@@ -235,10 +233,12 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await panelConcepto.getByLabel('Categoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreCategoria }).click()
-  await panelConcepto.getByLabel('Subcategoría', { exact: true }).click()
-  await page.getByRole('option', { name: nombreSubcategoria }).click()
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcion(
+    page,
+    panelConcepto.getByLabel('Subcategoría', { exact: true }),
+    nombreSubcategoria,
+  )
   await panelConcepto.getByLabel('Importe previsto').fill('50.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
 

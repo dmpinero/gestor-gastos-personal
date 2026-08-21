@@ -76,6 +76,48 @@ describe('useTiendaMovimientos', () => {
     expect(tienda.movimientos).toEqual([movimientoEjemplo])
   })
 
+  it('carga y fusiona los movimientos de varias cuentas', async () => {
+    const movimientoCuenta2 = { ...movimientoEjemplo, id: 2, cuenta_id: 2 }
+    vi.mocked(clienteApi.obtener)
+      .mockResolvedValueOnce([movimientoEjemplo])
+      .mockResolvedValueOnce([movimientoCuenta2])
+
+    const tienda = useTiendaMovimientos()
+    await tienda.cargarVarias([1, 2])
+
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/movimientos?cuenta_id=1')
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/movimientos?cuenta_id=2')
+    expect(tienda.movimientos).toEqual([movimientoEjemplo, movimientoCuenta2])
+  })
+
+  it('con una lista de cuentas vacía no hace peticiones y deja los movimientos vacíos', async () => {
+    const tienda = useTiendaMovimientos()
+    await tienda.cargarVarias([])
+
+    expect(clienteApi.obtener).not.toHaveBeenCalled()
+    expect(tienda.movimientos).toEqual([])
+  })
+
+  it('ignora una respuesta obsoleta de cargarVarias que llega tras una selección más reciente', async () => {
+    let resolverPrimeraLlamada: (valor: (typeof movimientoEjemplo)[]) => void
+    const primeraLlamada = new Promise<(typeof movimientoEjemplo)[]>((resolver) => {
+      resolverPrimeraLlamada = resolver
+    })
+    const movimientoCuenta2 = { ...movimientoEjemplo, id: 2, cuenta_id: 2 }
+    vi.mocked(clienteApi.obtener)
+      .mockReturnValueOnce(primeraLlamada)
+      .mockResolvedValueOnce([movimientoCuenta2])
+
+    const tienda = useTiendaMovimientos()
+    const primeraSeleccion = tienda.cargarVarias([1]) // se queda pendiente
+    await tienda.cargarVarias([2]) // se resuelve antes
+
+    resolverPrimeraLlamada!([movimientoEjemplo]) // respuesta tardía de la selección anterior
+    await primeraSeleccion
+
+    expect(tienda.movimientos).toEqual([movimientoCuenta2])
+  })
+
   it('elimina un movimiento de la lista', async () => {
     vi.mocked(clienteApi.crear).mockResolvedValue(movimientoEjemplo)
     vi.mocked(clienteApi.eliminar).mockResolvedValue(undefined)

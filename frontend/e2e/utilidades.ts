@@ -28,12 +28,46 @@ export async function elegirOpcion(page: Page, disparador: Locator, texto: strin
 }
 
 /**
- * Abre el selector de "Cuenta" y elige la cuenta indicada (ver `elegirOpcion`).
- * Siempre usa `exact: true`: el nombre accesible del selector es literalmente
- * "Cuenta", y sin `exact` coincidiría también con cualquier checkbox de fila
- * cuyo aria-label ("Seleccionar el movimiento ...") contenga la subcadena
- * "cuenta" en la descripción del movimiento (dato de cualquier test).
+ * Selector de "Cuenta" del formulario de crear/editar movimiento: un Select
+ * normal de una sola opción (mismo patrón que Categoría/Subcategoría), con
+ * nombre accesible "Cuenta". `exact: true` porque, sin él, coincidiría
+ * también con cualquier checkbox de fila cuyo aria-label ("Seleccionar el
+ * movimiento ...") contenga la subcadena "cuenta" en la descripción.
  */
+export async function elegirCuentaDelFormulario(
+  page: Page,
+  panel: Locator,
+  numeroCuenta: string,
+): Promise<void> {
+  await elegirOpcion(page, panel.getByLabel('Cuenta', { exact: true }), numeroCuenta)
+}
+
+/**
+ * Filtro "Cuenta" de la barra de filtros de Movimientos: ya no es un Select
+ * de una sola opción, sino un Popover con una casilla por cuenta (todas
+ * marcadas por defecto). Deja marcadas única y exclusivamente las cuentas
+ * indicadas, sea cual sea el estado previo del popover (no basta con
+ * alternar la casilla "Seleccionar todas", que no es idempotente: su efecto
+ * depende de si ya estaba en todo/nada/una selección parcial).
+ */
+export async function seleccionarCuentas(page: Page, numerosCuenta: string[]): Promise<void> {
+  await page.getByRole('button', { name: 'Filtrar por cuenta' }).click()
+  const filas = page.locator('[data-slot="popover-content"] li')
+  const total = await filas.count()
+  for (let indice = 0; indice < total; indice++) {
+    const fila = filas.nth(indice)
+    const texto = (await fila.textContent())?.trim()
+    const casilla = fila.getByRole('checkbox')
+    if (texto !== undefined && numerosCuenta.includes(texto)) {
+      await casilla.check()
+    } else {
+      await casilla.uncheck()
+    }
+  }
+  await page.keyboard.press('Escape')
+}
+
+/** Ver `seleccionarCuentas`: deja marcada solo esta única cuenta. */
 export async function seleccionarCuenta(page: Page, numeroCuenta: string): Promise<void> {
-  await elegirOpcion(page, page.getByLabel('Cuenta', { exact: true }), numeroCuenta)
+  await seleccionarCuentas(page, [numeroCuenta])
 }

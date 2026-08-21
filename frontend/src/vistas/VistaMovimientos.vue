@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Euro,
   FileText,
+  Landmark,
   Pencil,
   Search,
   Tag,
@@ -25,6 +26,7 @@ import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import FiltroCuentasMultiple from '@/componentes/compartido/FiltroCuentasMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
@@ -57,7 +59,7 @@ const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaMovimientos = useTiendaMovimientos()
 
-const cuentaSeleccionada = ref<number | null>(null)
+const cuentasSeleccionadas = ref<number[]>([])
 const error = ref<string | null>(null)
 const idEnEdicion = ref<number | null>(null)
 const panelAbierto = ref(false)
@@ -76,10 +78,10 @@ const formulario = reactive<DatosMovimiento>({
 
 // Los componentes Select trabajan con valores de texto; estos proxies traducen
 // entre esa representación y los identificadores numéricos del formulario.
-const cuentaSeleccionadaTexto = computed<string | undefined>({
-  get: () => (cuentaSeleccionada.value === null ? undefined : String(cuentaSeleccionada.value)),
+const cuentaFormularioTexto = computed<string | undefined>({
+  get: () => (formulario.cuenta_id ? String(formulario.cuenta_id) : undefined),
   set: (valor) => {
-    cuentaSeleccionada.value = valor === undefined ? null : Number(valor)
+    formulario.cuenta_id = valor === undefined ? 0 : Number(valor)
   },
 })
 
@@ -154,6 +156,11 @@ const subcategoriasDelFiltro = computed(() =>
         ?.subcategorias ?? []),
 )
 
+function nombreCuenta(idCuenta: number): string {
+  const cuenta = tiendaCuentas.cuentas.find((c) => c.id === idCuenta)
+  return cuenta ? (cuenta.alias ?? cuenta.numero_cuenta) : ''
+}
+
 function nombreCategoria(idCategoria: number): string {
   return (
     tiendaCategorias.categorias.find((c) => c.categoria.id === idCategoria)?.categoria.nombre ?? ''
@@ -195,6 +202,7 @@ const filasConFiltrosAvanzados = computed(() =>
 
 const { busqueda, filasFiltradas } = useBusquedaTabla(filasConFiltrosAvanzados, (m) => [
   formatearFecha(m.fecha_valor),
+  nombreCuenta(m.cuenta_id),
   m.descripcion,
   nombreCategoria(m.categoria_id),
   nombreSubcategoria(m.subcategoria_id),
@@ -252,6 +260,8 @@ const datosGraficoIngresos = computed(() => datosGraficoDe(movimientosIngresados
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
+  cuenta_id: (a: Movimiento, b: Movimiento) =>
+    compararTexto(nombreCuenta(a.cuenta_id), nombreCuenta(b.cuenta_id)),
   descripcion: (a: Movimiento, b: Movimiento) => a.descripcion.localeCompare(b.descripcion),
   categoria_id: (a: Movimiento, b: Movimiento) =>
     compararTexto(nombreCategoria(a.categoria_id), nombreCategoria(b.categoria_id)),
@@ -302,25 +312,31 @@ onMounted(async () => {
   await Promise.all([tiendaCuentas.cargar(), tiendaCategorias.cargar()])
 
   // Si se llega desde "Ver movimientos" tras una importación, se preselecciona
-  // la cuenta indicada en la URL en vez de la primera de la lista.
+  // solo la cuenta indicada en la URL; si no, todas las cuentas por defecto.
   const idDesdeUrl = Number(ruta.query.cuenta_id)
   const cuentaDesdeUrl = tiendaCuentas.cuentas.find((c) => c.id === idDesdeUrl)
-  if (cuentaDesdeUrl) {
-    cuentaSeleccionada.value = cuentaDesdeUrl.id
-  } else if (tiendaCuentas.cuentas[0]) {
-    cuentaSeleccionada.value = tiendaCuentas.cuentas[0].id
-  }
+  cuentasSeleccionadas.value = cuentaDesdeUrl
+    ? [cuentaDesdeUrl.id]
+    : tiendaCuentas.cuentas.map((c) => c.id)
 })
 
-watch(cuentaSeleccionada, (id) => {
-  seleccionados.value = new Set()
-  if (id !== null) {
-    formulario.cuenta_id = id
-    tiendaMovimientos.cargar(id)
-  }
-})
+// Marcar/desmarcar varias cuentas seguidas en el popover (p. ej. "Seleccionar
+// todas") dispara un cambio de `cuentasSeleccionadas` por cada casilla; se
+// espera un instante sin más cambios antes de recargar, para no lanzar una
+// petición por cuenta y por click en vez de una sola con la selección final.
+let temporizadorRecarga: ReturnType<typeof setTimeout> | undefined
+watch(
+  cuentasSeleccionadas,
+  (ids) => {
+    seleccionados.value = new Set()
+    clearTimeout(temporizadorRecarga)
+    temporizadorRecarga = setTimeout(() => tiendaMovimientos.cargarVarias(ids), 150)
+  },
+  { deep: true },
+)
 
 function limpiarFormulario(): void {
+  formulario.cuenta_id = 0
   formulario.categoria_id = 0
   formulario.subcategoria_id = null
   formulario.fecha_valor = ''
@@ -333,6 +349,7 @@ function limpiarFormulario(): void {
 
 function abrirParaCrear(): void {
   limpiarFormulario()
+  formulario.cuenta_id = cuentasSeleccionadas.value[0] ?? 0
   panelAbierto.value = true
 }
 
@@ -388,9 +405,7 @@ async function eliminarSeleccionados(): Promise<void> {
   // algún borrado: con Promise.all, un único fallo abortaba el resto sin
   // volver a sincronizar, dejando la tabla desajustada respecto al backend
   // aunque otros movimientos sí se hubieran borrado.
-  if (cuentaSeleccionada.value !== null) {
-    await tiendaMovimientos.cargar(cuentaSeleccionada.value)
-  }
+  await tiendaMovimientos.cargarVarias(cuentasSeleccionadas.value)
   seleccionados.value = new Set()
   const fallidos = resultados.filter((r) => r.status === 'rejected')
   if (fallidos.length > 0) {
@@ -426,6 +441,27 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         </SheetHeader>
 
         <form class="flex flex-col gap-3 px-4" @submit.prevent="guardar">
+          <div class="flex flex-col gap-1.5">
+            <Label id="etiqueta-cuenta-formulario" for="selector-cuenta-formulario">Cuenta</Label>
+            <Select v-model="cuentaFormularioTexto">
+              <SelectTrigger
+                id="selector-cuenta-formulario"
+                aria-labelledby="etiqueta-cuenta-formulario"
+              >
+                <SelectValue placeholder="Selecciona una cuenta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="cuenta in tiendaCuentas.cuentas"
+                  :key="cuenta.id"
+                  :value="String(cuenta.id)"
+                >
+                  {{ cuenta.alias ?? cuenta.numero_cuenta }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div class="flex flex-col gap-1.5">
             <Label for="fecha-valor">Fecha</Label>
             <Input id="fecha-valor" v-model="formulario.fecha_valor" type="date" required />
@@ -529,22 +565,12 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           Filtros
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
-          <div class="flex max-w-xs flex-col gap-1.5">
-            <Label id="etiqueta-cuenta" for="selector-cuenta">Cuenta</Label>
-            <Select v-model="cuentaSeleccionadaTexto">
-              <SelectTrigger id="selector-cuenta" aria-labelledby="etiqueta-cuenta">
-                <SelectValue placeholder="Selecciona una cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="cuenta in tiendaCuentas.cuentas"
-                  :key="cuenta.id"
-                  :value="String(cuenta.id)"
-                >
-                  {{ cuenta.alias ?? cuenta.numero_cuenta }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+          <div class="flex flex-col gap-1.5">
+            <Label>Cuenta</Label>
+            <FiltroCuentasMultiple
+              v-model="cuentasSeleccionadas"
+              :cuentas="tiendaCuentas.cuentas"
+            />
           </div>
 
           <div class="flex max-w-xs flex-col gap-1.5">
@@ -706,6 +732,16 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </TableHead>
           <TableHead>
             <CabeceraOrdenable
+              :icono="Landmark"
+              color-icono="text-indigo-500"
+              :activo="campo === 'cuenta_id'"
+              :direccion="direccion"
+              @ordenar="ordenarPor('cuenta_id')"
+              >Cuenta</CabeceraOrdenable
+            >
+          </TableHead>
+          <TableHead>
+            <CabeceraOrdenable
               :icono="CalendarDays"
               color-icono="text-blue-500"
               :activo="campo === 'fecha_valor'"
@@ -776,6 +812,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               @update:model-value="(valor) => alternarSeleccion(movimiento.id, valor === true)"
             />
           </TableCell>
+          <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
           <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
           <TableCell>{{ movimiento.descripcion }}</TableCell>
           <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>

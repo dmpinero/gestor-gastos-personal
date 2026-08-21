@@ -104,7 +104,13 @@ const descripcionAccesible = computed(() =>
       </button>
     </div>
 
-    <div v-if="modo === 'barras'" class="flex items-end gap-4 overflow-x-auto pb-1">
+    <div
+      v-if="modo === 'barras'"
+      class="flex items-end gap-4 overflow-x-auto pb-1"
+      tabindex="0"
+      role="group"
+      :aria-label="`Evolución: ${descripcionAccesible}`"
+    >
       <div
         v-for="item in items"
         :key="item.periodo"
@@ -125,7 +131,7 @@ const descripcionAccesible = computed(() =>
       </div>
     </div>
 
-    <div v-else class="overflow-x-auto pb-1">
+    <div v-else class="overflow-x-auto pb-1" tabindex="0" role="group">
       <svg
         :viewBox="`0 0 ${anchoTotal} ${ALTO_GRAFICO}`"
         :width="anchoTotal"

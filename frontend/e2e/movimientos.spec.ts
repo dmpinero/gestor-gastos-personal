@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import {
+  elegirCuentaDelFormulario,
+  elegirOpcion,
+  seleccionarCuenta,
+  seleccionarCuentas,
+} from './utilidades'
 
 test('gestión completa de un movimiento: crear, editar y eliminar', async ({ page }) => {
   const sufijo = Date.now()
@@ -423,4 +428,114 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
 
   await expect(page.getByText('Evolución de gastos')).toBeVisible()
   await expect(page.getByText('Evolución de ingresos')).toBeVisible()
+})
+
+test('el filtro de cuenta permite seleccionar varias cuentas a la vez, mostrando su columna Cuenta', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuentaA = `ES00 MULTI-A ${sufijo}`
+  const numeroCuentaB = `ES00 MULTI-B ${sufijo}`
+  const numeroCuentaC = `ES00 MULTI-C ${sufijo}`
+  const nombreCategoria = `Categoria MULTI ${sufijo}`
+  const descripcionA = `Movimiento multi A ${sufijo}`
+  const descripcionB = `Movimiento multi B ${sufijo}`
+  const descripcionC = `Movimiento multi C ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  for (const numeroCuenta of [numeroCuentaA, numeroCuentaB, numeroCuentaC]) {
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    const panelCuenta = page.getByRole('dialog')
+    await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+    await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+  }
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  for (const [numeroCuenta, descripcion] of [
+    [numeroCuentaA, descripcionA],
+    [numeroCuentaB, descripcionB],
+    [numeroCuentaC, descripcionC],
+  ]) {
+    await seleccionarCuenta(page, numeroCuenta)
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill('2026-01-15')
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill('-1.00')
+    await panel.getByPlaceholder('Saldo').fill('99.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  // Con solo la cuenta C activa (última seleccionada), no se ven A ni B.
+  await expect(page.locator('tr', { hasText: descripcionC })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcionA })).toHaveCount(0)
+  await expect(page.locator('tr', { hasText: descripcionB })).toHaveCount(0)
+
+  // Se marcan A y B a la vez (sin tocar C, que se desmarca): deben verse los
+  // movimientos de ambas, cada uno con su propia cuenta en la columna Cuenta.
+  await seleccionarCuentas(page, [numeroCuentaA, numeroCuentaB])
+
+  const filaA = page.locator('tr', { hasText: descripcionA })
+  const filaB = page.locator('tr', { hasText: descripcionB })
+  await expect(filaA).toBeVisible()
+  await expect(filaB).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcionC })).toHaveCount(0)
+  await expect(filaA).toContainText(numeroCuentaA)
+  await expect(filaB).toContainText(numeroCuentaB)
+})
+
+test('al crear un movimiento se puede elegir explícitamente la cuenta en el panel', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuentaA = `ES00 PANEL-A ${sufijo}`
+  const numeroCuentaB = `ES00 PANEL-B ${sufijo}`
+  const nombreCategoria = `Categoria PANEL ${sufijo}`
+  const descripcion = `Movimiento panel cuenta B ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  for (const numeroCuenta of [numeroCuentaA, numeroCuentaB]) {
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    const panelCuenta = page.getByRole('dialog')
+    await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+    await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+  }
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  // El filtro deja la cuenta A preseleccionada en el panel por defecto, pero
+  // el movimiento se crea explícitamente para la cuenta B.
+  await seleccionarCuenta(page, numeroCuentaA)
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panel = page.getByRole('dialog')
+  await elegirCuentaDelFormulario(page, panel, numeroCuentaB)
+  await panel.locator('input[type="date"]').fill('2026-01-15')
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panel.getByPlaceholder('Descripción').fill(descripcion)
+  await panel.getByPlaceholder('Importe').fill('-1.00')
+  await panel.getByPlaceholder('Saldo').fill('99.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+
+  // Con la cuenta A activa en el filtro no se ve (se creó para B).
+  await expect(page.locator('tr', { hasText: descripcion })).toHaveCount(0)
+
+  await seleccionarCuenta(page, numeroCuentaB)
+  await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
 })

@@ -631,50 +631,57 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       </div>
     </div>
 
-    <div v-if="movimientosGastados.length > 0" class="mt-6">
-      <div class="grid grid-cols-2 gap-4 sm:max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-muted-foreground text-sm font-medium">Total gastado</CardTitle>
-          </CardHeader>
-          <CardContent class="text-destructive text-2xl font-semibold">
-            {{ formatearImporte(totalGastado) }}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
-          </CardHeader>
-          <CardContent class="text-2xl font-semibold">
-            {{ movimientosGastados.length }}
-          </CardContent>
-        </Card>
+    <div
+      v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
+      class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2"
+    >
+      <div v-if="movimientosGastados.length > 0">
+        <div class="grid grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle class="text-muted-foreground text-sm font-medium">Total gastado</CardTitle>
+            </CardHeader>
+            <CardContent class="text-destructive text-2xl font-semibold">
+              {{ formatearImporte(totalGastado) }}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+            </CardHeader>
+            <CardContent class="text-2xl font-semibold">
+              {{ movimientosGastados.length }}
+            </CardContent>
+          </Card>
+        </div>
+        <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de gastos</h3>
+        <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
       </div>
-      <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de gastos</h3>
-      <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
-    </div>
 
-    <div v-if="movimientosIngresados.length > 0" class="mt-6">
-      <div class="grid grid-cols-2 gap-4 sm:max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-muted-foreground text-sm font-medium">Total ingresado</CardTitle>
-          </CardHeader>
-          <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
-            {{ formatearImporte(totalIngresado) }}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
-          </CardHeader>
-          <CardContent class="text-2xl font-semibold">
-            {{ movimientosIngresados.length }}
-          </CardContent>
-        </Card>
+      <div v-if="movimientosIngresados.length > 0">
+        <div class="grid grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle class="text-muted-foreground text-sm font-medium"
+                >Total ingresado</CardTitle
+              >
+            </CardHeader>
+            <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
+              {{ formatearImporte(totalIngresado) }}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+            </CardHeader>
+            <CardContent class="text-2xl font-semibold">
+              {{ movimientosIngresados.length }}
+            </CardContent>
+          </Card>
+        </div>
+        <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
+        <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
       </div>
-      <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
-      <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
     </div>
 
     <Table class="mt-4">

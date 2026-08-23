@@ -129,6 +129,17 @@ const importeMax = ref('')
 const saldoMin = ref('')
 const saldoMax = ref('')
 
+// "Movimientos excluidos" es una categoría de convención (p. ej. traspasos
+// entre cuentas propias) que no representa ni un gasto ni un ingreso real;
+// no hay un campo de dominio para marcarla, se identifica por su nombre.
+const NOMBRE_CATEGORIA_EXCLUIDOS = 'Movimientos excluidos'
+const excluirMovimientosExcluidos = ref(false)
+const categoriaExcluidosId = computed(
+  () =>
+    tiendaCategorias.categorias.find((c) => c.categoria.nombre === NOMBRE_CATEGORIA_EXCLUIDOS)
+      ?.categoria.id ?? null,
+)
+
 const categoriaFiltroTexto = computed<string>({
   get: () => (categoriaFiltro.value === null ? FILTRO_TODAS : String(categoriaFiltro.value)),
   set: (valor) => {
@@ -196,6 +207,12 @@ const filasConFiltrosAvanzados = computed(() =>
     if (importeMax.value !== '' && Number(m.importe) > Number(importeMax.value)) return false
     if (saldoMin.value !== '' && Number(m.saldo) < Number(saldoMin.value)) return false
     if (saldoMax.value !== '' && Number(m.saldo) > Number(saldoMax.value)) return false
+    if (
+      excluirMovimientosExcluidos.value &&
+      categoriaExcluidosId.value !== null &&
+      m.categoria_id === categoriaExcluidosId.value
+    )
+      return false
     return true
   }),
 )
@@ -220,6 +237,7 @@ function limpiarFiltros(): void {
   importeMax.value = ''
   saldoMin.value = ''
   saldoMax.value = ''
+  excluirMovimientosExcluidos.value = false
 }
 
 const filtrosAbiertos = ref(true)
@@ -296,6 +314,7 @@ watch(
     importeMax,
     saldoMin,
     saldoMax,
+    excluirMovimientosExcluidos,
   ],
   () => {
     paginaActual.value = 1
@@ -586,6 +605,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                 class="pl-8"
               />
             </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <Checkbox
+              id="filtro-excluir-movimientos-excluidos"
+              :model-value="excluirMovimientosExcluidos"
+              @update:model-value="(valor) => (excluirMovimientosExcluidos = valor === true)"
+            />
+            <Label for="filtro-excluir-movimientos-excluidos" class="font-normal"
+              >Excluir "Movimientos excluidos"</Label
+            >
           </div>
 
           <div class="flex flex-col gap-1.5">

@@ -539,3 +539,70 @@ test('al crear un movimiento se puede elegir explícitamente la cuenta en el pan
   await seleccionarCuenta(page, numeroCuentaB)
   await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
 })
+
+test('el check "Excluir Movimientos excluidos" los quita de la tabla y de los totales', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-EXCL ${sufijo}`
+  const nombreCategoriaNormal = `Categoria MOV-EXCL ${sufijo}`
+  const descripcionGasto = `Gasto normal ${sufijo}`
+  const descripcionIngreso = `Ingreso normal ${sufijo}`
+  const descripcionExcluidaGasto = `Traspaso gasto ${sufijo}`
+  const descripcionExcluidaIngreso = `Traspaso ingreso ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombreCategoria of [nombreCategoriaNormal, 'Movimientos excluidos']) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+  }
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  for (const [descripcion, importe, nombreCategoria] of [
+    [descripcionGasto, '-20.00', nombreCategoriaNormal],
+    [descripcionIngreso, '500.00', nombreCategoriaNormal],
+    [descripcionExcluidaGasto, '-15.00', 'Movimientos excluidos'],
+    [descripcionExcluidaIngreso, '15.00', 'Movimientos excluidos'],
+  ]) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill('2026-01-15')
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill(importe)
+    await panel.getByPlaceholder('Saldo').fill('970.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  const tarjetaGastado = page.locator('[data-slot="card"]', { hasText: 'Total gastado' })
+  const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
+  await expect(tarjetaGastado).toContainText('-35,00 €')
+  await expect(tarjetaIngresado).toContainText('515,00 €')
+
+  await page.getByLabel('Excluir "Movimientos excluidos"').check()
+
+  await expect(page.locator('tr', { hasText: descripcionExcluidaGasto })).toHaveCount(0)
+  await expect(page.locator('tr', { hasText: descripcionExcluidaIngreso })).toHaveCount(0)
+  await expect(page.locator('tr', { hasText: descripcionGasto })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcionIngreso })).toBeVisible()
+  await expect(tarjetaGastado).toContainText('-20,00 €')
+  await expect(tarjetaIngresado).toContainText('500,00 €')
+
+  await page.getByRole('button', { name: 'Limpiar filtros' }).click()
+  await expect(page.getByLabel('Excluir "Movimientos excluidos"')).not.toBeChecked()
+  await expect(page.locator('tr', { hasText: descripcionExcluidaGasto })).toBeVisible()
+  await expect(tarjetaGastado).toContainText('-35,00 €')
+})

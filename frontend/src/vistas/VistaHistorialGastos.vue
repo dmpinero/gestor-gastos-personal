@@ -7,7 +7,7 @@ import type { Movimiento } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
-import { formatearFecha, formatearImporte } from '@/lib/formato'
+import { claseColorImporte, formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -319,7 +319,9 @@ watch(busqueda, () => {
             <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
             <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
             <TableCell>{{ movimiento.descripcion }}</TableCell>
-            <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
+            <TableCell :class="claseColorImporte(movimiento.importe)">{{
+              formatearImporte(movimiento.importe)
+            }}</TableCell>
             <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
           </TableRow>
         </TableBody>

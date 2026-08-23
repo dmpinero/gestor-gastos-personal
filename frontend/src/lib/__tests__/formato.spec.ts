@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatearFecha, formatearImporte, formatearPeriodo } from '../formato'
+import { claseColorImporte, formatearFecha, formatearImporte, formatearPeriodo } from '../formato'
 
 describe('formatearFecha', () => {
   it('convierte una fecha ISO a formato dd/mm/aaaa', () => {
@@ -19,6 +19,21 @@ describe('formatearImporte', () => {
 
   it('formatea un importe negativo conservando el signo', () => {
     expect(formatearImporte('-30.00')).toContain('-30,00')
+  })
+})
+
+describe('claseColorImporte', () => {
+  it('devuelve la clase de verde para un importe positivo', () => {
+    expect(claseColorImporte('30.00')).toContain('text-success')
+  })
+
+  it('devuelve la clase de rojo para un importe negativo', () => {
+    expect(claseColorImporte('-30.00')).toBe('text-destructive')
+  })
+
+  it('no devuelve color para un importe igual a cero', () => {
+    expect(claseColorImporte('0')).toBe('')
+    expect(claseColorImporte(0)).toBe('')
   })
 })
 

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { Pencil, Trash2 } from '@lucide/vue'
 import type { FilaResumenAnual, OrigenValorMensual, Periodicidad } from '@/api/tipos'
-import { formatearImporte } from '@/lib/formato'
+import { claseColorImporte, formatearImporte } from '@/lib/formato'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
@@ -81,11 +81,15 @@ function cancelarEdicion(): void {
   celdaEditando.value = null
 }
 
-function claseCelda(origen: OrigenValorMensual): string {
+// Los valores "previsto" se muestran atenuados a propósito para distinguirlos
+// de los confirmados; no se colorean en verde/rojo para no perder ese matiz.
+function claseCelda(origen: OrigenValorMensual, importe: string): string {
   const base = 'p-0 text-right tabular-nums'
   if (origen === 'previsto') return `${base} text-muted-foreground italic`
-  if (origen === 'ajustado') return `${base} border-b-2 border-dashed border-amber-500`
-  return base
+  if (origen === 'ajustado') {
+    return `${base} border-b-2 border-dashed border-amber-500 ${claseColorImporte(importe)}`
+  }
+  return `${base} ${claseColorImporte(importe)}`
 }
 </script>
 
@@ -117,7 +121,7 @@ function claseCelda(origen: OrigenValorMensual): string {
             <TableCell
               v-for="valor in fila.valores"
               :key="valor.mes"
-              :class="claseCelda(valor.origen)"
+              :class="claseCelda(valor.origen, valor.importe)"
             >
               <input
                 v-if="estaEditando(fila.concepto_id, valor.mes)"
@@ -172,6 +176,7 @@ function claseCelda(origen: OrigenValorMensual): string {
               v-for="(total, indice) in totales"
               :key="indice"
               class="text-right tabular-nums"
+              :class="claseColorImporte(total)"
             >
               {{ formatearImporte(total) }}
             </TableCell>

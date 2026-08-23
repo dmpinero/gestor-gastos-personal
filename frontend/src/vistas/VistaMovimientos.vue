@@ -645,229 +645,238 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       </Collapsible>
     </div>
 
-    <Collapsible
+    <div
       v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
-      v-model:open="graficosAbiertos"
-      class="mt-6"
+      class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
     >
-      <CollapsibleTrigger
-        class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
-        :aria-label="graficosAbiertos ? 'Contraer gráficos' : 'Expandir gráficos'"
-      >
-        <ChevronRight
-          class="size-4 transition-transform"
-          :class="graficosAbiertos ? 'rotate-90' : ''"
-        />
-        Gráficos
-      </CollapsibleTrigger>
-      <CollapsibleContent class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div v-if="movimientosGastados.length > 0">
-          <div class="grid grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle class="text-muted-foreground text-sm font-medium"
-                  >Total gastado</CardTitle
-                >
-              </CardHeader>
-              <CardContent class="text-destructive text-2xl font-semibold">
-                {{ formatearImporte(totalGastado) }}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
-              </CardHeader>
-              <CardContent class="text-2xl font-semibold">
-                {{ movimientosGastados.length }}
-              </CardContent>
-            </Card>
+      <Collapsible v-model:open="graficosAbiertos">
+        <CollapsibleTrigger
+          class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+          :aria-label="graficosAbiertos ? 'Contraer gráficos' : 'Expandir gráficos'"
+        >
+          <ChevronRight
+            class="size-4 transition-transform"
+            :class="graficosAbiertos ? 'rotate-90' : ''"
+          />
+          Gráficos
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div v-if="movimientosGastados.length > 0">
+            <div class="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle class="text-muted-foreground text-sm font-medium"
+                    >Total gastado</CardTitle
+                  >
+                </CardHeader>
+                <CardContent class="text-destructive text-2xl font-semibold">
+                  {{ formatearImporte(totalGastado) }}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle class="text-muted-foreground text-sm font-medium"
+                    >Movimientos</CardTitle
+                  >
+                </CardHeader>
+                <CardContent class="text-2xl font-semibold">
+                  {{ movimientosGastados.length }}
+                </CardContent>
+              </Card>
+            </div>
+            <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de gastos</h3>
+            <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
           </div>
-          <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de gastos</h3>
-          <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
-        </div>
 
-        <div v-if="movimientosIngresados.length > 0">
-          <div class="grid grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle class="text-muted-foreground text-sm font-medium"
-                  >Total ingresado</CardTitle
-                >
-              </CardHeader>
-              <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
-                {{ formatearImporte(totalIngresado) }}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
-              </CardHeader>
-              <CardContent class="text-2xl font-semibold">
-                {{ movimientosIngresados.length }}
-              </CardContent>
-            </Card>
+          <div v-if="movimientosIngresados.length > 0">
+            <div class="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle class="text-muted-foreground text-sm font-medium"
+                    >Total ingresado</CardTitle
+                  >
+                </CardHeader>
+                <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
+                  {{ formatearImporte(totalIngresado) }}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle class="text-muted-foreground text-sm font-medium"
+                    >Movimientos</CardTitle
+                  >
+                </CardHeader>
+                <CardContent class="text-2xl font-semibold">
+                  {{ movimientosIngresados.length }}
+                </CardContent>
+              </Card>
+            </div>
+            <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
+            <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
           </div>
-          <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
-          <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
 
-    <Collapsible v-model:open="resultadosAbiertos" class="mt-6">
-      <CollapsibleTrigger
-        class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
-        :aria-label="resultadosAbiertos ? 'Contraer resultados' : 'Expandir resultados'"
-      >
-        <ChevronRight
-          class="size-4 transition-transform"
-          :class="resultadosAbiertos ? 'rotate-90' : ''"
-        />
-        Resultados
-      </CollapsibleTrigger>
-      <CollapsibleContent class="mt-4">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
-          <p class="text-muted-foreground text-sm">
-            Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
-          </p>
-        </div>
+    <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
+      <Collapsible v-model:open="resultadosAbiertos">
+        <CollapsibleTrigger
+          class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+          :aria-label="resultadosAbiertos ? 'Contraer resultados' : 'Expandir resultados'"
+        >
+          <ChevronRight
+            class="size-4 transition-transform"
+            :class="resultadosAbiertos ? 'rotate-90' : ''"
+          />
+          Resultados
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-4">
+          <div class="flex flex-wrap items-end justify-between gap-4">
+            <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
+            <p class="text-muted-foreground text-sm">
+              Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
+            </p>
+          </div>
 
-        <Table class="mt-4">
-          <TableHeader>
-            <TableRow>
-              <TableHead class="w-8">
-                <Checkbox
-                  :model-value="todosSeleccionados"
-                  aria-label="Seleccionar todos los movimientos"
-                  @update:model-value="(valor) => alternarSeleccionTodos(valor === true)"
-                />
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="Landmark"
-                  color-icono="text-indigo-500"
-                  :activo="campo === 'cuenta_id'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('cuenta_id')"
-                  >Cuenta</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="CalendarDays"
-                  color-icono="text-blue-500"
-                  :activo="campo === 'fecha_valor'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('fecha_valor')"
-                  >Fecha</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="FileText"
-                  color-icono="text-slate-500"
-                  :activo="campo === 'descripcion'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('descripcion')"
-                  >Descripción</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="Tag"
-                  color-icono="text-violet-500"
-                  :activo="campo === 'categoria_id'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('categoria_id')"
-                  >Categoría</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="Tags"
-                  color-icono="text-rose-500"
-                  :activo="campo === 'subcategoria_id'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('subcategoria_id')"
-                  >Subcategoría</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="Euro"
-                  color-icono="text-amber-500"
-                  :activo="campo === 'importe'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('importe')"
-                  >Importe</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead>
-                <CabeceraOrdenable
-                  :icono="Wallet"
-                  color-icono="text-teal-500"
-                  :activo="campo === 'saldo'"
-                  :direccion="direccion"
-                  @ordenar="ordenarPor('saldo')"
-                  >Saldo</CabeceraOrdenable
-                >
-              </TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="movimiento in filasPagina" :key="movimiento.id">
-              <TableCell>
-                <Checkbox
-                  :model-value="seleccionados.has(movimiento.id)"
-                  :aria-label="`Seleccionar el movimiento ${movimiento.descripcion}`"
-                  @update:model-value="(valor) => alternarSeleccion(movimiento.id, valor === true)"
-                />
-              </TableCell>
-              <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
-              <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-              <TableCell>{{ movimiento.descripcion }}</TableCell>
-              <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
-              <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
-              <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
-              <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
-              <TableCell class="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Editar"
-                  @click="abrirParaEditar(movimiento)"
-                >
-                  <Pencil class="size-4" />
-                </Button>
-                <DialogoConfirmarEliminacion
-                  :descripcion="`el movimiento ${movimiento.descripcion}`"
-                  @confirmar="eliminar(movimiento.id)"
-                >
-                  <template #disparador>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="text-destructive"
-                      aria-label="Eliminar"
-                    >
-                      <Trash2 class="size-4" />
-                    </Button>
-                  </template>
-                </DialogoConfirmarEliminacion>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+          <Table class="mt-4">
+            <TableHeader>
+              <TableRow>
+                <TableHead class="w-8">
+                  <Checkbox
+                    :model-value="todosSeleccionados"
+                    aria-label="Seleccionar todos los movimientos"
+                    @update:model-value="(valor) => alternarSeleccionTodos(valor === true)"
+                  />
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="Landmark"
+                    color-icono="text-indigo-500"
+                    :activo="campo === 'cuenta_id'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('cuenta_id')"
+                    >Cuenta</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="CalendarDays"
+                    color-icono="text-blue-500"
+                    :activo="campo === 'fecha_valor'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('fecha_valor')"
+                    >Fecha</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="FileText"
+                    color-icono="text-slate-500"
+                    :activo="campo === 'descripcion'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('descripcion')"
+                    >Descripción</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="Tag"
+                    color-icono="text-violet-500"
+                    :activo="campo === 'categoria_id'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('categoria_id')"
+                    >Categoría</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="Tags"
+                    color-icono="text-rose-500"
+                    :activo="campo === 'subcategoria_id'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('subcategoria_id')"
+                    >Subcategoría</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="Euro"
+                    color-icono="text-amber-500"
+                    :activo="campo === 'importe'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('importe')"
+                    >Importe</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead>
+                  <CabeceraOrdenable
+                    :icono="Wallet"
+                    color-icono="text-teal-500"
+                    :activo="campo === 'saldo'"
+                    :direccion="direccion"
+                    @ordenar="ordenarPor('saldo')"
+                    >Saldo</CabeceraOrdenable
+                  >
+                </TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="movimiento in filasPagina" :key="movimiento.id">
+                <TableCell>
+                  <Checkbox
+                    :model-value="seleccionados.has(movimiento.id)"
+                    :aria-label="`Seleccionar el movimiento ${movimiento.descripcion}`"
+                    @update:model-value="
+                      (valor) => alternarSeleccion(movimiento.id, valor === true)
+                    "
+                  />
+                </TableCell>
+                <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
+                <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
+                <TableCell>{{ movimiento.descripcion }}</TableCell>
+                <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
+                <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
+                <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
+                <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
+                <TableCell class="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Editar"
+                    @click="abrirParaEditar(movimiento)"
+                  >
+                    <Pencil class="size-4" />
+                  </Button>
+                  <DialogoConfirmarEliminacion
+                    :descripcion="`el movimiento ${movimiento.descripcion}`"
+                    @confirmar="eliminar(movimiento.id)"
+                  >
+                    <template #disparador>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="text-destructive"
+                        aria-label="Eliminar"
+                      >
+                        <Trash2 class="size-4" />
+                      </Button>
+                    </template>
+                  </DialogoConfirmarEliminacion>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
 
-        <BarraPaginacion
-          v-if="totalPaginas > 1"
-          :pagina-actual="paginaActual"
-          :total-paginas="totalPaginas"
-          @anterior="paginaAnterior"
-          @siguiente="paginaSiguiente"
-        />
-      </CollapsibleContent>
-    </Collapsible>
+          <BarraPaginacion
+            v-if="totalPaginas > 1"
+            :pagina-actual="paginaActual"
+            :total-paginas="totalPaginas"
+            @anterior="paginaAnterior"
+            @siguiente="paginaSiguiente"
+          />
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   </section>
 </template>

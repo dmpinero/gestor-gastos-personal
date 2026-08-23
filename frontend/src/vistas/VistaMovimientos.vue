@@ -26,7 +26,7 @@ import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
-import FiltroCuentasMultiple from '@/componentes/compartido/FiltroCuentasMultiple.vue'
+import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
@@ -116,50 +116,51 @@ const subcategoriasDeLaCategoria = computed(() => {
 const fechaDesde = ref('')
 const fechaHasta = ref('')
 
-const FILTRO_TODAS = 'todas'
-const SIN_SUBCATEGORIA_FILTRO = 'sin-subcategoria-filtro'
-
-const categoriaFiltro = ref<number | null>(null)
-const subcategoriaFiltro = ref<number | typeof FILTRO_TODAS | typeof SIN_SUBCATEGORIA_FILTRO>(
-  FILTRO_TODAS,
-)
-
 const importeMin = ref('')
 const importeMax = ref('')
 const saldoMin = ref('')
 const saldoMax = ref('')
 
-const categoriaFiltroTexto = computed<string>({
-  get: () => (categoriaFiltro.value === null ? FILTRO_TODAS : String(categoriaFiltro.value)),
-  set: (valor) => {
-    categoriaFiltro.value = valor === FILTRO_TODAS ? null : Number(valor)
-    subcategoriaFiltro.value = FILTRO_TODAS
-  },
-})
+// Filtro de categoría/subcategoría con selección múltiple (mismo patrón que
+// el filtro de Cuenta): todas marcadas por defecto, sin selección = 0
+// resultados. La subcategoría "(sin subcategoría)" no tiene id real en el
+// dominio; se representa con este identificador negativo, que nunca
+// coincide con un id de subcategoría real (siempre positivos).
+const SIN_SUBCATEGORIA_FILTRO_ID = -1
 
-const subcategoriaFiltroTexto = computed<string>({
-  get: () => String(subcategoriaFiltro.value),
-  set: (valor) => {
-    subcategoriaFiltro.value =
-      valor === FILTRO_TODAS
-        ? FILTRO_TODAS
-        : valor === SIN_SUBCATEGORIA_FILTRO
-          ? SIN_SUBCATEGORIA_FILTRO
-          : Number(valor)
-  },
-})
+const categoriasFiltro = ref<number[]>([])
+const subcategoriasFiltro = ref<number[]>([])
 
-const subcategoriasDelFiltro = computed(() =>
-  categoriaFiltro.value === null
-    ? tiendaCategorias.categorias.flatMap((c) => c.subcategorias)
-    : (tiendaCategorias.categorias.find((c) => c.categoria.id === categoriaFiltro.value)
-        ?.subcategorias ?? []),
+const itemsCategoriasFiltro = computed(() =>
+  tiendaCategorias.categorias.map((c) => ({ id: c.categoria.id, nombre: c.categoria.nombre })),
 )
+
+// Subcategorías de las categorías actualmente marcadas en el filtro (todas,
+// si están todas marcadas), más la opción "(sin subcategoría)".
+const itemsSubcategoriasFiltro = computed(() => {
+  const subcategorias = tiendaCategorias.categorias
+    .filter((c) => categoriasFiltro.value.includes(c.categoria.id))
+    .flatMap((c) => c.subcategorias)
+    .map((s) => ({ id: s.id, nombre: s.nombre }))
+  return [...subcategorias, { id: SIN_SUBCATEGORIA_FILTRO_ID, nombre: '(sin subcategoría)' }]
+})
+
+// Al cambiar las categorías marcadas, las subcategorías disponibles cambian:
+// se resetea la selección a "todas las nuevas disponibles" (si se dejara la
+// selección anterior, podría referirse a subcategorías de una categoría ya
+// desmarcada).
+watch(itemsSubcategoriasFiltro, (items) => {
+  subcategoriasFiltro.value = items.map((i) => i.id)
+})
 
 function nombreCuenta(idCuenta: number): string {
   const cuenta = tiendaCuentas.cuentas.find((c) => c.id === idCuenta)
   return cuenta ? (cuenta.alias ?? cuenta.numero_cuenta) : ''
 }
+
+const itemsCuentasFiltro = computed(() =>
+  tiendaCuentas.cuentas.map((c) => ({ id: c.id, nombre: c.alias ?? c.numero_cuenta })),
+)
 
 function nombreCategoria(idCategoria: number): string {
   return (
@@ -184,14 +185,9 @@ const filasConFiltrosAvanzados = computed(() =>
   tiendaMovimientos.movimientos.filter((m) => {
     if (fechaDesde.value && m.fecha_valor < fechaDesde.value) return false
     if (fechaHasta.value && m.fecha_valor > fechaHasta.value) return false
-    if (categoriaFiltro.value !== null && m.categoria_id !== categoriaFiltro.value) return false
-    if (subcategoriaFiltro.value !== FILTRO_TODAS) {
-      const coincide =
-        subcategoriaFiltro.value === SIN_SUBCATEGORIA_FILTRO
-          ? m.subcategoria_id === null
-          : m.subcategoria_id === subcategoriaFiltro.value
-      if (!coincide) return false
-    }
+    if (!categoriasFiltro.value.includes(m.categoria_id)) return false
+    const claveSubcategoria = m.subcategoria_id ?? SIN_SUBCATEGORIA_FILTRO_ID
+    if (!subcategoriasFiltro.value.includes(claveSubcategoria)) return false
     if (importeMin.value !== '' && Number(m.importe) < Number(importeMin.value)) return false
     if (importeMax.value !== '' && Number(m.importe) > Number(importeMax.value)) return false
     if (saldoMin.value !== '' && Number(m.saldo) < Number(saldoMin.value)) return false
@@ -214,8 +210,8 @@ function limpiarFiltros(): void {
   busqueda.value = ''
   fechaDesde.value = ''
   fechaHasta.value = ''
-  categoriaFiltro.value = null
-  subcategoriaFiltro.value = FILTRO_TODAS
+  categoriasFiltro.value = itemsCategoriasFiltro.value.map((i) => i.id)
+  subcategoriasFiltro.value = itemsSubcategoriasFiltro.value.map((i) => i.id)
   importeMin.value = ''
   importeMax.value = ''
   saldoMin.value = ''
@@ -290,8 +286,8 @@ watch(
     busqueda,
     fechaDesde,
     fechaHasta,
-    categoriaFiltro,
-    subcategoriaFiltro,
+    categoriasFiltro,
+    subcategoriasFiltro,
     importeMin,
     importeMax,
     saldoMin,
@@ -300,6 +296,7 @@ watch(
   () => {
     paginaActual.value = 1
   },
+  { deep: true },
 )
 
 const todosSeleccionados = computed(
@@ -318,6 +315,9 @@ onMounted(async () => {
   cuentasSeleccionadas.value = cuentaDesdeUrl
     ? [cuentaDesdeUrl.id]
     : tiendaCuentas.cuentas.map((c) => c.id)
+
+  categoriasFiltro.value = itemsCategoriasFiltro.value.map((i) => i.id)
+  subcategoriasFiltro.value = itemsSubcategoriasFiltro.value.map((i) => i.id)
 })
 
 // Marcar/desmarcar varias cuentas seguidas en el popover (p. ej. "Seleccionar
@@ -567,9 +567,13 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
           <div class="flex flex-col gap-1.5">
             <Label>Cuenta</Label>
-            <FiltroCuentasMultiple
+            <FiltroMultiple
               v-model="cuentasSeleccionadas"
-              :cuentas="tiendaCuentas.cuentas"
+              :items="itemsCuentasFiltro"
+              id-base="filtro-cuenta"
+              etiqueta-boton="Filtrar por cuenta"
+              nombre-singular="cuenta"
+              nombre-plural="cuentas"
             />
           </div>
 
@@ -598,48 +602,27 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <Label id="etiqueta-filtro-categoria" for="selector-filtro-categoria"
-              >Filtrar por categoría</Label
-            >
-            <Select v-model="categoriaFiltroTexto">
-              <SelectTrigger
-                id="selector-filtro-categoria"
-                aria-labelledby="etiqueta-filtro-categoria"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
-                <SelectItem
-                  v-for="c in tiendaCategorias.categorias"
-                  :key="c.categoria.id"
-                  :value="String(c.categoria.id)"
-                >
-                  {{ c.categoria.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Filtrar por categoría</Label>
+            <FiltroMultiple
+              v-model="categoriasFiltro"
+              :items="itemsCategoriasFiltro"
+              id-base="filtro-categoria"
+              etiqueta-boton="Filtrar por categoría"
+              nombre-singular="categoría"
+              nombre-plural="categorías"
+            />
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <Label id="etiqueta-filtro-subcategoria" for="selector-filtro-subcategoria"
-              >Filtrar por subcategoría</Label
-            >
-            <Select v-model="subcategoriaFiltroTexto">
-              <SelectTrigger
-                id="selector-filtro-subcategoria"
-                aria-labelledby="etiqueta-filtro-subcategoria"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="FILTRO_TODAS">Todas</SelectItem>
-                <SelectItem :value="SIN_SUBCATEGORIA_FILTRO">(sin subcategoría)</SelectItem>
-                <SelectItem v-for="s in subcategoriasDelFiltro" :key="s.id" :value="String(s.id)">
-                  {{ s.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Filtrar por subcategoría</Label>
+            <FiltroMultiple
+              v-model="subcategoriasFiltro"
+              :items="itemsSubcategoriasFiltro"
+              id-base="filtro-subcategoria"
+              etiqueta-boton="Filtrar por subcategoría"
+              nombre-singular="subcategoría"
+              nombre-plural="subcategorías"
+            />
           </div>
 
           <FiltroRangoNumero

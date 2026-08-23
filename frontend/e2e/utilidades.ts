@@ -43,22 +43,27 @@ export async function elegirCuentaDelFormulario(
 }
 
 /**
- * Filtro "Cuenta" de la barra de filtros de Movimientos: ya no es un Select
- * de una sola opción, sino un Popover con una casilla por cuenta (todas
- * marcadas por defecto). Deja marcadas única y exclusivamente las cuentas
- * indicadas, sea cual sea el estado previo del popover (no basta con
- * alternar la casilla "Seleccionar todas", que no es idempotente: su efecto
- * depende de si ya estaba en todo/nada/una selección parcial).
+ * Filtros "Cuenta"/"Categoría"/"Subcategoría" de la barra de filtros de
+ * Movimientos: ya no son un Select de una sola opción, sino un Popover con
+ * una casilla por elemento (todos marcados por defecto). Deja marcados
+ * única y exclusivamente los elementos indicados, sea cual sea el estado
+ * previo del popover (no basta con alternar la casilla "Seleccionar
+ * todas", que no es idempotente: su efecto depende de si ya estaba en
+ * todo/nada/una selección parcial).
  */
-export async function seleccionarCuentas(page: Page, numerosCuenta: string[]): Promise<void> {
-  await page.getByRole('button', { name: 'Filtrar por cuenta' }).click()
+export async function seleccionarElementosFiltro(
+  page: Page,
+  etiquetaBoton: string,
+  textos: string[],
+): Promise<void> {
+  await page.getByRole('button', { name: etiquetaBoton }).click()
   const filas = page.locator('[data-slot="popover-content"] li')
   const total = await filas.count()
   for (let indice = 0; indice < total; indice++) {
     const fila = filas.nth(indice)
     const texto = (await fila.textContent())?.trim()
     const casilla = fila.getByRole('checkbox')
-    if (texto !== undefined && numerosCuenta.includes(texto)) {
+    if (texto !== undefined && textos.includes(texto)) {
       await casilla.check()
     } else {
       await casilla.uncheck()
@@ -67,7 +72,38 @@ export async function seleccionarCuentas(page: Page, numerosCuenta: string[]): P
   await page.keyboard.press('Escape')
 }
 
-/** Ver `seleccionarCuentas`: deja marcada solo esta única cuenta. */
+/** Ver `seleccionarElementosFiltro`: deja marcadas solo estas cuentas. */
+export async function seleccionarCuentas(page: Page, numerosCuenta: string[]): Promise<void> {
+  await seleccionarElementosFiltro(page, 'Filtrar por cuenta', numerosCuenta)
+}
+
+/** Ver `seleccionarElementosFiltro`: deja marcada solo esta única cuenta. */
 export async function seleccionarCuenta(page: Page, numeroCuenta: string): Promise<void> {
   await seleccionarCuentas(page, [numeroCuenta])
+}
+
+/** Ver `seleccionarElementosFiltro`: deja marcadas solo estas categorías. */
+export async function seleccionarCategorias(page: Page, nombresCategoria: string[]): Promise<void> {
+  await seleccionarElementosFiltro(page, 'Filtrar por categoría', nombresCategoria)
+}
+
+/** Ver `seleccionarElementosFiltro`: deja marcada solo esta única categoría. */
+export async function seleccionarCategoria(page: Page, nombreCategoria: string): Promise<void> {
+  await seleccionarCategorias(page, [nombreCategoria])
+}
+
+/** Ver `seleccionarElementosFiltro`: deja marcadas solo estas subcategorías. */
+export async function seleccionarSubcategorias(
+  page: Page,
+  nombresSubcategoria: string[],
+): Promise<void> {
+  await seleccionarElementosFiltro(page, 'Filtrar por subcategoría', nombresSubcategoria)
+}
+
+/** Ver `seleccionarElementosFiltro`: deja marcada solo esta única subcategoría. */
+export async function seleccionarSubcategoria(
+  page: Page,
+  nombreSubcategoria: string,
+): Promise<void> {
+  await seleccionarSubcategorias(page, [nombreSubcategoria])
 }

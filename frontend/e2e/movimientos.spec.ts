@@ -434,6 +434,48 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   await expect(page.getByText('Evolución de ingresos')).toBeVisible()
 })
 
+test('el gráfico de evolución se puede ver como distribución circular', async ({ page }) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-CIRCULAR ${sufijo}`
+  const nombreCategoria = `Categoria MOV-CIRCULAR ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  for (const [fecha, importe] of [
+    ['2026-01-05', '-30.00'],
+    ['2026-02-05', '-10.00'],
+  ]) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill(fecha)
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await panel.getByPlaceholder('Descripción').fill(`Gasto ${fecha}`)
+    await panel.getByPlaceholder('Importe').fill(importe)
+    await panel.getByPlaceholder('Saldo').fill('970.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: `Gasto ${fecha}` })).toBeVisible()
+  }
+
+  await page.getByRole('button', { name: 'Ver como circular' }).first().click()
+  await expect(page.getByText('75%')).toBeVisible()
+  await expect(page.getByText('25%')).toBeVisible()
+})
+
 test('el filtro de cuenta permite seleccionar varias cuentas a la vez, mostrando su columna Cuenta', async ({
   page,
 }) => {

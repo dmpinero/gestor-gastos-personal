@@ -2,8 +2,12 @@ import { test, expect } from '@playwright/test'
 import {
   elegirCuentaDelFormulario,
   elegirOpcion,
+  seleccionarCategoria,
+  seleccionarCategorias,
   seleccionarCuenta,
   seleccionarCuentas,
+  seleccionarSubcategoria,
+  seleccionarSubcategorias,
 } from './utilidades'
 
 test('gestión completa de un movimiento: crear, editar y eliminar', async ({ page }) => {
@@ -335,8 +339,8 @@ test('los filtros de fecha, importe, categoría y subcategoría se combinan entr
 
   await page.getByLabel('Fecha desde').fill('2026-03-01')
   await page.getByLabel('Fecha hasta').fill('2026-03-15')
-  await elegirOpcion(page, page.getByLabel('Filtrar por categoría'), nombreCategoria)
-  await elegirOpcion(page, page.getByLabel('Filtrar por subcategoría'), nombreSubcategoria)
+  await seleccionarCategoria(page, nombreCategoria)
+  await seleccionarSubcategoria(page, nombreSubcategoria)
   await page.getByLabel('Importe mínimo').fill('-50')
   await page.getByLabel('Importe máximo').fill('0')
   await page.getByLabel('Buscar').fill('Objetivo')
@@ -538,4 +542,84 @@ test('al crear un movimiento se puede elegir explícitamente la cuenta en el pan
 
   await seleccionarCuenta(page, numeroCuentaB)
   await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+})
+
+test('los filtros de categoría y subcategoría permiten seleccionar varios elementos a la vez', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MULTICAT ${sufijo}`
+  const nombreCategoriaX = `Categoria MULTICAT-X ${sufijo}`
+  const nombreCategoriaY = `Categoria MULTICAT-Y ${sufijo}`
+  const nombreSub1 = `Subcategoria MULTICAT-1 ${sufijo}`
+  const nombreSub2 = `Subcategoria MULTICAT-2 ${sufijo}`
+  const nombreSub3 = `Subcategoria MULTICAT-3 ${sufijo}`
+  const descripcion1 = `Movimiento multicat 1 ${sufijo}`
+  const descripcion2 = `Movimiento multicat 2 ${sufijo}`
+  const descripcion3 = `Movimiento multicat 3 ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const [nombreCategoria, subcategorias] of [
+    [nombreCategoriaX, [nombreSub1, nombreSub2]],
+    [nombreCategoriaY, [nombreSub3]],
+  ] as const) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    const tarjetaCategoria = page.locator('[data-slot="card"]', { hasText: nombreCategoria })
+    await expect(tarjetaCategoria).toBeVisible()
+    for (const nombreSubcategoria of subcategorias) {
+      await tarjetaCategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+      await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
+      await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+    }
+  }
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  for (const [descripcion, nombreCategoria, nombreSubcategoria] of [
+    [descripcion1, nombreCategoriaX, nombreSub1],
+    [descripcion2, nombreCategoriaX, nombreSub2],
+    [descripcion3, nombreCategoriaY, nombreSub3],
+  ]) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill('2026-01-15')
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), nombreSubcategoria)
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill('-1.00')
+    await panel.getByPlaceholder('Saldo').fill('99.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  // Solo la categoría X activa: se ven 1 y 2, no 3 (categoría Y).
+  await seleccionarCategoria(page, nombreCategoriaX)
+  await expect(page.locator('tr', { hasText: descripcion1 })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcion2 })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcion3 })).toHaveCount(0)
+
+  // Dentro de la categoría X, solo la subcategoría 1: no se ve el 2.
+  await seleccionarSubcategoria(page, nombreSub1)
+  await expect(page.locator('tr', { hasText: descripcion1 })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcion2 })).toHaveCount(0)
+
+  // Se marcan ambas subcategorías de la categoría X: vuelven a verse las dos.
+  await seleccionarSubcategorias(page, [nombreSub1, nombreSub2])
+  await expect(page.locator('tr', { hasText: descripcion1 })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcion2 })).toBeVisible()
+  await expect(page.locator('tr', { hasText: descripcion3 })).toHaveCount(0)
+
+  // Se marcan ambas categorías de nuevo: reaparece el movimiento de Y.
+  await seleccionarCategorias(page, [nombreCategoriaX, nombreCategoriaY])
+  await expect(page.locator('tr', { hasText: descripcion3 })).toBeVisible()
 })

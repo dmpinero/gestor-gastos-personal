@@ -5,8 +5,8 @@ import { useRouter } from 'vue-router'
 import { clienteApi, ErrorApi } from '@/api/cliente'
 import type { ResumenImportacion, ResumenImportacionConceptosPrevistos } from '@/api/tipos'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
+import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import { Button } from '@/componentes/ui/button'
-import { Progress } from '@/componentes/ui/progress'
 import ModalComparacionDuplicados from '@/componentes/importacion/ModalComparacionDuplicados.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import { useTiendaCategorias } from '@/stores/categorias'
@@ -209,18 +209,12 @@ function verResumenAnual(): void {
       </Button>
     </form>
 
-    <div
+    <ModalProgresoBloqueante
       v-if="importando && ficheroEnProceso"
-      class="mt-4 w-full max-w-md"
-      data-test="progreso-importacion"
-    >
-      <p class="text-sm text-muted-foreground">
-        Procesando {{ ficheroEnProceso }}:
-        <template v-if="progreso">{{ progreso.procesadas }} de {{ progreso.total }} filas</template>
-        <template v-else>preparando…</template>
-      </p>
-      <Progress class="mt-2" :model-value="progreso?.procesadas ?? 0" :max="progreso?.total || 1" />
-    </div>
+      :titulo="`Importando ${ficheroEnProceso}`"
+      etiqueta-unidad="filas"
+      :progreso="progreso"
+    />
 
     <div v-if="ficherosConError.length > 0" class="mt-4 text-sm text-destructive" role="alert">
       <p v-for="resultado in ficherosConError" :key="resultado.nombreFichero">

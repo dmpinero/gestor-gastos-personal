@@ -8,12 +8,14 @@ import { aTextoOULlo } from '@/api/utilidades'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
+import { useProgresoTareas } from '@/composables/useProgresoTareas'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Button } from '@/componentes/ui/button'
 import { Checkbox } from '@/componentes/ui/checkbox'
@@ -41,6 +43,7 @@ const panelAbierto = ref(false)
 const seleccionadas = ref<Set<number>>(new Set())
 const filtrosAbiertos = ref(true)
 const resultadosAbiertos = ref(true)
+const progresoEliminacion = useProgresoTareas()
 
 const formulario = reactive<DatosCuenta>({
   numero_cuenta: '',
@@ -250,10 +253,15 @@ async function eliminar(id: number, cascada = false): Promise<void> {
 async function eliminarSeleccionadas(cascada = false): Promise<void> {
   errorFormulario.value = null
   try {
-    await Promise.all([...seleccionadas.value].map((id) => tienda.eliminar(id, cascada)))
+    const tareas = progresoEliminacion.envolver(
+      [...seleccionadas.value].map((id) => () => tienda.eliminar(id, cascada)),
+    )
+    await Promise.all(tareas.map((tarea) => tarea()))
     seleccionadas.value.clear()
   } catch (motivo) {
     errorFormulario.value = (motivo as Error).message
+  } finally {
+    progresoEliminacion.terminar()
   }
 }
 
@@ -275,6 +283,16 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       <h2 class="text-xl font-semibold">Cuentas bancarias</h2>
       <Button variant="success" @click="abrirParaCrear">Crear cuenta</Button>
     </div>
+
+    <ModalProgresoBloqueante
+      v-if="progresoEliminacion.enCurso.value"
+      titulo="Eliminando cuentas"
+      etiqueta-unidad="cuentas"
+      :progreso="{
+        procesadas: progresoEliminacion.procesadas.value,
+        total: progresoEliminacion.total.value,
+      }"
+    />
 
     <Sheet v-model:open="panelAbierto">
       <SheetContent>

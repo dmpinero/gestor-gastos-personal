@@ -12,12 +12,21 @@ import { computed, type HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
 import DialogOverlay from './DialogOverlay.vue'
 
-const props = defineProps<DialogContentProps & { class?: HTMLAttributes['class'] }>()
+const props = defineProps<
+  DialogContentProps & {
+    class?: HTMLAttributes['class']
+    // Para modales de operación en curso que no deben poder cerrarse
+    // mientras se ejecutan (p. ej. un borrado en bloque o una importación):
+    // oculta la X y bloquea el cierre por Escape o por click fuera.
+    sinCerrar?: boolean
+  }
+>()
 const emits = defineEmits<DialogContentEmits>()
 
 const delegatedProps = computed(() => {
-  const { class: clase, ...delegated } = props
+  const { class: clase, sinCerrar: descartado, ...delegated } = props
   void clase
+  void descartado
   return delegated
 })
 
@@ -36,9 +45,13 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           props.class,
         )
       "
+      @escape-key-down="(evento) => props.sinCerrar && evento.preventDefault()"
+      @pointer-down-outside="(evento) => props.sinCerrar && evento.preventDefault()"
+      @interact-outside="(evento) => props.sinCerrar && evento.preventDefault()"
     >
       <slot />
       <DialogClose
+        v-if="!props.sinCerrar"
         class="ring-offset-background focus:ring-ring data-[state=open]:bg-accent absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
       >
         <X class="size-4" />

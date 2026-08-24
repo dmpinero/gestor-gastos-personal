@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue'
 import { clienteApi } from '@/api/cliente'
 import type { Categoria, Movimiento, Subcategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
+import { useProgresoTareas } from '@/composables/useProgresoTareas'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
@@ -26,6 +27,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/s
 import DialogoConfirmarEliminacion, {
   type Dependencia,
 } from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
+import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 
 const tienda = useTiendaCategorias()
 const tiendaCuentas = useTiendaCuentas()
@@ -37,6 +39,7 @@ const panelAbierto = ref(false)
 const idEnEdicion = ref<number | null>(null)
 const nombreFormulario = ref('')
 const seleccionadas = ref<Set<number>>(new Set())
+const progresoEliminacion = useProgresoTareas()
 
 const panelSubcategoriaAbierto = ref(false)
 const subcategoriaEnEdicion = ref<{ id: number; categoriaOrigenId: number } | null>(null)
@@ -270,10 +273,15 @@ async function dependenciasDeSeleccionadas(): Promise<Dependencia[]> {
 async function eliminarSeleccionadas(cascada = false): Promise<void> {
   error.value = null
   try {
-    await Promise.all([...seleccionadas.value].map((id) => tienda.eliminarCategoria(id, cascada)))
+    const tareas = progresoEliminacion.envolver(
+      [...seleccionadas.value].map((id) => () => tienda.eliminarCategoria(id, cascada)),
+    )
+    await Promise.all(tareas.map((tarea) => tarea()))
     seleccionadas.value.clear()
   } catch (motivo) {
     error.value = (motivo as Error).message
+  } finally {
+    progresoEliminacion.terminar()
   }
 }
 
@@ -348,6 +356,17 @@ async function guardarSubcategoria(): Promise<void> {
       <h2 class="text-xl font-semibold">Categorías</h2>
       <Button variant="success" @click="abrirParaCrear">Crear categoría</Button>
     </div>
+
+    <ModalProgresoBloqueante
+      v-if="progresoEliminacion.enCurso.value"
+      titulo="Eliminando categorías"
+      etiqueta-unidad="categorías"
+      :progreso="{
+        procesadas: progresoEliminacion.procesadas.value,
+        total: progresoEliminacion.total.value,
+      }"
+    />
+
     <p class="text-muted-foreground mt-1 text-sm">
       {{ filasFiltradas.length }} categoría{{ filasFiltradas.length === 1 ? '' : 's' }}
     </p>

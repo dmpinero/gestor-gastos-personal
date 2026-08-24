@@ -20,6 +20,7 @@ import { aTextoOULlo } from '@/api/utilidades'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
+import { useProgresoTareas } from '@/composables/useProgresoTareas'
 import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
 import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
@@ -32,6 +33,7 @@ import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Button } from '@/componentes/ui/button'
@@ -68,6 +70,7 @@ const error = ref<string | null>(null)
 const idEnEdicion = ref<number | null>(null)
 const panelAbierto = ref(false)
 const seleccionados = ref<Set<number>>(new Set())
+const progresoEliminacion = useProgresoTareas()
 
 const formulario = reactive<DatosMovimiento>({
   cuenta_id: 0,
@@ -461,9 +464,11 @@ async function eliminar(id: number): Promise<void> {
 async function eliminarSeleccionados(): Promise<void> {
   error.value = null
   const idsSeleccionados = [...seleccionados.value]
-  const resultados = await Promise.allSettled(
-    idsSeleccionados.map((id) => tiendaMovimientos.eliminar(id)),
+  const tareas = progresoEliminacion.envolver(
+    idsSeleccionados.map((id) => () => tiendaMovimientos.eliminar(id)),
   )
+  const resultados = await Promise.allSettled(tareas.map((tarea) => tarea()))
+  progresoEliminacion.terminar()
   // Se recarga siempre desde el servidor al terminar, aunque haya fallado
   // algún borrado: con Promise.all, un único fallo abortaba el resto sin
   // volver a sincronizar, dejando la tabla desajustada respecto al backend
@@ -494,6 +499,16 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       <h2 class="text-xl font-semibold">Movimientos</h2>
       <Button variant="success" @click="abrirParaCrear">Crear movimiento</Button>
     </div>
+
+    <ModalProgresoBloqueante
+      v-if="progresoEliminacion.enCurso.value"
+      titulo="Eliminando movimientos"
+      etiqueta-unidad="movimientos"
+      :progreso="{
+        procesadas: progresoEliminacion.procesadas.value,
+        total: progresoEliminacion.total.value,
+      }"
+    />
 
     <Sheet v-model:open="panelAbierto">
       <SheetContent>

@@ -2,6 +2,7 @@ import io
 from decimal import Decimal
 
 import openpyxl
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font, PatternFill
 from openpyxl.workbook import Workbook
 
@@ -48,7 +49,7 @@ class EscritorExcelResumenAnualOpenpyxl:
             hoja.append(
                 [
                     fila.concepto_id,
-                    fila.nombre,
+                    ILLEGAL_CHARACTERS_RE.sub("", fila.nombre),
                     fila.periodicidad,
                     *[v.importe for v in fila.valores],
                 ]

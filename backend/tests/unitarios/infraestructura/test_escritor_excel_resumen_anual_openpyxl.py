@@ -126,3 +126,30 @@ def test_las_celdas_previstas_van_en_cursiva_y_las_ajustadas_llevan_relleno() ->
     assert celda_previsto.font.italic is True
     assert celda_ajustado.fill.start_color.rgb == "00FFF3CD"
     assert not celda_real.font.italic
+
+
+def test_un_nombre_con_caracteres_de_control_no_rompe_la_escritura() -> None:
+    # openpyxl (y el formato XML de .xlsx) no admite ciertos caracteres de
+    # control en el contenido de una celda; un nombre de categoría/concepto
+    # con uno de ellos no debe tumbar la exportación con IllegalCharacterError.
+    fila = FilaResumenAnual(
+        concepto_id=1,
+        categoria_id=10,
+        subcategoria_id=None,
+        nombre="Ocio\x00con\x0bcontrol",
+        periodicidad="mensual",
+        valores=_valores({mes: (Decimal("-9.99"), "previsto") for mes in range(1, 13)}),
+    )
+    resumen = ResumenAnual(
+        anio=2026,
+        filas_gastos=[fila],
+        filas_ingresos=[],
+        totales_gastos=[Decimal("-9.99")] * 12,
+        totales_ingresos=[Decimal("0")] * 12,
+    )
+
+    contenido = EscritorExcelResumenAnualOpenpyxl().escribir(resumen)
+    libro = openpyxl.load_workbook(io.BytesIO(contenido))
+    hoja = libro["Gastos"]
+
+    assert hoja["B2"].value == "Ocioconcontrol"

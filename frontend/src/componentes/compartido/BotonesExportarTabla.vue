@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FileSpreadsheet, FileText } from '@lucide/vue'
 import { exportarTablaExcel, exportarTablaPDF } from '@/lib/exportarTabla'
+import { formatearMarcaTemporalFichero } from '@/lib/formato'
 import { Button } from '@/componentes/ui/button'
 
 // Botones de exportar reutilizables para cualquier tabla de la aplicación:
@@ -13,12 +14,23 @@ const props = defineProps<{
   filas: (string | number)[][]
 }>()
 
+// Nombre + marca temporal, para no sobrescribir exportaciones anteriores
+// del mismo listado y saber cuándo se generó cada fichero.
+function nombreConMarcaTemporal(): string {
+  return `${props.nombreFichero}_${formatearMarcaTemporalFichero()}`
+}
+
 async function exportarExcel(): Promise<void> {
-  await exportarTablaExcel(`${props.nombreFichero}.xlsx`, props.columnas, props.filas)
+  await exportarTablaExcel(`${nombreConMarcaTemporal()}.xlsx`, props.columnas, props.filas)
 }
 
 async function exportarPdf(): Promise<void> {
-  await exportarTablaPDF(`${props.nombreFichero}.pdf`, props.titulo, props.columnas, props.filas)
+  await exportarTablaPDF(
+    `${nombreConMarcaTemporal()}.pdf`,
+    props.titulo,
+    props.columnas,
+    props.filas,
+  )
 }
 </script>
 

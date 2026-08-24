@@ -557,17 +557,24 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await expect(modalDetalle.getByRole('columnheader', { name: 'Subcategoría' })).toBeVisible()
   await expect(modalDetalle.getByRole('cell', { name: 'Solo gasto' })).toBeVisible()
 
+  const nombreCategoriaEscapado = nombreCategoria.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const patronMarcaTemporal = /_\d{8}_\d{6}/.source
+
   const [descargaExcel] = await Promise.all([
     page.waitForEvent('download'),
     modalDetalle.getByRole('button', { name: 'Exportar a Excel' }).click(),
   ])
-  expect(descargaExcel.suggestedFilename()).toBe(`${nombreCategoria}.xlsx`)
+  expect(descargaExcel.suggestedFilename()).toMatch(
+    new RegExp(`^${nombreCategoriaEscapado}${patronMarcaTemporal}\\.xlsx$`),
+  )
 
   const [descargaPdf] = await Promise.all([
     page.waitForEvent('download'),
     modalDetalle.getByRole('button', { name: 'Exportar a PDF' }).click(),
   ])
-  expect(descargaPdf.suggestedFilename()).toBe(`${nombreCategoria}.pdf`)
+  expect(descargaPdf.suggestedFilename()).toMatch(
+    new RegExp(`^${nombreCategoriaEscapado}${patronMarcaTemporal}\\.pdf$`),
+  )
 
   await page.keyboard.press('Escape')
   await expect(modalDetalle).toBeHidden()

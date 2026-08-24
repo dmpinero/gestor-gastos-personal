@@ -11,15 +11,29 @@ vi.mock('@/api/cliente', () => ({
   },
 }))
 
+function mockearRutas(rutas: Record<string, unknown>): void {
+  vi.mocked(clienteApi.obtener).mockImplementation(((ruta: string) => {
+    for (const [prefijo, valor] of Object.entries(rutas)) {
+      if (ruta.startsWith(prefijo)) return Promise.resolve(valor)
+    }
+    return Promise.resolve([])
+  }) as typeof clienteApi.obtener)
+}
+
 describe('VistaInicio', () => {
   it('muestra el saldo global, el saldo por cuenta y los totales por categoría', async () => {
-    vi.mocked(clienteApi.obtener).mockResolvedValue({
-      saldo_global: '2470.00',
-      saldos_por_cuenta: [
-        { cuenta_id: 1, numero_cuenta: 'ES00 1234', alias: null, saldo: '2470.00' },
-      ],
-      gastos_por_categoria: [{ categoria_id: 1, nombre: 'Alimentación', total: '-30.00' }],
-      ingresos_por_categoria: [{ categoria_id: 2, nombre: 'Nómina', total: '1500.00' }],
+    mockearRutas({
+      '/dashboard/resumen': {
+        saldo_global: '2470.00',
+        saldos_por_cuenta: [
+          { cuenta_id: 1, numero_cuenta: 'ES00 1234', alias: null, saldo: '2470.00' },
+        ],
+        gastos_por_categoria: [{ categoria_id: 1, nombre: 'Alimentación', total: '-30.00' }],
+        ingresos_por_categoria: [{ categoria_id: 2, nombre: 'Nómina', total: '1500.00' }],
+      },
+      '/cuentas': [{ id: 1, numero_cuenta: 'ES00 1234', alias: null }],
+      '/categorias': [],
+      '/movimientos': [],
     })
     const pinia = createPinia()
     setActivePinia(pinia)

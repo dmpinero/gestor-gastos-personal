@@ -7,6 +7,30 @@ afterEach(() => {
 })
 
 describe('DialogoConfirmarEliminacion', () => {
+  it('sin disparadorSolido, el trigger por defecto es un enlace', () => {
+    const wrapper = mount(DialogoConfirmarEliminacion, {
+      props: { descripcion: 'la cuenta ES00 1234', textoBoton: 'Eliminar seleccionados' },
+    })
+
+    const boton = wrapper.get('button')
+    expect(boton.classes()).toContain('text-destructive')
+    expect(boton.classes().join(' ')).toMatch(/underline-offset-4/)
+  })
+
+  it('con disparadorSolido, el trigger por defecto es un botón sólido destructive', () => {
+    const wrapper = mount(DialogoConfirmarEliminacion, {
+      props: {
+        descripcion: '3 cuentas seleccionadas',
+        textoBoton: 'Eliminar seleccionados',
+        disparadorSolido: true,
+      },
+    })
+
+    const boton = wrapper.get('button')
+    expect(boton.classes().join(' ')).toContain('bg-destructive')
+    expect(boton.classes().join(' ')).not.toMatch(/underline-offset-4/)
+  })
+
   it('cancelar no emite confirmar', async () => {
     const wrapper = mount(DialogoConfirmarEliminacion, {
       props: { descripcion: 'la cuenta ES00 1234' },

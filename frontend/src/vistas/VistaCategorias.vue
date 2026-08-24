@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { Pencil, Search, X } from '@lucide/vue'
+import { ChevronRight, Pencil, Search, X } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 
-import type { Categoria, Subcategoria } from '@/api/tipos'
+import { clienteApi } from '@/api/cliente'
+import type { Categoria, Movimiento, Subcategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
+import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaCuentas } from '@/stores/cuentas'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import {
@@ -24,6 +28,7 @@ import DialogoConfirmarEliminacion, {
 } from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tienda = useTiendaCategorias()
+const tiendaCuentas = useTiendaCuentas()
 const error = ref<string | null>(null)
 const errorPanel = ref<string | null>(null)
 const subcategoriaNuevaPorCategoria = ref<Record<number, string>>({})
@@ -39,6 +44,23 @@ const nombreSubcategoriaFormulario = ref('')
 const categoriaDestinoFormulario = ref<string | undefined>(undefined)
 const errorPanelSubcategoria = ref<string | null>(null)
 
+const filtrosAbiertos = ref(true)
+// Todas las categorías empiezan expandidas; se guardan aquí solo las que el
+// usuario ha contraído explícitamente (evita tener que sincronizar el
+// conjunto de "abiertas" cada vez que se crea una categoría nueva).
+const categoriasCerradas = ref<Set<number>>(new Set())
+
+function categoriaAbierta(idCategoria: number): boolean {
+  return !categoriasCerradas.value.has(idCategoria)
+}
+
+function alternarCategoria(idCategoria: number, abierta: boolean): void {
+  const nuevo = new Set(categoriasCerradas.value)
+  if (abierta) nuevo.delete(idCategoria)
+  else nuevo.add(idCategoria)
+  categoriasCerradas.value = nuevo
+}
+
 const { busqueda, filasFiltradas } = useBusquedaTabla(
   computed(() => tienda.categorias),
   (item) => [item.categoria.nombre, ...item.subcategorias.map((s) => s.nombre)],
@@ -52,6 +74,7 @@ const todasSeleccionadas = computed(
 
 onMounted(() => {
   tienda.cargar()
+  tiendaCuentas.cargar()
 })
 
 function abrirParaCrear(): void {
@@ -136,6 +159,53 @@ async function dependenciasDeSubcategoria(
     })
   }
   return items
+}
+
+function nombreCuentaPorId(id: number): string {
+  const cuenta = tiendaCuentas.cuentas.find((c) => c.id === id)
+  return cuenta ? (cuenta.alias ?? cuenta.numero_cuenta) : ''
+}
+
+const COLUMNAS_DETALLES_MOVIMIENTOS = [
+  'Fecha',
+  'Cuenta',
+  'Categoría',
+  'Subcategoría',
+  'Descripción',
+  'Importe',
+  'Saldo',
+]
+
+function filasDetalleDeMovimientos(
+  movimientos: Movimiento[],
+  nombreCategoria: string,
+  nombreSubcategoria: string,
+): (string | number)[][] {
+  return movimientos.map((m) => [
+    formatearFecha(m.fecha_valor),
+    nombreCuentaPorId(m.cuenta_id),
+    nombreCategoria,
+    nombreSubcategoria,
+    m.descripcion,
+    formatearImporte(m.importe),
+    formatearImporte(m.saldo),
+  ])
+}
+
+// Se consulta directamente vía clienteApi (no a través del store de
+// movimientos) para no pisar el estado global de `movimientos`, que otras
+// vistas usan para su propio listado.
+async function movimientosDeSubcategoria(idSubcategoria: number): Promise<Movimiento[]> {
+  return clienteApi.obtener<Movimiento[]>(`/movimientos?subcategoria_id=${idSubcategoria}`)
+}
+
+async function filasDetalleDeSubcategoria(
+  idSubcategoria: number,
+  nombreCategoria: string,
+  nombreSubcategoria: string,
+): Promise<(string | number)[][]> {
+  const movimientos = await movimientosDeSubcategoria(idSubcategoria)
+  return filasDetalleDeMovimientos(movimientos, nombreCategoria, nombreSubcategoria)
 }
 
 async function eliminarCategoria(id: number, cascada = false): Promise<void> {
@@ -315,100 +385,149 @@ async function guardarSubcategoria(): Promise<void> {
       <DialogoConfirmarEliminacion
         :descripcion="`${seleccionadas.size} categorías seleccionadas`"
         texto-boton="Eliminar seleccionados"
+        disparador-solido
         :obtener-dependencias="dependenciasDeSeleccionadas"
         @confirmar="(cascada) => eliminarSeleccionadas(cascada)"
       />
     </div>
 
-    <div class="mt-4 flex max-w-xs flex-col gap-1.5">
-      <Label for="buscar-categorias">Buscar</Label>
-      <div class="relative">
-        <Search
-          class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
-        />
-        <Input
-          id="buscar-categorias"
-          v-model="busqueda"
-          placeholder="Buscar categorías…"
-          class="pl-8"
-        />
-      </div>
+    <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
+      <Collapsible v-model:open="filtrosAbiertos">
+        <CollapsibleTrigger
+          class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+          :aria-label="filtrosAbiertos ? 'Contraer filtros' : 'Expandir filtros'"
+        >
+          <ChevronRight
+            class="size-4 transition-transform"
+            :class="filtrosAbiertos ? 'rotate-90' : ''"
+          />
+          Filtros
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
+          <div class="flex max-w-xs flex-col gap-1.5">
+            <Label for="buscar-categorias">Buscar</Label>
+            <div class="relative">
+              <Search
+                class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+              />
+              <Input
+                id="buscar-categorias"
+                v-model="busqueda"
+                placeholder="Buscar categorías…"
+                class="pl-8"
+              />
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
 
     <div class="mt-4 space-y-4">
       <Card v-for="item in filasFiltradas" :key="item.categoria.id">
-        <CardHeader class="flex flex-row items-center justify-between">
-          <div class="flex items-center gap-2">
-            <Checkbox
-              :model-value="seleccionadas.has(item.categoria.id)"
-              :aria-label="`Seleccionar la categoría ${item.categoria.nombre}`"
-              @update:model-value="(valor) => alternarSeleccion(item.categoria.id, valor === true)"
-            />
-            <CardTitle>{{ item.categoria.nombre }}</CardTitle>
-          </div>
-          <div class="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Editar"
-              @click="abrirParaEditar(item.categoria)"
-            >
-              <Pencil class="size-4" />
-            </Button>
-            <DialogoConfirmarEliminacion
-              :descripcion="`la categoría ${item.categoria.nombre}`"
-              texto-boton="Eliminar categoría"
-              :obtener-dependencias="() => dependenciasDeCategoria(item.categoria.id)"
-              @confirmar="(cascada) => eliminarCategoria(item.categoria.id, cascada)"
-            />
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <ul class="flex flex-wrap gap-2">
-            <li v-for="sub in item.subcategorias" :key="sub.id">
-              <Badge variant="secondary" class="gap-1 py-1 pr-1 pl-3 text-sm font-normal">
-                <span>{{ sub.nombre }}</span>
+        <Collapsible
+          :open="categoriaAbierta(item.categoria.id)"
+          @update:open="(abierta) => alternarCategoria(item.categoria.id, abierta)"
+        >
+          <CardHeader class="flex flex-row items-center justify-between">
+            <div class="flex items-center gap-2">
+              <CollapsibleTrigger as-child>
                 <Button
                   variant="ghost"
                   size="icon"
-                  class="size-4 rounded-full hover:bg-background/60"
-                  aria-label="Editar"
-                  @click="abrirParaEditarSubcategoria(item.categoria.id, sub)"
-                >
-                  <Pencil class="size-3" />
-                </Button>
-                <DialogoConfirmarEliminacion
-                  :descripcion="`la subcategoría ${sub.nombre}`"
-                  :obtener-dependencias="
-                    () => dependenciasDeSubcategoria(item.categoria.id, sub.id)
+                  :aria-label="
+                    categoriaAbierta(item.categoria.id)
+                      ? `Contraer ${item.categoria.nombre}`
+                      : `Expandir ${item.categoria.nombre}`
                   "
-                  @confirmar="(cascada) => eliminarSubcategoria(item.categoria.id, sub.id, cascada)"
                 >
-                  <template #disparador>
+                  <ChevronRight
+                    class="size-4 transition-transform"
+                    :class="categoriaAbierta(item.categoria.id) ? 'rotate-90' : ''"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              <Checkbox
+                :model-value="seleccionadas.has(item.categoria.id)"
+                :aria-label="`Seleccionar la categoría ${item.categoria.nombre}`"
+                @update:model-value="
+                  (valor) => alternarSeleccion(item.categoria.id, valor === true)
+                "
+              />
+              <CardTitle>{{ item.categoria.nombre }}</CardTitle>
+            </div>
+            <div class="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Editar"
+                @click="abrirParaEditar(item.categoria)"
+              >
+                <Pencil class="size-4" />
+              </Button>
+              <DialogoConfirmarEliminacion
+                :descripcion="`la categoría ${item.categoria.nombre}`"
+                texto-boton="Eliminar categoría"
+                :obtener-dependencias="() => dependenciasDeCategoria(item.categoria.id)"
+                @confirmar="(cascada) => eliminarCategoria(item.categoria.id, cascada)"
+              />
+            </div>
+          </CardHeader>
+
+          <CollapsibleContent>
+            <CardContent>
+              <ul class="flex flex-wrap gap-2">
+                <li v-for="sub in item.subcategorias" :key="sub.id">
+                  <Badge variant="secondary" class="gap-1 py-1 pr-1 pl-3 text-sm font-normal">
+                    <span>{{ sub.nombre }}</span>
                     <Button
                       variant="ghost"
                       size="icon"
                       class="size-4 rounded-full hover:bg-background/60"
-                      aria-label="Eliminar"
+                      aria-label="Editar"
+                      @click="abrirParaEditarSubcategoria(item.categoria.id, sub)"
                     >
-                      <X class="size-3" />
+                      <Pencil class="size-3" />
                     </Button>
-                  </template>
-                </DialogoConfirmarEliminacion>
-              </Badge>
-            </li>
-          </ul>
+                    <DialogoConfirmarEliminacion
+                      :descripcion="`la subcategoría ${sub.nombre}`"
+                      :obtener-dependencias="
+                        () => dependenciasDeSubcategoria(item.categoria.id, sub.id)
+                      "
+                      titulo-detalles="Movimientos que se eliminarán"
+                      :columnas-detalles="COLUMNAS_DETALLES_MOVIMIENTOS"
+                      :obtener-filas-detalles="
+                        () => filasDetalleDeSubcategoria(sub.id, item.categoria.nombre, sub.nombre)
+                      "
+                      @confirmar="
+                        (cascada) => eliminarSubcategoria(item.categoria.id, sub.id, cascada)
+                      "
+                    >
+                      <template #disparador>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          class="size-4 rounded-full hover:bg-background/60"
+                          aria-label="Eliminar"
+                        >
+                          <X class="size-3" />
+                        </Button>
+                      </template>
+                    </DialogoConfirmarEliminacion>
+                  </Badge>
+                </li>
+              </ul>
 
-          <form class="mt-3 flex gap-2" @submit.prevent="crearSubcategoria(item.categoria.id)">
-            <Input
-              v-model="subcategoriaNuevaPorCategoria[item.categoria.id]"
-              placeholder="Nueva subcategoría"
-              class="max-w-xs"
-            />
-            <Button type="submit" variant="success">Añadir</Button>
-          </form>
-        </CardContent>
+              <form class="mt-3 flex gap-2" @submit.prevent="crearSubcategoria(item.categoria.id)">
+                <Input
+                  v-model="subcategoriaNuevaPorCategoria[item.categoria.id]"
+                  placeholder="Nueva subcategoría"
+                  class="max-w-xs"
+                />
+                <Button type="submit" variant="success">Añadir</Button>
+              </form>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
     </div>
 

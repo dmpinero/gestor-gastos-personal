@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Pencil, Trash2 } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { Pencil, Tag, Trash2 } from '@lucide/vue'
 import type { FilaResumenAnual, OrigenValorMensual, Periodicidad } from '@/api/tipos'
 import { claseColorImporte, formatearImporte } from '@/lib/formato'
+import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
@@ -44,7 +46,7 @@ const COLOR_PERIODICIDAD: Record<Periodicidad, string> = {
   anual: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
 }
 
-defineProps<{
+const props = defineProps<{
   titulo: string
   filas: FilaResumenAnual[]
   totales: string[]
@@ -56,6 +58,16 @@ const emit = defineEmits<{
   eliminar: [conceptoId: number]
   'editar-celda': [conceptoId: number, mes: number, importe: string | null]
 }>()
+
+// Solo "Concepto" es un campo realmente ordenable en este listado: los
+// meses son columnas fijas en su orden natural (Ene-Dic), no campos por los
+// que tenga sentido reordenar filas.
+const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(
+  computed(() => props.filas),
+  {
+    nombre: (a: FilaResumenAnual, b: FilaResumenAnual) => a.nombre.localeCompare(b.nombre),
+  },
+)
 
 const celdaEditando = ref<{ conceptoId: number; mes: number } | null>(null)
 const valorEdicion = ref('')
@@ -101,7 +113,16 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Concepto</TableHead>
+            <TableHead>
+              <CabeceraOrdenable
+                :icono="Tag"
+                color-icono="text-violet-500"
+                :activo="campo === 'nombre'"
+                :direccion="direccion"
+                @ordenar="ordenarPor('nombre')"
+                >Concepto</CabeceraOrdenable
+              >
+            </TableHead>
             <TableHead v-for="mes in MESES_CORTOS" :key="mes" class="text-right">{{
               mes
             }}</TableHead>
@@ -109,7 +130,7 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="fila in filas" :key="fila.concepto_id">
+          <TableRow v-for="fila in filasOrdenadas" :key="fila.concepto_id">
             <TableCell>
               <div class="flex items-center gap-2">
                 <span>{{ fila.nombre }}</span>

@@ -1,15 +1,51 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { formatearImporte } from '@/lib/formato'
+import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
+import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaDashboard } from '@/stores/dashboard'
+import { useTiendaMovimientos } from '@/stores/movimientos'
 
 const tienda = useTiendaDashboard()
+const tiendaCuentas = useTiendaCuentas()
+const tiendaCategorias = useTiendaCategorias()
+const tiendaMovimientos = useTiendaMovimientos()
 
-onMounted(() => {
+onMounted(async () => {
   tienda.cargar()
+  tiendaCategorias.cargar()
+  // El resumen del backend solo trae totales agregados por categoría; para
+  // habilitar "Detalles" (misma modal que en Movimientos, con los
+  // movimientos reales) hace falta cargar los movimientos de todas las
+  // cuentas y agruparlos en el cliente.
+  await tiendaCuentas.cargar()
+  await tiendaMovimientos.cargarVarias(tiendaCuentas.cuentas.map((c) => c.id))
 })
+
+function nombreSubcategoria(idSubcategoria: number | null): string {
+  if (idSubcategoria === null) return ''
+  for (const c of tiendaCategorias.categorias) {
+    const sub = c.subcategorias.find((s) => s.id === idSubcategoria)
+    if (sub) return sub.nombre
+  }
+  return ''
+}
+
+const movimientosPorCategoriaGastos = computed(() =>
+  agruparMovimientosPorCategoria(
+    tiendaMovimientos.movimientos.filter((m) => Number(m.importe) < 0),
+    nombreSubcategoria,
+  ),
+)
+const movimientosPorCategoriaIngresos = computed(() =>
+  agruparMovimientosPorCategoria(
+    tiendaMovimientos.movimientos.filter((m) => Number(m.importe) > 0),
+    nombreSubcategoria,
+  ),
+)
 </script>
 
 <template>
@@ -49,6 +85,7 @@ onMounted(() => {
             :items="tienda.resumen.gastos_por_categoria"
             acento="gasto"
             mensaje-vacio="No hay gastos registrados todavía."
+            :movimientos-por-categoria="movimientosPorCategoriaGastos"
           />
         </CardContent>
       </Card>
@@ -60,6 +97,7 @@ onMounted(() => {
             :items="tienda.resumen.ingresos_por_categoria"
             acento="ingreso"
             mensaje-vacio="No hay ingresos registrados todavía."
+            :movimientos-por-categoria="movimientosPorCategoriaIngresos"
           />
         </CardContent>
       </Card>

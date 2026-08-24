@@ -68,4 +68,29 @@ describe('ModalDetalleMovimientos', () => {
     ])
     wrapper.unmount()
   })
+
+  it('muestra el número de movimientos junto al total', async () => {
+    const wrapper = mount(ModalDetalleMovimientos, {
+      attachTo: document.body,
+      props: { nombreCategoria: 'Servicios', total: '-56.00', movimientos },
+    })
+    await wrapper.get('button').trigger('click')
+
+    const descripcion = document.body.querySelector('[role="dialog"]')?.textContent ?? ''
+    expect(descripcion).toContain('3 movimientos')
+    wrapper.unmount()
+  })
+
+  it('con un solo movimiento, usa el singular', async () => {
+    const wrapper = mount(ModalDetalleMovimientos, {
+      attachTo: document.body,
+      props: { nombreCategoria: 'Servicios', total: '-5.00', movimientos: [movimientos[0]!] },
+    })
+    await wrapper.get('button').trigger('click')
+
+    const descripcion = document.body.querySelector('[role="dialog"]')?.textContent ?? ''
+    expect(descripcion).toContain('1 movimiento')
+    expect(descripcion).not.toContain('1 movimientos')
+    wrapper.unmount()
+  })
 })

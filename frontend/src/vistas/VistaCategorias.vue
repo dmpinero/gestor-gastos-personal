@@ -332,6 +332,9 @@ async function guardarSubcategoria(): Promise<void> {
       <h2 class="text-xl font-semibold">Categorías</h2>
       <Button variant="success" @click="abrirParaCrear">Crear categoría</Button>
     </div>
+    <p class="text-muted-foreground mt-1 text-sm">
+      {{ filasFiltradas.length }} categoría{{ filasFiltradas.length === 1 ? '' : 's' }}
+    </p>
 
     <Sheet v-model:open="panelAbierto">
       <SheetContent>
@@ -454,6 +457,11 @@ async function guardarSubcategoria(): Promise<void> {
                 "
               />
               <CardTitle>{{ item.categoria.nombre }}</CardTitle>
+              <span class="text-muted-foreground text-sm">
+                ({{ item.subcategorias.length }} subcategoría{{
+                  item.subcategorias.length === 1 ? '' : 's'
+                }})
+              </span>
             </div>
             <div class="flex items-center gap-1">
               <Button

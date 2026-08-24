@@ -109,102 +109,107 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
   <section>
     <h3 class="text-lg font-semibold">{{ titulo }}</h3>
     <p v-if="filas.length === 0" class="text-muted-foreground mt-2 text-sm">{{ mensajeVacio }}</p>
-    <div v-else class="mt-2 overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>
-              <CabeceraOrdenable
-                :icono="Tag"
-                color-icono="text-violet-500"
-                :activo="campo === 'nombre'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('nombre')"
-                >Concepto</CabeceraOrdenable
+    <template v-else>
+      <p class="text-muted-foreground mt-1 text-sm">
+        {{ filas.length }} concepto{{ filas.length === 1 ? '' : 's' }}
+      </p>
+      <div class="mt-2 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <CabeceraOrdenable
+                  :icono="Tag"
+                  color-icono="text-violet-500"
+                  :activo="campo === 'nombre'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('nombre')"
+                  >Concepto</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead v-for="mes in MESES_CORTOS" :key="mes" class="text-right">{{
+                mes
+              }}</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="fila in filasOrdenadas" :key="fila.concepto_id">
+              <TableCell>
+                <div class="flex items-center gap-2">
+                  <span>{{ fila.nombre }}</span>
+                  <Badge :class="COLOR_PERIODICIDAD[fila.periodicidad]" variant="outline">
+                    {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
+                  </Badge>
+                </div>
+              </TableCell>
+              <TableCell
+                v-for="valor in fila.valores"
+                :key="valor.mes"
+                :class="claseCelda(valor.origen, valor.importe)"
               >
-            </TableHead>
-            <TableHead v-for="mes in MESES_CORTOS" :key="mes" class="text-right">{{
-              mes
-            }}</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-for="fila in filasOrdenadas" :key="fila.concepto_id">
-            <TableCell>
-              <div class="flex items-center gap-2">
-                <span>{{ fila.nombre }}</span>
-                <Badge :class="COLOR_PERIODICIDAD[fila.periodicidad]" variant="outline">
-                  {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
-                </Badge>
-              </div>
-            </TableCell>
-            <TableCell
-              v-for="valor in fila.valores"
-              :key="valor.mes"
-              :class="claseCelda(valor.origen, valor.importe)"
-            >
-              <input
-                v-if="estaEditando(fila.concepto_id, valor.mes)"
-                :value="valorEdicion"
-                type="text"
-                autofocus
-                class="w-full bg-transparent px-2 py-2 text-right outline-none"
-                :aria-label="`Importe de ${MESES_CORTOS[valor.mes - 1]} para ${fila.nombre}`"
-                @input="valorEdicion = ($event.target as HTMLInputElement).value"
-                @keydown.enter="confirmarEdicion()"
-                @keydown.escape="cancelarEdicion()"
-                @blur="confirmarEdicion()"
-              />
-              <button
-                v-else
-                type="button"
-                class="hover:bg-muted/50 w-full px-2 py-2 text-right"
-                @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
+                <input
+                  v-if="estaEditando(fila.concepto_id, valor.mes)"
+                  :value="valorEdicion"
+                  type="text"
+                  autofocus
+                  class="w-full bg-transparent px-2 py-2 text-right outline-none"
+                  :aria-label="`Importe de ${MESES_CORTOS[valor.mes - 1]} para ${fila.nombre}`"
+                  @input="valorEdicion = ($event.target as HTMLInputElement).value"
+                  @keydown.enter="confirmarEdicion()"
+                  @keydown.escape="cancelarEdicion()"
+                  @blur="confirmarEdicion()"
+                />
+                <button
+                  v-else
+                  type="button"
+                  class="hover:bg-muted/50 w-full px-2 py-2 text-right"
+                  @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
+                >
+                  {{ formatearImporte(valor.importe) }}
+                </button>
+              </TableCell>
+              <TableCell class="text-right whitespace-nowrap">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Editar"
+                  @click="emit('editar', fila.concepto_id)"
+                >
+                  <Pencil class="size-4" />
+                </Button>
+                <DialogoConfirmarEliminacion
+                  :descripcion="`el concepto previsto ${fila.nombre}`"
+                  @confirmar="emit('eliminar', fila.concepto_id)"
+                >
+                  <template #disparador>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="text-destructive"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </template>
+                </DialogoConfirmarEliminacion>
+              </TableCell>
+            </TableRow>
+            <TableRow class="font-semibold">
+              <TableCell>Total</TableCell>
+              <TableCell
+                v-for="(total, indice) in totales"
+                :key="indice"
+                class="text-right tabular-nums"
+                :class="claseColorImporte(total)"
               >
-                {{ formatearImporte(valor.importe) }}
-              </button>
-            </TableCell>
-            <TableCell class="text-right whitespace-nowrap">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Editar"
-                @click="emit('editar', fila.concepto_id)"
-              >
-                <Pencil class="size-4" />
-              </Button>
-              <DialogoConfirmarEliminacion
-                :descripcion="`el concepto previsto ${fila.nombre}`"
-                @confirmar="emit('eliminar', fila.concepto_id)"
-              >
-                <template #disparador>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="text-destructive"
-                    aria-label="Eliminar"
-                  >
-                    <Trash2 class="size-4" />
-                  </Button>
-                </template>
-              </DialogoConfirmarEliminacion>
-            </TableCell>
-          </TableRow>
-          <TableRow class="font-semibold">
-            <TableCell>Total</TableCell>
-            <TableCell
-              v-for="(total, indice) in totales"
-              :key="indice"
-              class="text-right tabular-nums"
-              :class="claseColorImporte(total)"
-            >
-              {{ formatearImporte(total) }}
-            </TableCell>
-            <TableCell></TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+                {{ formatearImporte(total) }}
+              </TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </template>
   </section>
 </template>

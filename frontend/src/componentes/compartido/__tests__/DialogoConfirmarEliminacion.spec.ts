@@ -117,4 +117,36 @@ describe('DialogoConfirmarEliminacion', () => {
     expect(wrapper.emitted('confirmar')).toEqual([[true]])
     wrapper.unmount()
   })
+
+  it('"Ver detalles" muestra el número de registros de la tabla', async () => {
+    const wrapper = mount(DialogoConfirmarEliminacion, {
+      props: {
+        descripcion: 'la cuenta ES00 1234',
+        obtenerDependencias: () => Promise.resolve([{ etiqueta: 'movimientos', cantidad: 2 }]),
+        tituloDetalles: 'Movimientos que se eliminarán',
+        columnasDetalles: ['Fecha', 'Importe'],
+        obtenerFilasDetalles: () =>
+          Promise.resolve([
+            ['01/01/2026', '-10,00 €'],
+            ['02/01/2026', '-20,00 €'],
+          ]),
+      },
+      attachTo: document.body,
+    })
+
+    await wrapper.get('button').trigger('click')
+    await new Promise((resolver) => setTimeout(resolver, 0))
+    await wrapper.vm.$nextTick()
+
+    const botonVerDetalles = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button'),
+    ).find((boton) => boton.textContent?.trim() === 'Ver detalles')
+    botonVerDetalles?.click()
+    await new Promise((resolver) => setTimeout(resolver, 0))
+    await wrapper.vm.$nextTick()
+
+    const modal = document.body.querySelector('[role="dialog"]')
+    expect(modal?.textContent).toContain('2 registros')
+    wrapper.unmount()
+  })
 })

@@ -31,7 +31,9 @@ import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
-import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
+import ListaTotalesCategoria, {
+  type MovimientoDeCategoria,
+} from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
@@ -284,41 +286,38 @@ function topCategoriasDe(movimientos: Movimiento[]): TotalCategoria[] {
 const topCategoriasGastos = computed(() => topCategoriasDe(movimientosGastados.value))
 const topCategoriasIngresos = computed(() => topCategoriasDe(movimientosIngresados.value))
 
-const MAXIMO_DESCRIPCIONES_POR_CATEGORIA = 15
-
-// Descripción de cada movimiento que compone el total de una categoría (p. ej.
-// "Pago en PELUQUERIA LAS ROZAS DE ES: -45,00 €"), para el title del top 10.
-// Se limita a los MAXIMO_DESCRIPCIONES_POR_CATEGORIA de mayor importe (con un
-// resumen del resto) para que el tooltip no crezca sin límite en categorías
-// con muchos movimientos.
-function descripcionesPorCategoriaDe(movimientos: Movimiento[]): Record<number, string[]> {
-  const movimientosPorCategoria = new Map<number, Movimiento[]>()
+// Movimientos que componen el total de cada categoría, ordenados de mayor a
+// menor importe (en valor absoluto). Alimenta el title y la modal "Detalles"
+// de cada categoría del top 10 (ver ListaTotalesCategoria).
+function movimientosPorCategoriaDe(
+  movimientos: Movimiento[],
+): Record<number, MovimientoDeCategoria[]> {
+  const porCategoria = new Map<number, Movimiento[]>()
   for (const m of movimientos) {
-    const lista = movimientosPorCategoria.get(m.categoria_id) ?? []
+    const lista = porCategoria.get(m.categoria_id) ?? []
     lista.push(m)
-    movimientosPorCategoria.set(m.categoria_id, lista)
+    porCategoria.set(m.categoria_id, lista)
   }
 
-  const resultado: Record<number, string[]> = {}
-  for (const [idCategoria, lista] of movimientosPorCategoria) {
-    const ordenados = [...lista].sort(
-      (a, b) => Math.abs(Number(b.importe)) - Math.abs(Number(a.importe)),
-    )
-    const lineas = ordenados
-      .slice(0, MAXIMO_DESCRIPCIONES_POR_CATEGORIA)
-      .map((m) => `${m.descripcion}: ${formatearImporte(m.importe)}`)
-    const restantes = ordenados.length - MAXIMO_DESCRIPCIONES_POR_CATEGORIA
-    if (restantes > 0) lineas.push(`… y ${restantes} más`)
-    resultado[idCategoria] = lineas
+  const resultado: Record<number, MovimientoDeCategoria[]> = {}
+  for (const [idCategoria, lista] of porCategoria) {
+    resultado[idCategoria] = [...lista]
+      .sort((a, b) => Math.abs(Number(b.importe)) - Math.abs(Number(a.importe)))
+      .map((m) => ({
+        fecha: m.fecha_valor,
+        descripcion: m.descripcion,
+        subcategoria: nombreSubcategoria(m.subcategoria_id),
+        importe: m.importe,
+      }))
   }
   return resultado
 }
 
-const descripcionesTopCategoriasGastos = computed(() =>
-  descripcionesPorCategoriaDe(movimientosGastados.value),
+const movimientosPorTopCategoriaGastos = computed(() =>
+  movimientosPorCategoriaDe(movimientosGastados.value),
 )
-const descripcionesTopCategoriasIngresos = computed(() =>
-  descripcionesPorCategoriaDe(movimientosIngresados.value),
+const movimientosPorTopCategoriaIngresos = computed(() =>
+  movimientosPorCategoriaDe(movimientosIngresados.value),
 )
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
@@ -799,14 +798,14 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                 :items="topCategoriasGastos"
                 acento="gasto"
                 mensaje-vacio="No hay gastos en el periodo mostrado."
-                :descripciones-por-categoria="descripcionesTopCategoriasGastos"
+                :movimientos-por-categoria="movimientosPorTopCategoriaGastos"
               />
               <ListaTotalesCategoria
                 titulo="Top 10 ingresos por categoría"
                 :items="topCategoriasIngresos"
                 acento="ingreso"
                 mensaje-vacio="No hay ingresos en el periodo mostrado."
-                :descripciones-por-categoria="descripcionesTopCategoriasIngresos"
+                :movimientos-por-categoria="movimientosPorTopCategoriaIngresos"
               />
             </div>
           </div>

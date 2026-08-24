@@ -545,6 +545,33 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await expect(filaTopGasto).toHaveAttribute('title', 'Solo gasto: -30,00 €')
   await expect(filaTopIngreso).toHaveAttribute('title', 'Con ingreso: 500,00 €')
 
+  // El enlace "Detalles" abre una modal con la misma información en tabla,
+  // más fecha, categoría y subcategoría, y con iconos para exportar.
+  await filaTopGasto.getByRole('button', { name: 'Detalles' }).click()
+  const modalDetalle = page.getByRole('dialog').filter({ hasText: nombreCategoria })
+  await expect(modalDetalle).toBeVisible()
+  await expect(modalDetalle.getByRole('columnheader', { name: 'Fecha' })).toBeVisible()
+  await expect(
+    modalDetalle.getByRole('columnheader', { name: 'Categoría', exact: true }),
+  ).toBeVisible()
+  await expect(modalDetalle.getByRole('columnheader', { name: 'Subcategoría' })).toBeVisible()
+  await expect(modalDetalle.getByRole('cell', { name: 'Solo gasto' })).toBeVisible()
+
+  const [descargaExcel] = await Promise.all([
+    page.waitForEvent('download'),
+    modalDetalle.getByRole('button', { name: 'Exportar a Excel' }).click(),
+  ])
+  expect(descargaExcel.suggestedFilename()).toBe(`${nombreCategoria}.xlsx`)
+
+  const [descargaPdf] = await Promise.all([
+    page.waitForEvent('download'),
+    modalDetalle.getByRole('button', { name: 'Exportar a PDF' }).click(),
+  ])
+  expect(descargaPdf.suggestedFilename()).toBe(`${nombreCategoria}.pdf`)
+
+  await page.keyboard.press('Escape')
+  await expect(modalDetalle).toBeHidden()
+
   await zonaComparativa.getByRole('button', { name: 'Ver como circular' }).click()
   const listaCircular = zonaComparativa.locator('ul').first()
   await expect(listaCircular.getByText('Gastos', { exact: true })).toBeVisible()

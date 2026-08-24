@@ -12,6 +12,7 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
+import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
@@ -162,6 +163,30 @@ const {
 watch(busqueda, () => {
   paginaActual.value = 1
 })
+
+const COLUMNAS_TABLA = [
+  'Fecha',
+  'Cuenta',
+  'Categoría',
+  'Subcategoría',
+  'Descripción',
+  'Importe',
+  'Saldo',
+]
+
+// Exporta todas las filas filtradas/ordenadas (no solo la página actual),
+// que es lo que un usuario espera de "exportar esta tabla".
+const filasTablaParaExportar = computed(() =>
+  filasOrdenadas.value.map((m) => [
+    formatearFecha(m.fecha_valor),
+    nombreCuenta(m.cuenta_id),
+    nombreCategoria(m.categoria_id),
+    nombreSubcategoria(m.subcategoria_id),
+    m.descripcion,
+    formatearImporte(m.importe),
+    formatearImporte(m.saldo),
+  ]),
+)
 </script>
 
 <template>
@@ -232,9 +257,17 @@ watch(busqueda, () => {
           </div>
           <SelectorTamanoPagina v-model="tamanoPagina" id-base="historial" />
         </div>
-        <p class="text-muted-foreground text-sm">
-          Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} gastos
-        </p>
+        <div class="flex items-center gap-3">
+          <p class="text-muted-foreground text-sm">
+            Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} gastos
+          </p>
+          <BotonesExportarTabla
+            nombre-fichero="Historial de gastos"
+            titulo="Historial de gastos"
+            :columnas="COLUMNAS_TABLA"
+            :filas="filasTablaParaExportar"
+          />
+        </div>
       </div>
 
       <Table class="mt-4">

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { FileSpreadsheet, FileText } from '@lucide/vue'
 import { computed } from 'vue'
 import type { TotalCategoria } from '@/api/tipos'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
-import { exportarTablaExcel, exportarTablaPDF } from '@/lib/exportarTabla'
 import { cn } from '@/lib/utils'
+import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -81,14 +80,6 @@ function filasDetalleDe(item: TotalCategoria): (string | number)[][] {
     formatearImporte(m.importe),
   ])
 }
-
-async function exportarExcel(item: TotalCategoria): Promise<void> {
-  await exportarTablaExcel(`${item.nombre}.xlsx`, COLUMNAS_DETALLE, filasDetalleDe(item))
-}
-
-async function exportarPdf(item: TotalCategoria): Promise<void> {
-  await exportarTablaPDF(`${item.nombre}.pdf`, item.nombre, COLUMNAS_DETALLE, filasDetalleDe(item))
-}
 </script>
 
 <template>
@@ -122,34 +113,20 @@ async function exportarPdf(item: TotalCategoria): Promise<void> {
           <DialogTrigger as-child>
             <Button variant="link" class="h-auto shrink-0 p-0 text-xs">Detalles</Button>
           </DialogTrigger>
-          <DialogContent class="max-w-3xl">
+          <DialogContent class="max-w-5xl">
             <DialogHeader>
               <div class="flex items-center justify-between gap-4 pr-6">
                 <DialogTitle>{{ item.nombre }}</DialogTitle>
-                <div class="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Exportar a Excel"
-                    title="Exportar a Excel"
-                    @click="exportarExcel(item)"
-                  >
-                    <FileSpreadsheet class="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Exportar a PDF"
-                    title="Exportar a PDF"
-                    @click="exportarPdf(item)"
-                  >
-                    <FileText class="size-4" />
-                  </Button>
-                </div>
+                <BotonesExportarTabla
+                  :nombre-fichero="item.nombre"
+                  :titulo="item.nombre"
+                  :columnas="COLUMNAS_DETALLE"
+                  :filas="filasDetalleDe(item)"
+                />
               </div>
               <DialogDescription>Total: {{ formatearImporte(item.total) }}</DialogDescription>
             </DialogHeader>
-            <div class="max-h-96 overflow-auto">
+            <div class="max-h-[32rem] overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

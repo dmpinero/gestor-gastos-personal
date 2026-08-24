@@ -9,6 +9,7 @@ import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
+import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Button } from '@/componentes/ui/button'
@@ -77,6 +78,20 @@ const {
 watch(busqueda, () => {
   paginaActual.value = 1
 })
+
+const COLUMNAS_TABLA = ['Número de cuenta', 'Alias', 'Entidad', 'Moneda', 'Titular']
+
+// Exporta todas las filas filtradas/ordenadas (no solo la página actual),
+// que es lo que un usuario espera de "exportar esta tabla".
+const filasTablaParaExportar = computed(() =>
+  filasOrdenadas.value.map((c) => [
+    c.numero_cuenta,
+    c.alias ?? '',
+    c.entidad_bancaria ?? '',
+    c.moneda ?? '',
+    c.titular ?? '',
+  ]),
+)
 
 const todasSeleccionadas = computed(
   () =>
@@ -284,9 +299,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         </div>
         <SelectorTamanoPagina v-model="tamanoPagina" id-base="cuentas" />
       </div>
-      <p class="text-muted-foreground text-sm">
-        Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} cuentas
-      </p>
+      <div class="flex items-center gap-3">
+        <p class="text-muted-foreground text-sm">
+          Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} cuentas
+        </p>
+        <BotonesExportarTabla
+          nombre-fichero="Cuentas"
+          titulo="Cuentas bancarias"
+          :columnas="COLUMNAS_TABLA"
+          :filas="filasTablaParaExportar"
+        />
+      </div>
     </div>
 
     <Table class="mt-4">

@@ -25,6 +25,7 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
+import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
@@ -332,6 +333,30 @@ const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(fila
   importe: (a: Movimiento, b: Movimiento) => Number(a.importe) - Number(b.importe),
   saldo: (a: Movimiento, b: Movimiento) => Number(a.saldo) - Number(b.saldo),
 })
+
+const COLUMNAS_TABLA = [
+  'Cuenta',
+  'Fecha',
+  'Descripción',
+  'Categoría',
+  'Subcategoría',
+  'Importe',
+  'Saldo',
+]
+
+// Exporta todas las filas filtradas/ordenadas (no solo la página actual),
+// que es lo que un usuario espera de "exportar esta tabla".
+const filasTablaParaExportar = computed(() =>
+  filasOrdenadas.value.map((m) => [
+    nombreCuenta(m.cuenta_id),
+    formatearFecha(m.fecha_valor),
+    m.descripcion,
+    nombreCategoria(m.categoria_id),
+    nombreSubcategoria(m.subcategoria_id),
+    formatearImporte(m.importe),
+    formatearImporte(m.saldo),
+  ]),
+)
 
 const tamanoPagina = ref<TamanoPagina>(10)
 const {
@@ -828,9 +853,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         <CollapsibleContent class="mt-4">
           <div class="flex flex-wrap items-end justify-between gap-4">
             <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
-            <p class="text-muted-foreground text-sm">
-              Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
-            </p>
+            <div class="flex items-center gap-3">
+              <p class="text-muted-foreground text-sm">
+                Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
+              </p>
+              <BotonesExportarTabla
+                nombre-fichero="Movimientos"
+                titulo="Movimientos"
+                :columnas="COLUMNAS_TABLA"
+                :filas="filasTablaParaExportar"
+              />
+            </div>
           </div>
 
           <Table class="mt-4">

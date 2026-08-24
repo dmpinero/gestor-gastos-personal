@@ -7,7 +7,7 @@ import type { Movimiento } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
-import { formatearFecha, formatearImporte } from '@/lib/formato'
+import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -313,7 +313,11 @@ watch(busqueda, () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="movimiento in filasPagina" :key="movimiento.id">
+          <TableRow
+            v-for="movimiento in filasPagina"
+            :key="movimiento.id"
+            :class="claseFondoImporte(movimiento.importe)"
+          >
             <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
             <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
             <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>

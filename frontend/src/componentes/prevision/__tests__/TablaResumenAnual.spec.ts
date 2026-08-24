@@ -87,4 +87,18 @@ describe('TablaResumenAnual', () => {
     expect(celdas[3]?.classes()).not.toContain('italic') // mes 3 = real
     expect(celdas[5]?.classes()).toContain('border-dashed') // mes 5 = ajustado
   })
+
+  it('colorea en rojo los importes negativos confirmados o ajustados, pero no los previstos', () => {
+    const wrapper = mount(TablaResumenAnual, {
+      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    })
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    expect(celdas[1]?.classes()).not.toContain('text-destructive') // mes 1 = previsto
+    expect(celdas[3]?.classes()).toContain('text-destructive') // mes 3 = real
+    expect(celdas[5]?.classes()).toContain('text-destructive') // mes 5 = ajustado
+
+    const celdasTotal = wrapper.findAll('tbody tr')[1]?.findAll('td') ?? []
+    expect(celdasTotal[1]?.classes()).toContain('text-destructive')
+  })
 })

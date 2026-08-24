@@ -95,4 +95,33 @@ describe('GraficoEvolucion', () => {
     expect(wrapper.find('polygon').exists()).toBe(true)
     expect(wrapper.find('polyline').exists()).toBe(true)
   })
+
+  it('el modo circular dibuja un sector por periodo y muestra el porcentaje de cada uno', async () => {
+    const wrapper = mount(GraficoEvolucion, {
+      props: {
+        items: [
+          { periodo: '2026-01', total: 30 },
+          { periodo: '2026-02', total: 10 },
+        ],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como circular"]').trigger('click')
+
+    expect(wrapper.findAll('svg[role="img"] path')).toHaveLength(2)
+    expect(wrapper.text()).toContain('75%')
+    expect(wrapper.text()).toContain('25%')
+  })
+
+  it('el modo circular con un único periodo dibuja un círculo completo', async () => {
+    const wrapper = mount(GraficoEvolucion, {
+      props: { items: [{ periodo: '2026-01', total: 30 }] },
+    })
+
+    await wrapper.get('[aria-label="Ver como circular"]').trigger('click')
+
+    expect(wrapper.find('svg[role="img"] circle').exists()).toBe(true)
+    expect(wrapper.findAll('svg[role="img"] path')).toHaveLength(0)
+    expect(wrapper.text()).toContain('100%')
+  })
 })

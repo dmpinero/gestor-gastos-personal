@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AreaChart, BarChart3, LineChart } from '@lucide/vue'
+import { AreaChart, BarChart3, LineChart, PieChart } from '@lucide/vue'
 import { computed, ref } from 'vue'
 import { formatearImporte, formatearPeriodo } from '@/lib/formato'
 
@@ -16,7 +16,7 @@ const props = withDefaults(
   { acento: 'gasto' },
 )
 
-const modo = ref<'barras' | 'lineas' | 'area'>('barras')
+const modo = ref<'barras' | 'lineas' | 'area' | 'circular'>('barras')
 
 const claseBarra = computed(() => (props.acento === 'gasto' ? 'bg-destructive' : 'bg-success'))
 const colorTrazo = computed(() =>
@@ -61,6 +61,48 @@ const descripcionAccesible = computed(() =>
     .map((item) => `${formatearPeriodo(item.periodo)}: ${formatearImporte(item.total)}`)
     .join(', '),
 )
+
+const RADIO_CIRCULO = 60
+const CENTRO_CIRCULO = 64
+
+// Ángulo 0° = arriba (12 en punto), creciente en sentido horario.
+function coordenadasEnCirculo(anguloGrados: number): { x: number; y: number } {
+  const rad = (anguloGrados * Math.PI) / 180
+  return {
+    x: CENTRO_CIRCULO + RADIO_CIRCULO * Math.sin(rad),
+    y: CENTRO_CIRCULO - RADIO_CIRCULO * Math.cos(rad),
+  }
+}
+
+function trazoSector(anguloInicio: number, anguloFin: number): string {
+  const inicio = coordenadasEnCirculo(anguloInicio)
+  const fin = coordenadasEnCirculo(anguloFin)
+  const arcoGrande = anguloFin - anguloInicio > 180 ? 1 : 0
+  return `M ${CENTRO_CIRCULO} ${CENTRO_CIRCULO} L ${inicio.x} ${inicio.y} A ${RADIO_CIRCULO} ${RADIO_CIRCULO} 0 ${arcoGrande} 1 ${fin.x} ${fin.y} Z`
+}
+
+const totalGeneral = computed(() => props.items.reduce((acc, item) => acc + item.total, 0))
+
+// Un solo periodo se dibuja como círculo completo aparte (un arco de 360°
+// degenera: su punto de inicio y de fin coinciden).
+const sectores = computed(() => {
+  if (totalGeneral.value <= 0 || props.items.length < 2) return []
+  let anguloAcumulado = 0
+  return props.items.map((item, indice) => {
+    const anguloInicio = anguloAcumulado
+    const anguloFin = anguloAcumulado + (item.total / totalGeneral.value) * 360
+    anguloAcumulado = anguloFin
+    return {
+      periodo: item.periodo,
+      total: item.total,
+      porcentaje: item.total / totalGeneral.value,
+      trazo: trazoSector(anguloInicio, anguloFin),
+      // Todos los sectores comparten el color del acento; se degrada la
+      // opacidad por índice para poder distinguir un periodo de otro.
+      opacidad: Math.max(0.35, 1 - indice * (0.65 / Math.max(1, props.items.length - 1))),
+    }
+  })
+})
 </script>
 
 <template>
@@ -102,6 +144,18 @@ const descripcionAccesible = computed(() =>
       >
         <AreaChart class="size-4" />
       </button>
+      <button
+        type="button"
+        aria-label="Ver como circular"
+        :aria-pressed="modo === 'circular'"
+        :class="[
+          'flex size-7 items-center justify-center rounded-sm',
+          modo === 'circular' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+        ]"
+        @click="modo = 'circular'"
+      >
+        <PieChart class="size-4" />
+      </button>
     </div>
 
     <div
@@ -129,6 +183,44 @@ const descripcionAccesible = computed(() =>
           formatearPeriodo(item.periodo)
         }}</span>
       </div>
+    </div>
+
+    <div v-else-if="modo === 'circular'" class="flex flex-wrap items-center gap-4">
+      <svg
+        viewBox="0 0 128 128"
+        width="128"
+        height="128"
+        role="img"
+        :aria-label="`Distribución: ${descripcionAccesible}`"
+      >
+        <circle
+          v-if="items.length === 1"
+          :cx="CENTRO_CIRCULO"
+          :cy="CENTRO_CIRCULO"
+          :r="RADIO_CIRCULO"
+          :fill="colorTrazo"
+        />
+        <path
+          v-for="sector in sectores"
+          :key="sector.periodo"
+          :d="sector.trazo"
+          :fill="colorTrazo"
+          :fill-opacity="sector.opacidad"
+        />
+      </svg>
+      <ul class="flex flex-col gap-1">
+        <li
+          v-for="item in items"
+          :key="item.periodo"
+          class="text-muted-foreground flex items-center gap-2 text-xs whitespace-nowrap"
+        >
+          <span class="capitalize">{{ formatearPeriodo(item.periodo) }}</span>
+          <span class="tabular-nums">{{ formatearImporte(item.total) }}</span>
+          <span class="tabular-nums"
+            >({{ totalGeneral > 0 ? Math.round((item.total / totalGeneral) * 100) : 0 }}%)</span
+          >
+        </li>
+      </ul>
     </div>
 
     <div v-else class="overflow-x-auto pb-1" tabindex="0" role="group">

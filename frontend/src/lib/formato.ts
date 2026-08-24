@@ -45,3 +45,19 @@ export function formatearPeriodo(periodo: string): string {
   const mes = Number(periodo.slice(5, 7))
   return formateadorPeriodo.format(new Date(anio, mes - 1, 1))
 }
+
+/**
+ * Marca temporal para nombres de fichero exportados: "ddmmaaaa_hhmmss" en
+ * hora local (sin separadores dentro de cada bloque, para que el nombre sea
+ * válido como nombre de fichero en cualquier sistema operativo).
+ */
+export function formatearMarcaTemporalFichero(fecha: Date = new Date()): string {
+  const dosDigitos = (n: number): string => String(n).padStart(2, '0')
+  const dia = dosDigitos(fecha.getDate())
+  const mes = dosDigitos(fecha.getMonth() + 1)
+  const anio = fecha.getFullYear()
+  const horas = dosDigitos(fecha.getHours())
+  const minutos = dosDigitos(fecha.getMinutes())
+  const segundos = dosDigitos(fecha.getSeconds())
+  return `${dia}${mes}${anio}_${horas}${minutos}${segundos}`
+}

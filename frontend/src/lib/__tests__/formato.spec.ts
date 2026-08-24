@@ -4,6 +4,7 @@ import {
   claseFondoImporte,
   formatearFecha,
   formatearImporte,
+  formatearMarcaTemporalFichero,
   formatearPeriodo,
 } from '../formato'
 
@@ -65,5 +66,17 @@ describe('formatearPeriodo', () => {
 
   it('distingue diciembre de enero', () => {
     expect(formatearPeriodo('2026-12')).toMatch(/dic/i)
+  })
+})
+
+describe('formatearMarcaTemporalFichero', () => {
+  it('formatea como ddmmaaaa_hhmmss con ceros a la izquierda', () => {
+    const fecha = new Date(2026, 0, 5, 9, 3, 7)
+    expect(formatearMarcaTemporalFichero(fecha)).toBe('05012026_090307')
+  })
+
+  it('no añade ceros de más cuando día, mes, hora, minuto y segundo tienen 2 dígitos', () => {
+    const fecha = new Date(2026, 11, 31, 23, 59, 58)
+    expect(formatearMarcaTemporalFichero(fecha)).toBe('31122026_235958')
   })
 })

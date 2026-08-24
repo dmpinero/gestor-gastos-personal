@@ -12,6 +12,16 @@ import {
   AlertDialogTrigger,
 } from '@/componentes/ui/alert-dialog'
 import { Button } from '@/componentes/ui/button'
+import BotonesExportarTabla from './BotonesExportarTabla.vue'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/componentes/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/componentes/ui/table'
 
 export interface Dependencia {
   etiqueta: string
@@ -23,8 +33,19 @@ const props = withDefaults(
     descripcion: string
     textoBoton?: string
     obtenerDependencias?: () => Promise<Dependencia[]>
+    // Trigger por defecto sólido (botón destructive) en vez de hiperenlace;
+    // pensado para acciones de borrado masivo ("Eliminar seleccionados"),
+    // donde un simple enlace pasa desapercibido.
+    disparadorSolido?: boolean
+    // "Ver detalles": modal con la lista completa de registros que se verán
+    // afectados por el borrado en cascada (p. ej. los movimientos que se
+    // eliminarán junto a una cuenta). Solo se muestra el enlace si se pasan
+    // estos tres props y hay al menos una dependencia con cantidad > 0.
+    tituloDetalles?: string
+    columnasDetalles?: string[]
+    obtenerFilasDetalles?: () => Promise<(string | number)[][]>
   }>(),
-  { textoBoton: 'Eliminar' },
+  { textoBoton: 'Eliminar', disparadorSolido: false },
 )
 const emit = defineEmits<{ confirmar: [cascada: boolean] }>()
 
@@ -47,13 +68,32 @@ async function alAbrir(abierto: boolean): Promise<void> {
 function confirmarBorrado(): void {
   emit('confirmar', dependencias.value.length > 0)
 }
+
+const detallesAbiertos = ref(false)
+const cargandoDetalles = ref(false)
+const filasDetalles = ref<(string | number)[][]>([])
+
+async function abrirDetalles(): Promise<void> {
+  if (!props.obtenerFilasDetalles) return
+  detallesAbiertos.value = true
+  cargandoDetalles.value = true
+  try {
+    filasDetalles.value = await props.obtenerFilasDetalles()
+  } finally {
+    cargandoDetalles.value = false
+  }
+}
 </script>
 
 <template>
   <AlertDialog @update:open="alAbrir">
     <AlertDialogTrigger as-child>
       <slot name="disparador">
-        <Button variant="link" class="text-destructive">{{ textoBoton }}</Button>
+        <Button
+          :variant="disparadorSolido ? 'destructive' : 'link'"
+          :class="disparadorSolido ? '' : 'text-destructive'"
+          >{{ textoBoton }}</Button
+        >
       </slot>
     </AlertDialogTrigger>
     <AlertDialogContent>
@@ -66,6 +106,14 @@ function confirmarBorrado(): void {
             {{ dependencias.map((d) => `${d.cantidad} ${d.etiqueta}`).join(', ') }}.
           </template>
         </AlertDialogDescription>
+        <Button
+          v-if="obtenerFilasDetalles && dependencias.length > 0"
+          type="button"
+          variant="link"
+          class="h-auto w-fit p-0 text-xs"
+          @click="abrirDetalles"
+          >Ver detalles</Button
+        >
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogAction :disabled="comprobandoDependencias" @click="confirmarBorrado"
@@ -75,4 +123,40 @@ function confirmarBorrado(): void {
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>
+
+  <Dialog v-model:open="detallesAbiertos">
+    <DialogContent class="max-w-5xl max-h-[85vh] flex flex-col">
+      <DialogHeader class="shrink-0">
+        <div class="flex items-center justify-between gap-4 pr-6">
+          <DialogTitle>{{ tituloDetalles }}</DialogTitle>
+          <BotonesExportarTabla
+            v-if="!cargandoDetalles"
+            :nombre-fichero="tituloDetalles ?? 'Detalles'"
+            :titulo="tituloDetalles ?? 'Detalles'"
+            :columnas="columnasDetalles ?? []"
+            :filas="filasDetalles"
+          />
+        </div>
+      </DialogHeader>
+      <p v-if="cargandoDetalles" class="text-muted-foreground text-sm">Cargando…</p>
+      <div v-else class="min-h-0 flex-1 overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead v-for="columna in columnasDetalles" :key="columna">{{
+                columna
+              }}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="(fila, indice) in filasDetalles" :key="indice">
+              <TableCell v-for="(valor, indiceColumna) in fila" :key="indiceColumna">{{
+                valor
+              }}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </DialogContent>
+  </Dialog>
 </template>

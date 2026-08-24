@@ -127,6 +127,9 @@ describe('ListaTotalesCategoria', () => {
   })
 
   it('los iconos de exportar llaman a exportarTablaExcel/exportarTablaPDF con los datos de la categoría', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 0, 5, 9, 3, 7))
+
     const wrapper = mount(ListaTotalesCategoria, {
       attachTo: document.body,
       props: {
@@ -162,17 +165,18 @@ describe('ListaTotalesCategoria', () => {
       formatearImporte('-45.00'),
     ]
     expect(exportarTablaExcel).toHaveBeenCalledWith(
-      'Servicios.xlsx',
+      'Servicios_05012026_090307.xlsx',
       ['Fecha', 'Descripción', 'Categoría', 'Subcategoría', 'Importe'],
       [filaEsperada],
     )
     expect(exportarTablaPDF).toHaveBeenCalledWith(
-      'Servicios.pdf',
+      'Servicios_05012026_090307.pdf',
       'Servicios',
       ['Fecha', 'Descripción', 'Categoría', 'Subcategoría', 'Importe'],
       [filaEsperada],
     )
     wrapper.unmount()
+    vi.useRealTimers()
   })
 
   it('la barra de la categoría con mayor importe ocupa el 100% del ancho', () => {

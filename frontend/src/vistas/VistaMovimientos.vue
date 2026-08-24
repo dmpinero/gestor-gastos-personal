@@ -21,6 +21,7 @@ import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
+import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -32,9 +33,7 @@ import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
-import ListaTotalesCategoria, {
-  type MovimientoDeCategoria,
-} from '@/componentes/dashboard/ListaTotalesCategoria.vue'
+import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
@@ -287,38 +286,11 @@ function topCategoriasDe(movimientos: Movimiento[]): TotalCategoria[] {
 const topCategoriasGastos = computed(() => topCategoriasDe(movimientosGastados.value))
 const topCategoriasIngresos = computed(() => topCategoriasDe(movimientosIngresados.value))
 
-// Movimientos que componen el total de cada categoría, ordenados de mayor a
-// menor importe (en valor absoluto). Alimenta el title y la modal "Detalles"
-// de cada categoría del top 10 (ver ListaTotalesCategoria).
-function movimientosPorCategoriaDe(
-  movimientos: Movimiento[],
-): Record<number, MovimientoDeCategoria[]> {
-  const porCategoria = new Map<number, Movimiento[]>()
-  for (const m of movimientos) {
-    const lista = porCategoria.get(m.categoria_id) ?? []
-    lista.push(m)
-    porCategoria.set(m.categoria_id, lista)
-  }
-
-  const resultado: Record<number, MovimientoDeCategoria[]> = {}
-  for (const [idCategoria, lista] of porCategoria) {
-    resultado[idCategoria] = [...lista]
-      .sort((a, b) => Math.abs(Number(b.importe)) - Math.abs(Number(a.importe)))
-      .map((m) => ({
-        fecha: m.fecha_valor,
-        descripcion: m.descripcion,
-        subcategoria: nombreSubcategoria(m.subcategoria_id),
-        importe: m.importe,
-      }))
-  }
-  return resultado
-}
-
 const movimientosPorTopCategoriaGastos = computed(() =>
-  movimientosPorCategoriaDe(movimientosGastados.value),
+  agruparMovimientosPorCategoria(movimientosGastados.value, nombreSubcategoria),
 )
 const movimientosPorTopCategoriaIngresos = computed(() =>
-  movimientosPorCategoriaDe(movimientosIngresados.value),
+  agruparMovimientosPorCategoria(movimientosIngresados.value, nombreSubcategoria),
 )
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
@@ -639,6 +611,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       <DialogoConfirmarEliminacion
         :descripcion="`${seleccionados.size} movimientos seleccionados`"
         texto-boton="Eliminar seleccionados"
+        disparador-solido
         @confirmar="eliminarSeleccionados"
       />
     </div>
@@ -729,7 +702,13 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             v-model:max="saldoMax"
           />
 
-          <Button type="button" variant="outline" @click="limpiarFiltros">Limpiar filtros</Button>
+          <Button
+            type="button"
+            variant="outline"
+            class="border-blue-600 bg-blue-600 text-white hover:bg-blue-600/90"
+            @click="limpiarFiltros"
+            >Limpiar filtros</Button
+          >
         </CollapsibleContent>
       </Collapsible>
     </div>

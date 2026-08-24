@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { CalendarDays, Euro, FileText, Landmark, Search, Tag, Tags, Wallet } from '@lucide/vue'
+import {
+  CalendarDays,
+  ChevronRight,
+  Euro,
+  FileText,
+  Landmark,
+  Search,
+  Tag,
+  Tags,
+  Wallet,
+} from '@lucide/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -17,6 +27,7 @@ import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import {
@@ -80,6 +91,9 @@ onMounted(() => {
 // Rango de periodo "AAAA-MM" (formato nativo de <input type="month">); vacío = sin límite.
 const desde = ref('')
 const hasta = ref('')
+
+const filtrosAbiertos = ref(true)
+const resultadosAbiertos = ref(true)
 
 watch(
   () => ruta.fullPath,
@@ -221,162 +235,190 @@ const filasTablaParaExportar = computed(() =>
         </Card>
       </div>
 
-      <div class="mt-4 flex flex-wrap gap-4">
-        <div class="flex max-w-48 flex-1 flex-col gap-1.5">
-          <Label for="periodo-desde">Desde</Label>
-          <Input id="periodo-desde" v-model="desde" type="month" :max="hasta || undefined" />
-        </div>
-        <div class="flex max-w-48 flex-1 flex-col gap-1.5">
-          <Label for="periodo-hasta">Hasta</Label>
-          <Input id="periodo-hasta" v-model="hasta" type="month" :min="desde || undefined" />
-        </div>
-      </div>
-
       <div v-if="datosGrafico.length > 0" class="mt-4">
         <h3 class="text-muted-foreground text-sm font-medium">Evolución</h3>
         <GraficoEvolucion :items="datosGrafico" acento="gasto" class="mt-3" />
       </div>
 
-      <div
-        class="bg-muted/40 mt-4 flex flex-wrap items-end justify-between gap-4 rounded-lg border p-4"
-      >
-        <div class="flex flex-wrap items-end gap-4">
-          <div class="flex max-w-xs flex-col gap-1.5">
-            <Label for="buscar-historial">Buscar</Label>
-            <div class="relative">
-              <Search
-                class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
-              />
-              <Input
-                id="buscar-historial"
-                v-model="busqueda"
-                placeholder="Buscar gastos…"
-                class="pl-8"
-              />
+      <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
+        <Collapsible v-model:open="filtrosAbiertos">
+          <CollapsibleTrigger
+            class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+            :aria-label="filtrosAbiertos ? 'Contraer filtros' : 'Expandir filtros'"
+          >
+            <ChevronRight
+              class="size-4 transition-transform"
+              :class="filtrosAbiertos ? 'rotate-90' : ''"
+            />
+            Filtros
+          </CollapsibleTrigger>
+          <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
+            <div class="flex max-w-48 flex-1 flex-col gap-1.5">
+              <Label for="periodo-desde">Desde</Label>
+              <Input id="periodo-desde" v-model="desde" type="month" :max="hasta || undefined" />
             </div>
-          </div>
-          <SelectorTamanoPagina v-model="tamanoPagina" id-base="historial" />
-        </div>
-        <div class="flex items-center gap-3">
-          <p class="text-muted-foreground text-sm">
-            Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} gastos
-          </p>
-          <BotonesExportarTabla
-            nombre-fichero="Historial de gastos"
-            titulo="Historial de gastos"
-            :columnas="COLUMNAS_TABLA"
-            :filas="filasTablaParaExportar"
-          />
-        </div>
+            <div class="flex max-w-48 flex-1 flex-col gap-1.5">
+              <Label for="periodo-hasta">Hasta</Label>
+              <Input id="periodo-hasta" v-model="hasta" type="month" :min="desde || undefined" />
+            </div>
+            <div class="flex max-w-xs flex-col gap-1.5">
+              <Label for="buscar-historial">Buscar</Label>
+              <div class="relative">
+                <Search
+                  class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+                />
+                <Input
+                  id="buscar-historial"
+                  v-model="busqueda"
+                  placeholder="Buscar gastos…"
+                  class="pl-8"
+                />
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      <Table class="mt-4 table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead class="w-[11%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="CalendarDays"
-                color-icono="text-blue-500"
-                :activo="campo === 'fecha_valor'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('fecha_valor')"
-                >Fecha</CabeceraOrdenable
-              >
-            </TableHead>
-            <TableHead class="w-[13%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="Landmark"
-                color-icono="text-indigo-500"
-                :activo="campo === 'cuenta_id'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('cuenta_id')"
-                >Cuenta</CabeceraOrdenable
-              >
-            </TableHead>
-            <TableHead class="w-[13%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="Tag"
-                color-icono="text-violet-500"
-                :activo="campo === 'categoria_id'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('categoria_id')"
-                >Categoría</CabeceraOrdenable
-              >
-            </TableHead>
-            <TableHead class="w-[15%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="Tags"
-                color-icono="text-rose-500"
-                :activo="campo === 'subcategoria_id'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('subcategoria_id')"
-                >Subcategoría</CabeceraOrdenable
-              >
-            </TableHead>
-            <TableHead class="w-[22%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="FileText"
-                color-icono="text-slate-500"
-                :activo="campo === 'descripcion'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('descripcion')"
-                >Descripción</CabeceraOrdenable
-              >
-            </TableHead>
-            <TableHead class="w-[12%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="Euro"
-                color-icono="text-amber-500"
-                :activo="campo === 'importe'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('importe')"
-                >Importe</CabeceraOrdenable
-              >
-            </TableHead>
-            <TableHead class="w-[12%] whitespace-normal">
-              <CabeceraOrdenable
-                :icono="Wallet"
-                color-icono="text-teal-500"
-                :activo="campo === 'saldo'"
-                :direccion="direccion"
-                @ordenar="ordenarPor('saldo')"
-                >Saldo</CabeceraOrdenable
-              >
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow
-            v-for="movimiento in filasPagina"
-            :key="movimiento.id"
-            :class="claseFondoImporte(movimiento.importe)"
+      <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
+        <Collapsible v-model:open="resultadosAbiertos">
+          <CollapsibleTrigger
+            class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+            :aria-label="resultadosAbiertos ? 'Contraer resultados' : 'Expandir resultados'"
           >
-            <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-            <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
-              nombreCuenta(movimiento.cuenta_id)
-            }}</TableCell>
-            <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
-              nombreCategoria(movimiento.categoria_id)
-            }}</TableCell>
-            <TableCell class="truncate" :title="nombreSubcategoria(movimiento.subcategoria_id)">{{
-              nombreSubcategoria(movimiento.subcategoria_id)
-            }}</TableCell>
-            <TableCell class="truncate" :title="movimiento.descripcion">{{
-              movimiento.descripcion
-            }}</TableCell>
-            <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
-            <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+            <ChevronRight
+              class="size-4 transition-transform"
+              :class="resultadosAbiertos ? 'rotate-90' : ''"
+            />
+            Resultados
+          </CollapsibleTrigger>
+          <CollapsibleContent class="mt-4">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+              <SelectorTamanoPagina v-model="tamanoPagina" id-base="historial" />
+              <div class="flex items-center gap-3">
+                <p class="text-muted-foreground text-sm">
+                  Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} gastos
+                </p>
+                <BotonesExportarTabla
+                  nombre-fichero="Historial de gastos"
+                  titulo="Historial de gastos"
+                  :columnas="COLUMNAS_TABLA"
+                  :filas="filasTablaParaExportar"
+                />
+              </div>
+            </div>
 
-      <BarraPaginacion
-        v-if="totalPaginas > 1"
-        :pagina-actual="paginaActual"
-        :total-paginas="totalPaginas"
-        @anterior="paginaAnterior"
-        @siguiente="paginaSiguiente"
-      />
+            <Table class="mt-4 table-fixed">
+              <TableHeader>
+                <TableRow>
+                  <TableHead class="w-[11%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="CalendarDays"
+                      color-icono="text-blue-500"
+                      :activo="campo === 'fecha_valor'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('fecha_valor')"
+                      >Fecha</CabeceraOrdenable
+                    >
+                  </TableHead>
+                  <TableHead class="w-[13%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="Landmark"
+                      color-icono="text-indigo-500"
+                      :activo="campo === 'cuenta_id'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('cuenta_id')"
+                      >Cuenta</CabeceraOrdenable
+                    >
+                  </TableHead>
+                  <TableHead class="w-[13%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="Tag"
+                      color-icono="text-violet-500"
+                      :activo="campo === 'categoria_id'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('categoria_id')"
+                      >Categoría</CabeceraOrdenable
+                    >
+                  </TableHead>
+                  <TableHead class="w-[15%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="Tags"
+                      color-icono="text-rose-500"
+                      :activo="campo === 'subcategoria_id'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('subcategoria_id')"
+                      >Subcategoría</CabeceraOrdenable
+                    >
+                  </TableHead>
+                  <TableHead class="w-[22%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="FileText"
+                      color-icono="text-slate-500"
+                      :activo="campo === 'descripcion'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('descripcion')"
+                      >Descripción</CabeceraOrdenable
+                    >
+                  </TableHead>
+                  <TableHead class="w-[12%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="Euro"
+                      color-icono="text-amber-500"
+                      :activo="campo === 'importe'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('importe')"
+                      >Importe</CabeceraOrdenable
+                    >
+                  </TableHead>
+                  <TableHead class="w-[12%] whitespace-normal">
+                    <CabeceraOrdenable
+                      :icono="Wallet"
+                      color-icono="text-teal-500"
+                      :activo="campo === 'saldo'"
+                      :direccion="direccion"
+                      @ordenar="ordenarPor('saldo')"
+                      >Saldo</CabeceraOrdenable
+                    >
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow
+                  v-for="movimiento in filasPagina"
+                  :key="movimiento.id"
+                  :class="claseFondoImporte(movimiento.importe)"
+                >
+                  <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
+                  <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
+                    nombreCuenta(movimiento.cuenta_id)
+                  }}</TableCell>
+                  <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
+                    nombreCategoria(movimiento.categoria_id)
+                  }}</TableCell>
+                  <TableCell
+                    class="truncate"
+                    :title="nombreSubcategoria(movimiento.subcategoria_id)"
+                    >{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell
+                  >
+                  <TableCell class="truncate" :title="movimiento.descripcion">{{
+                    movimiento.descripcion
+                  }}</TableCell>
+                  <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
+                  <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+
+            <BarraPaginacion
+              v-if="totalPaginas > 1"
+              :pagina-actual="paginaActual"
+              :total-paginas="totalPaginas"
+              @anterior="paginaAnterior"
+              @siguiente="paginaSiguiente"
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
 
       <p
         v-if="filasOrdenadas.length === 0 && !tiendaMovimientos.cargando"

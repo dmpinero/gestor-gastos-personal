@@ -270,10 +270,10 @@ const filasTablaParaExportar = computed(() =>
         </div>
       </div>
 
-      <Table class="mt-4">
+      <Table class="mt-4 table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead>
+            <TableHead class="w-[11%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="CalendarDays"
                 color-icono="text-blue-500"
@@ -283,7 +283,7 @@ const filasTablaParaExportar = computed(() =>
                 >Fecha</CabeceraOrdenable
               >
             </TableHead>
-            <TableHead>
+            <TableHead class="w-[13%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="Landmark"
                 color-icono="text-indigo-500"
@@ -293,7 +293,7 @@ const filasTablaParaExportar = computed(() =>
                 >Cuenta</CabeceraOrdenable
               >
             </TableHead>
-            <TableHead>
+            <TableHead class="w-[13%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="Tag"
                 color-icono="text-violet-500"
@@ -303,7 +303,7 @@ const filasTablaParaExportar = computed(() =>
                 >Categoría</CabeceraOrdenable
               >
             </TableHead>
-            <TableHead>
+            <TableHead class="w-[15%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="Tags"
                 color-icono="text-rose-500"
@@ -313,7 +313,7 @@ const filasTablaParaExportar = computed(() =>
                 >Subcategoría</CabeceraOrdenable
               >
             </TableHead>
-            <TableHead>
+            <TableHead class="w-[22%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="FileText"
                 color-icono="text-slate-500"
@@ -323,7 +323,7 @@ const filasTablaParaExportar = computed(() =>
                 >Descripción</CabeceraOrdenable
               >
             </TableHead>
-            <TableHead>
+            <TableHead class="w-[12%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="Euro"
                 color-icono="text-amber-500"
@@ -333,7 +333,7 @@ const filasTablaParaExportar = computed(() =>
                 >Importe</CabeceraOrdenable
               >
             </TableHead>
-            <TableHead>
+            <TableHead class="w-[12%] whitespace-normal">
               <CabeceraOrdenable
                 :icono="Wallet"
                 color-icono="text-teal-500"
@@ -352,10 +352,18 @@ const filasTablaParaExportar = computed(() =>
             :class="claseFondoImporte(movimiento.importe)"
           >
             <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-            <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
-            <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
-            <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
-            <TableCell>{{ movimiento.descripcion }}</TableCell>
+            <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
+              nombreCuenta(movimiento.cuenta_id)
+            }}</TableCell>
+            <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
+              nombreCategoria(movimiento.categoria_id)
+            }}</TableCell>
+            <TableCell class="truncate" :title="nombreSubcategoria(movimiento.subcategoria_id)">{{
+              nombreSubcategoria(movimiento.subcategoria_id)
+            }}</TableCell>
+            <TableCell class="truncate" :title="movimiento.descripcion">{{
+              movimiento.descripcion
+            }}</TableCell>
             <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
             <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
           </TableRow>

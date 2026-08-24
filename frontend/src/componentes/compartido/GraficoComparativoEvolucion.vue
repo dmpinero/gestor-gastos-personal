@@ -220,17 +220,28 @@ const sectoresComparativos = computed(() => {
         class="flex min-w-16 shrink-0 flex-col items-center gap-1"
       >
         <div class="flex items-end gap-1">
-          <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
-            <div
-              class="bg-destructive w-full rounded-t-md transition-all"
-              :style="{ height: `${alturaPorcentaje(fila.gasto)}%` }"
-            />
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-destructive text-xs whitespace-nowrap tabular-nums">{{
+              formatearImporte(fila.gasto)
+            }}</span>
+            <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
+              <div
+                class="bg-destructive w-full rounded-t-md transition-all"
+                :style="{ height: `${alturaPorcentaje(fila.gasto)}%` }"
+              />
+            </div>
           </div>
-          <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
-            <div
-              class="bg-success w-full rounded-t-md transition-all"
-              :style="{ height: `${alturaPorcentaje(fila.ingreso)}%` }"
-            />
+          <div class="flex flex-col items-center gap-1">
+            <span
+              class="text-success dark:text-emerald-500 text-xs whitespace-nowrap tabular-nums"
+              >{{ formatearImporte(fila.ingreso) }}</span
+            >
+            <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
+              <div
+                class="bg-success w-full rounded-t-md transition-all"
+                :style="{ height: `${alturaPorcentaje(fila.ingreso)}%` }"
+              />
+            </div>
           </div>
         </div>
         <span class="text-muted-foreground text-xs whitespace-nowrap capitalize">{{
@@ -300,22 +311,30 @@ const sectoresComparativos = computed(() => {
         />
         <polyline :points="lineaGasto" fill="none" stroke="var(--destructive)" stroke-width="2" />
         <polyline :points="lineaIngreso" fill="none" stroke="var(--success)" stroke-width="2" />
-        <circle
-          v-for="punto in puntosGasto"
-          :key="`gasto-${punto.periodo}`"
-          :cx="punto.x"
-          :cy="punto.y"
-          r="4"
-          fill="var(--destructive)"
-        />
-        <circle
-          v-for="punto in puntosIngreso"
-          :key="`ingreso-${punto.periodo}`"
-          :cx="punto.x"
-          :cy="punto.y"
-          r="4"
-          fill="var(--success)"
-        />
+        <template v-for="punto in puntosGasto" :key="`gasto-${punto.periodo}`">
+          <text
+            :x="punto.x"
+            :y="Math.max(punto.y - 8, 10)"
+            text-anchor="middle"
+            font-size="10"
+            fill="var(--muted-foreground)"
+          >
+            {{ formatearImporte(punto.total) }}
+          </text>
+          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--destructive)" />
+        </template>
+        <template v-for="punto in puntosIngreso" :key="`ingreso-${punto.periodo}`">
+          <text
+            :x="punto.x"
+            :y="Math.max(punto.y - 18, 10)"
+            text-anchor="middle"
+            font-size="10"
+            fill="var(--muted-foreground)"
+          >
+            {{ formatearImporte(punto.total) }}
+          </text>
+          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--success)" />
+        </template>
       </svg>
       <div class="flex" :style="{ width: `${anchoTotal}px` }">
         <span

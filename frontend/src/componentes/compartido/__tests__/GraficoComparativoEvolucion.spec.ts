@@ -44,6 +44,18 @@ describe('GraficoComparativoEvolucion', () => {
     expect(barraGasto.attributes('style')).toContain('height: 30%')
   })
 
+  it('el modo barras muestra el importe de cada serie sobre su barra', () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    expect(wrapper.text()).toContain(formatearImporte(30))
+    expect(wrapper.text()).toContain(formatearImporte(100))
+  })
+
   it('muestra barras por defecto y cambia a líneas al pulsar el botón correspondiente', async () => {
     const wrapper = mount(GraficoComparativoEvolucion, {
       props: {
@@ -59,6 +71,10 @@ describe('GraficoComparativoEvolucion', () => {
     expect(wrapper.find('svg[role="img"]').exists()).toBe(true)
     // Un círculo por serie y por periodo (1 periodo x 2 series = 2 círculos).
     expect(wrapper.findAll('svg[role="img"] circle')).toHaveLength(2)
+    // Un texto de importe por serie y por periodo (1 periodo x 2 series = 2 textos).
+    expect(wrapper.findAll('svg[role="img"] text')).toHaveLength(2)
+    expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(30))
+    expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(100))
   })
 
   it('el modo área añade un polígono de relleno por cada serie', async () => {

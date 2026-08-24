@@ -527,8 +527,19 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await expect(comparativa).toBeVisible()
   const zonaComparativa = comparativa.locator('..')
 
+  // El modo barras (por defecto) muestra el importe de cada serie.
+  const barrasComparativa = zonaComparativa.locator('[role="group"]')
+  await expect(barrasComparativa.getByText('30,00 €')).toBeVisible()
+  await expect(barrasComparativa.getByText('500,00 €')).toBeVisible()
+
+  // Debajo, el top 10 por categoría de cada serie.
+  await expect(page.getByText('Top 10 gastos por categoría')).toBeVisible()
+  await expect(page.getByText('Top 10 ingresos por categoría')).toBeVisible()
+  await expect(page.locator('li', { hasText: nombreCategoria }).first()).toContainText('-30,00 €')
+  await expect(page.locator('li', { hasText: nombreCategoria }).last()).toContainText('500,00 €')
+
   await zonaComparativa.getByRole('button', { name: 'Ver como circular' }).click()
-  const listaCircular = zonaComparativa.locator('ul')
+  const listaCircular = zonaComparativa.locator('ul').first()
   await expect(listaCircular.getByText('Gastos', { exact: true })).toBeVisible()
   await expect(listaCircular.getByText('Ingresos', { exact: true })).toBeVisible()
 })

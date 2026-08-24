@@ -113,8 +113,8 @@ function filasDetalleDe(item: TotalCategoria): (string | number)[][] {
           <DialogTrigger as-child>
             <Button variant="link" class="h-auto shrink-0 p-0 text-xs">Detalles</Button>
           </DialogTrigger>
-          <DialogContent class="max-w-5xl">
-            <DialogHeader>
+          <DialogContent class="max-w-5xl max-h-[85vh] flex flex-col">
+            <DialogHeader class="shrink-0">
               <div class="flex items-center justify-between gap-4 pr-6">
                 <DialogTitle>{{ item.nombre }}</DialogTitle>
                 <BotonesExportarTabla
@@ -126,7 +126,7 @@ function filasDetalleDe(item: TotalCategoria): (string | number)[][] {
               </div>
               <DialogDescription>Total: {{ formatearImporte(item.total) }}</DialogDescription>
             </DialogHeader>
-            <div class="max-h-[32rem] overflow-auto">
+            <div class="min-h-0 flex-1 overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

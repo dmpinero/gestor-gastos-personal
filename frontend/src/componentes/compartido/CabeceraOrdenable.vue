@@ -21,11 +21,11 @@ const iconoOrden = computed(() => {
 <template>
   <button
     type="button"
-    class="hover:text-foreground flex items-center gap-1.5"
+    class="hover:text-foreground flex w-full min-w-0 items-center gap-1.5"
     @click="emit('ordenar')"
   >
     <component :is="icono" :class="[colorIcono, 'size-3.5 shrink-0']" />
-    <span><slot /></span>
+    <span class="min-w-0 truncate"><slot /></span>
     <component :is="iconoOrden" class="text-muted-foreground size-3.5 shrink-0" />
   </button>
 </template>

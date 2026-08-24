@@ -312,17 +312,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       </div>
     </div>
 
-    <Table class="mt-4">
+    <Table class="mt-4 table-fixed">
       <TableHeader>
         <TableRow>
-          <TableHead class="w-8">
+          <TableHead class="w-9">
             <Checkbox
               :model-value="todasSeleccionadas"
               aria-label="Seleccionar todas las cuentas"
               @update:model-value="(valor) => alternarSeleccionTodas(valor === true)"
             />
           </TableHead>
-          <TableHead>
+          <TableHead class="w-[28%] whitespace-normal">
             <CabeceraOrdenable
               :icono="Hash"
               color-icono="text-blue-500"
@@ -332,7 +332,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               >Número de cuenta</CabeceraOrdenable
             >
           </TableHead>
-          <TableHead>
+          <TableHead class="w-[15%] whitespace-normal">
             <CabeceraOrdenable
               :icono="Tag"
               color-icono="text-violet-500"
@@ -342,7 +342,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               >Alias</CabeceraOrdenable
             >
           </TableHead>
-          <TableHead>
+          <TableHead class="w-[17%] whitespace-normal">
             <CabeceraOrdenable
               :icono="Landmark"
               color-icono="text-amber-500"
@@ -352,7 +352,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               >Entidad</CabeceraOrdenable
             >
           </TableHead>
-          <TableHead>
+          <TableHead class="w-[10%] whitespace-normal">
             <CabeceraOrdenable
               :icono="Coins"
               color-icono="text-teal-500"
@@ -362,7 +362,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               >Moneda</CabeceraOrdenable
             >
           </TableHead>
-          <TableHead>
+          <TableHead class="w-[22%] whitespace-normal">
             <CabeceraOrdenable
               :icono="User"
               color-icono="text-rose-500"
@@ -372,7 +372,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               >Titular</CabeceraOrdenable
             >
           </TableHead>
-          <TableHead></TableHead>
+          <TableHead class="w-24"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -384,11 +384,15 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               @update:model-value="(valor) => alternarSeleccion(cuenta.id, valor === true)"
             />
           </TableCell>
-          <TableCell>{{ cuenta.numero_cuenta }}</TableCell>
-          <TableCell>{{ cuenta.alias }}</TableCell>
-          <TableCell>{{ cuenta.entidad_bancaria }}</TableCell>
-          <TableCell>{{ cuenta.moneda }}</TableCell>
-          <TableCell>{{ cuenta.titular }}</TableCell>
+          <TableCell class="truncate" :title="cuenta.numero_cuenta">{{
+            cuenta.numero_cuenta
+          }}</TableCell>
+          <TableCell class="truncate" :title="cuenta.alias ?? ''">{{ cuenta.alias }}</TableCell>
+          <TableCell class="truncate" :title="cuenta.entidad_bancaria ?? ''">{{
+            cuenta.entidad_bancaria
+          }}</TableCell>
+          <TableCell class="truncate" :title="cuenta.moneda ?? ''">{{ cuenta.moneda }}</TableCell>
+          <TableCell class="truncate" :title="cuenta.titular ?? ''">{{ cuenta.titular }}</TableCell>
           <TableCell class="text-right">
             <Button
               variant="ghost"

@@ -866,17 +866,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             </div>
           </div>
 
-          <Table class="mt-4">
+          <Table class="mt-4 table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead class="w-8">
+                <TableHead class="w-9">
                   <Checkbox
                     :model-value="todosSeleccionados"
                     aria-label="Seleccionar todos los movimientos"
                     @update:model-value="(valor) => alternarSeleccionTodos(valor === true)"
                   />
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[11%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="Landmark"
                     color-icono="text-indigo-500"
@@ -886,7 +886,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Cuenta</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[10%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="CalendarDays"
                     color-icono="text-blue-500"
@@ -896,7 +896,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Fecha</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[28%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="FileText"
                     color-icono="text-slate-500"
@@ -906,7 +906,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Descripción</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[13%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="Tag"
                     color-icono="text-violet-500"
@@ -916,7 +916,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Categoría</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[17%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="Tags"
                     color-icono="text-rose-500"
@@ -926,7 +926,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Subcategoría</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[10%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="Euro"
                     color-icono="text-amber-500"
@@ -936,7 +936,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Importe</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead>
+                <TableHead class="w-[9%] whitespace-normal">
                   <CabeceraOrdenable
                     :icono="Wallet"
                     color-icono="text-teal-500"
@@ -946,7 +946,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     >Saldo</CabeceraOrdenable
                   >
                 </TableHead>
-                <TableHead></TableHead>
+                <TableHead class="w-24"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -964,11 +964,21 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     "
                   />
                 </TableCell>
-                <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
+                <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
+                  nombreCuenta(movimiento.cuenta_id)
+                }}</TableCell>
                 <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-                <TableCell>{{ movimiento.descripcion }}</TableCell>
-                <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
-                <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
+                <TableCell class="truncate" :title="movimiento.descripcion">{{
+                  movimiento.descripcion
+                }}</TableCell>
+                <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
+                  nombreCategoria(movimiento.categoria_id)
+                }}</TableCell>
+                <TableCell
+                  class="truncate"
+                  :title="nombreSubcategoria(movimiento.subcategoria_id)"
+                  >{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell
+                >
                 <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
                 <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
                 <TableCell class="text-right">

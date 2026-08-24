@@ -11,7 +11,7 @@ import BarraEstado from '@/componentes/layout/BarraEstado.vue'
     <BarraLateral />
     <SidebarInset>
       <BarraSuperior />
-      <main class="flex-1 overflow-y-auto p-6 pb-12">
+      <main class="min-w-0 flex-1 overflow-y-auto p-6 pb-12">
         <RouterView />
       </main>
     </SidebarInset>

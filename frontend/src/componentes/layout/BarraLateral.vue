@@ -11,9 +11,10 @@ import {
   Upload,
   Wallet,
 } from '@lucide/vue'
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaDashboard } from '@/stores/dashboard'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
 import {
   Sidebar,
@@ -33,10 +34,33 @@ import {
 
 const ruta = useRoute()
 const tiendaCategorias = useTiendaCategorias()
+const tiendaDashboard = useTiendaDashboard()
 
 onMounted(() => {
   tiendaCategorias.cargar()
+  tiendaDashboard.cargar()
 })
+
+// Total neto de cada categoría (gastos + ingresos ya agregados por el
+// backend en /dashboard/resumen), para colorear su icono en Historial:
+// rojo si la categoría es predominantemente de gasto, verde si es de
+// ingreso. Una categoría sin movimientos, o con gastos e ingresos que se
+// compensan exactamente, se queda con el color neutro por defecto.
+const netoPorCategoria = computed(() => {
+  const mapa = new Map<number, number>()
+  const resumen = tiendaDashboard.resumen
+  if (!resumen) return mapa
+  for (const item of [...resumen.gastos_por_categoria, ...resumen.ingresos_por_categoria]) {
+    mapa.set(item.categoria_id, (mapa.get(item.categoria_id) ?? 0) + Number(item.total))
+  }
+  return mapa
+})
+
+function colorCategoria(idCategoria: number): string {
+  const neto = netoPorCategoria.value.get(idCategoria)
+  if (!neto) return 'text-violet-500'
+  return neto < 0 ? 'text-destructive' : 'text-success dark:text-emerald-500'
+}
 
 const subseccionesGestion = [
   { a: '/gestion/cuentas', etiqueta: 'Cuentas', icono: Wallet, color: 'text-amber-500' },
@@ -209,7 +233,7 @@ watch(
                                 : undefined
                             "
                           >
-                            <Tag class="text-violet-500" />
+                            <Tag :class="colorCategoria(item.categoria.id)" />
                             <span class="truncate">{{ item.categoria.nombre }}</span>
                           </RouterLink>
                         </SidebarMenuSubButton>

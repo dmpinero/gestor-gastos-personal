@@ -476,6 +476,59 @@ test('el gráfico de evolución se puede ver como distribución circular', async
   await expect(page.getByText('25%')).toBeVisible()
 })
 
+test('las zonas de gráficos y de resultados se pueden contraer y expandir de forma independiente', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-ZONAS ${sufijo}`
+  const nombreCategoria = `Categoria MOV-ZONAS ${sufijo}`
+  const descripcion = `Movimiento zonas ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-15')
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panel.getByPlaceholder('Descripción').fill(descripcion)
+  await panel.getByPlaceholder('Importe').fill('-30.00')
+  await panel.getByPlaceholder('Saldo').fill('970.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  const fila = page.locator('tr', { hasText: descripcion })
+  await expect(fila).toBeVisible()
+
+  await expect(page.getByText('Total gastado')).toBeVisible()
+  await page.getByRole('button', { name: 'Contraer gráficos' }).click()
+  await expect(page.getByText('Total gastado')).toBeHidden()
+  // La zona de resultados no se ve afectada al contraer la de gráficos.
+  await expect(fila).toBeVisible()
+
+  await page.getByRole('button', { name: 'Expandir gráficos' }).click()
+  await expect(page.getByText('Total gastado')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Contraer resultados' }).click()
+  await expect(fila).toBeHidden()
+  // La zona de gráficos no se ve afectada al contraer la de resultados.
+  await expect(page.getByText('Total gastado')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Expandir resultados' }).click()
+  await expect(fila).toBeVisible()
+})
+
 test('el filtro de cuenta permite seleccionar varias cuentas a la vez, mostrando su columna Cuenta', async ({
   page,
 }) => {

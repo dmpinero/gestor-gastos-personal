@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { elegirOpcion, seleccionarCuenta } from './utilidades'
 
 test('el panel de navegación colapsa y expande, y resalta la sección activa', async ({ page }) => {
   await page.goto('/')
@@ -90,6 +91,61 @@ test('cerrar el panel de creación sin guardar no modifica el listado', async ({
 
   await expect(page.locator('tbody tr')).toHaveCount(filasAntes)
   await expect(page.locator('tr', { hasText: 'ES00 NO SE GUARDA' })).toHaveCount(0)
+})
+
+test('en el menú de Historial, el icono de cada categoría es rojo si es de gasto y verde si es de ingreso', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 HISTCOL ${sufijo}`
+  const categoriaGasto = `Categoria HISTCOL GASTO ${sufijo}`
+  const categoriaIngreso = `Categoria HISTCOL INGRESO ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombreCategoria of [categoriaGasto, categoriaIngreso]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+  }
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  for (const [nombreCategoria, importe] of [
+    [categoriaGasto, '-30.00'],
+    [categoriaIngreso, '30.00'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await expect(panel).toBeVisible()
+    await panel.locator('input[type="date"]').fill('2026-01-15')
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await panel.getByPlaceholder('Descripción').fill(`Movimiento ${nombreCategoria}`)
+    await panel.getByPlaceholder('Importe').fill(importe)
+    await panel.getByPlaceholder('Saldo').fill('100.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: nombreCategoria })).toBeVisible()
+  }
+
+  // El menú lateral carga los totales de /dashboard/resumen una sola vez al
+  // montarse; recargar la página fuerza a que recoja los movimientos recién
+  // creados.
+  await page.goto('/historial')
+  await page.reload()
+  const enlaceGasto = page.getByRole('link', { name: categoriaGasto })
+  const enlaceIngreso = page.getByRole('link', { name: categoriaIngreso })
+  await expect(enlaceGasto).toBeVisible()
+  await expect(enlaceIngreso).toBeVisible()
+  await expect(enlaceGasto.locator('svg').first()).toHaveClass(/text-destructive/)
+  await expect(enlaceIngreso.locator('svg').first()).toHaveClass(/text-success/)
 })
 
 test('la barra de estado muestra la versión y abre el historial de cambios', async ({ page }) => {

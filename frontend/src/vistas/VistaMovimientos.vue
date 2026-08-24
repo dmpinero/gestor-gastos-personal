@@ -20,7 +20,7 @@ import { aTextoOULlo } from '@/api/utilidades'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
-import { claseColorImporte, formatearFecha, formatearImporte } from '@/lib/formato'
+import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -787,7 +787,11 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow v-for="movimiento in filasPagina" :key="movimiento.id">
+        <TableRow
+          v-for="movimiento in filasPagina"
+          :key="movimiento.id"
+          :class="claseFondoImporte(movimiento.importe)"
+        >
           <TableCell>
             <Checkbox
               :model-value="seleccionados.has(movimiento.id)"
@@ -800,9 +804,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           <TableCell>{{ movimiento.descripcion }}</TableCell>
           <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
           <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
-          <TableCell :class="claseColorImporte(movimiento.importe)">{{
-            formatearImporte(movimiento.importe)
-          }}</TableCell>
+          <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
           <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
           <TableCell class="text-right">
             <Button

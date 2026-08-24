@@ -284,6 +284,43 @@ function topCategoriasDe(movimientos: Movimiento[]): TotalCategoria[] {
 const topCategoriasGastos = computed(() => topCategoriasDe(movimientosGastados.value))
 const topCategoriasIngresos = computed(() => topCategoriasDe(movimientosIngresados.value))
 
+const MAXIMO_DESCRIPCIONES_POR_CATEGORIA = 15
+
+// Descripción de cada movimiento que compone el total de una categoría (p. ej.
+// "Pago en PELUQUERIA LAS ROZAS DE ES: -45,00 €"), para el title del top 10.
+// Se limita a los MAXIMO_DESCRIPCIONES_POR_CATEGORIA de mayor importe (con un
+// resumen del resto) para que el tooltip no crezca sin límite en categorías
+// con muchos movimientos.
+function descripcionesPorCategoriaDe(movimientos: Movimiento[]): Record<number, string[]> {
+  const movimientosPorCategoria = new Map<number, Movimiento[]>()
+  for (const m of movimientos) {
+    const lista = movimientosPorCategoria.get(m.categoria_id) ?? []
+    lista.push(m)
+    movimientosPorCategoria.set(m.categoria_id, lista)
+  }
+
+  const resultado: Record<number, string[]> = {}
+  for (const [idCategoria, lista] of movimientosPorCategoria) {
+    const ordenados = [...lista].sort(
+      (a, b) => Math.abs(Number(b.importe)) - Math.abs(Number(a.importe)),
+    )
+    const lineas = ordenados
+      .slice(0, MAXIMO_DESCRIPCIONES_POR_CATEGORIA)
+      .map((m) => `${m.descripcion}: ${formatearImporte(m.importe)}`)
+    const restantes = ordenados.length - MAXIMO_DESCRIPCIONES_POR_CATEGORIA
+    if (restantes > 0) lineas.push(`… y ${restantes} más`)
+    resultado[idCategoria] = lineas
+  }
+  return resultado
+}
+
+const descripcionesTopCategoriasGastos = computed(() =>
+  descripcionesPorCategoriaDe(movimientosGastados.value),
+)
+const descripcionesTopCategoriasIngresos = computed(() =>
+  descripcionesPorCategoriaDe(movimientosIngresados.value),
+)
+
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
   cuenta_id: (a: Movimiento, b: Movimiento) =>
@@ -762,12 +799,14 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                 :items="topCategoriasGastos"
                 acento="gasto"
                 mensaje-vacio="No hay gastos en el periodo mostrado."
+                :descripciones-por-categoria="descripcionesTopCategoriasGastos"
               />
               <ListaTotalesCategoria
                 titulo="Top 10 ingresos por categoría"
                 :items="topCategoriasIngresos"
                 acento="ingreso"
                 mensaje-vacio="No hay ingresos en el periodo mostrado."
+                :descripciones-por-categoria="descripcionesTopCategoriasIngresos"
               />
             </div>
           </div>

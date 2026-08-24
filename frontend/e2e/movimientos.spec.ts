@@ -535,8 +535,15 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   // Debajo, el top 10 por categoría de cada serie.
   await expect(page.getByText('Top 10 gastos por categoría')).toBeVisible()
   await expect(page.getByText('Top 10 ingresos por categoría')).toBeVisible()
-  await expect(page.locator('li', { hasText: nombreCategoria }).first()).toContainText('-30,00 €')
-  await expect(page.locator('li', { hasText: nombreCategoria }).last()).toContainText('500,00 €')
+  const filaTopGasto = page.locator('li', { hasText: nombreCategoria }).first()
+  const filaTopIngreso = page.locator('li', { hasText: nombreCategoria }).last()
+  await expect(filaTopGasto).toContainText('-30,00 €')
+  await expect(filaTopIngreso).toContainText('500,00 €')
+
+  // El title (tooltip nativo al pasar el ratón) muestra la descripción de
+  // cada movimiento que compone el total de la categoría, no solo su nombre.
+  await expect(filaTopGasto).toHaveAttribute('title', 'Solo gasto: -30,00 €')
+  await expect(filaTopIngreso).toHaveAttribute('title', 'Con ingreso: 500,00 €')
 
   await zonaComparativa.getByRole('button', { name: 'Ver como circular' }).click()
   const listaCircular = zonaComparativa.locator('ul').first()

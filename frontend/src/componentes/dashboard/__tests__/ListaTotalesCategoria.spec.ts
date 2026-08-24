@@ -36,7 +36,7 @@ describe('ListaTotalesCategoria', () => {
     expect(wrapper.text()).toContain(formatearImporte('-30.00'))
   })
 
-  it('cada fila lleva un title con el nombre completo e importe, visible al pasar el ratón', () => {
+  it('sin descripcionesPorCategoria, el title cae de vuelta al nombre completo e importe', () => {
     const wrapper = mount(ListaTotalesCategoria, {
       props: {
         titulo: 'Gastos por categoría',
@@ -51,6 +51,28 @@ describe('ListaTotalesCategoria', () => {
     const fila = wrapper.get('li')
     expect(fila.attributes('title')).toBe(
       `Alimentación y bebidas no alcohólicas: ${formatearImporte('-30.00')}`,
+    )
+  })
+
+  it('con descripcionesPorCategoria, el title muestra la descripción de cada movimiento', () => {
+    const wrapper = mount(ListaTotalesCategoria, {
+      props: {
+        titulo: 'Gastos por categoría',
+        items: [{ categoria_id: 1, nombre: 'Servicios', total: '-45.00' }],
+        acento: 'gasto',
+        mensajeVacio: 'No hay gastos registrados todavía.',
+        descripcionesPorCategoria: {
+          1: [
+            `Pago en PELUQUERIA LAS ROZAS DE ES: ${formatearImporte('-45.00')}`,
+            `Otro pago: ${formatearImporte('-5.00')}`,
+          ],
+        },
+      },
+    })
+
+    const fila = wrapper.get('li')
+    expect(fila.attributes('title')).toBe(
+      `Pago en PELUQUERIA LAS ROZAS DE ES: ${formatearImporte('-45.00')}\nOtro pago: ${formatearImporte('-5.00')}`,
     )
   })
 

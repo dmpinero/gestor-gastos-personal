@@ -52,10 +52,10 @@ def test_crear_y_listar_por_cuenta_ordenado(sesion_bd) -> None:
     assert [m.descripcion for m in movimientos] == ["Reciente", "Antiguo"]
 
 
-def test_existe_duplicado(sesion_bd) -> None:
+def test_buscar_duplicado(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
-    repositorio.crear(
+    creado = repositorio.crear(
         Movimiento(
             cuenta_id=cuenta.id,
             categoria_id=categoria.id,
@@ -66,17 +66,17 @@ def test_existe_duplicado(sesion_bd) -> None:
         )
     )
 
-    assert (
-        repositorio.existe_duplicado(
-            cuenta.id, datetime.date(2026, 1, 1), Decimal("-10.00"), Decimal("100.00"), "Compra"
-        )
-        is True
+    duplicado = repositorio.buscar_duplicado(
+        cuenta.id, datetime.date(2026, 1, 1), Decimal("-10.00"), Decimal("100.00"), "Compra"
     )
+    assert duplicado is not None
+    assert duplicado.id == creado.id
+
     assert (
-        repositorio.existe_duplicado(
+        repositorio.buscar_duplicado(
             cuenta.id, datetime.date(2026, 1, 2), Decimal("-10.00"), Decimal("100.00"), "Compra"
         )
-        is False
+        is None
     )
 
 

@@ -98,6 +98,76 @@ async function subirArchivo<T>(ruta: string, campo: string, fichero: File): Prom
   return (await respuesta.json()) as T
 }
 
+interface EventoNdjson {
+  tipo: string
+  procesadas?: number
+  total?: number
+}
+
+/**
+ * Como `subirArchivo`, pero para endpoints que devuelven el progreso en
+ * streaming: una línea NDJSON `{"tipo":"progreso",...}` por cada unidad de
+ * trabajo procesada (se traduce en una llamada a `alProgreso`) y, al final,
+ * una línea `{"tipo":"resumen",...}` con el resultado, que es lo que
+ * resuelve la promesa.
+ */
+async function subirArchivoConProgreso<T>(
+  ruta: string,
+  campo: string,
+  fichero: File,
+  alProgreso: (procesadas: number, total: number) => void,
+): Promise<T> {
+  const formData = new FormData()
+  formData.append(campo, fichero)
+
+  const respuesta = await fetch(`${URL_BASE_API}${ruta}`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!respuesta.ok) {
+    const { mensaje, traza } = await extraerDetalleError(respuesta)
+    throw new ErrorApi(respuesta.status, mensaje, traza)
+  }
+  if (!respuesta.body) {
+    return (await respuesta.json()) as T
+  }
+
+  let resumen: T | undefined
+
+  function procesarLinea(linea: string): void {
+    if (!linea.trim()) return
+    const evento = JSON.parse(linea) as EventoNdjson
+    if (evento.tipo === 'progreso') {
+      alProgreso(evento.procesadas ?? 0, evento.total ?? 0)
+    } else if (evento.tipo === 'resumen') {
+      // Se descarta el discriminador "tipo": es solo protocolo de
+      // transporte, no forma parte de la forma de T.
+      const { tipo: descartado, ...resto } = evento as EventoNdjson & Record<string, unknown>
+      void descartado
+      resumen = resto as T
+    }
+  }
+
+  const lector = respuesta.body.getReader()
+  const decodificador = new TextDecoder()
+  let restoSinProcesar = ''
+  for (;;) {
+    const { value, done } = await lector.read()
+    if (done) break
+    restoSinProcesar += decodificador.decode(value, { stream: true })
+    const lineas = restoSinProcesar.split('\n')
+    restoSinProcesar = lineas.pop() ?? ''
+    for (const linea of lineas) procesarLinea(linea)
+  }
+  if (restoSinProcesar.trim()) procesarLinea(restoSinProcesar)
+
+  if (resumen === undefined) {
+    throw new ErrorApi(0, 'La importación se interrumpió antes de terminar.')
+  }
+  return resumen
+}
+
 export const clienteApi = {
   obtener: <T>(ruta: string, token?: string | null) => peticion<T>('GET', ruta, { token }),
   crear: <T>(ruta: string, cuerpo: unknown, token?: string | null) =>
@@ -106,5 +176,6 @@ export const clienteApi = {
     peticion<T>('PUT', ruta, { cuerpo, token }),
   eliminar: <T>(ruta: string, token?: string | null) => peticion<T>('DELETE', ruta, { token }),
   subirArchivo,
+  subirArchivoConProgreso,
   descargar,
 }

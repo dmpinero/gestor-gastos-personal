@@ -54,12 +54,28 @@ export interface DatosMovimiento {
   saldo: string
 }
 
+export interface FilaMovimientoExcel {
+  fecha_valor: string
+  categoria: string
+  subcategoria: string | null
+  descripcion: string
+  comentario: string | null
+  importe: string
+  saldo: string
+}
+
+export interface DuplicadoDetectado {
+  fila_excel: FilaMovimientoExcel
+  movimiento_existente: Movimiento
+}
+
 export interface ResumenImportacion {
   cuenta_id: number
   movimientos_importados: number
   movimientos_omitidos_por_duplicado: number
   categorias_creadas: string[]
   subcategorias_creadas: string[]
+  duplicados: DuplicadoDetectado[]
 }
 
 export interface SaldoCuenta {

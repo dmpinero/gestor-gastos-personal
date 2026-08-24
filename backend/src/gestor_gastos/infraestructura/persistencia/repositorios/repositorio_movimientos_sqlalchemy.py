@@ -94,26 +94,24 @@ class RepositorioMovimientosSqlAlchemy:
             self._sesion.delete(modelo)
             self._sesion.commit()
 
-    def existe_duplicado(
+    def buscar_duplicado(
         self,
         id_cuenta: int,
         fecha_valor: datetime.date,
         importe: Decimal,
         saldo: Decimal,
         descripcion: str,
-    ) -> bool:
-        return (
-            self._sesion.scalar(
-                select(MovimientoModelo).where(
-                    MovimientoModelo.cuenta_id == id_cuenta,
-                    MovimientoModelo.fecha_valor == fecha_valor,
-                    MovimientoModelo.importe == importe,
-                    MovimientoModelo.saldo == saldo,
-                    MovimientoModelo.descripcion == descripcion,
-                )
+    ) -> Movimiento | None:
+        modelo = self._sesion.scalar(
+            select(MovimientoModelo).where(
+                MovimientoModelo.cuenta_id == id_cuenta,
+                MovimientoModelo.fecha_valor == fecha_valor,
+                MovimientoModelo.importe == importe,
+                MovimientoModelo.saldo == saldo,
+                MovimientoModelo.descripcion == descripcion,
             )
-            is not None
         )
+        return _a_entidad(modelo) if modelo is not None else None
 
     def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int:
         return self._sesion.scalar(

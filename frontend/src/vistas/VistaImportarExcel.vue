@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { clienteApi, ErrorApi } from '@/api/cliente'
 import type { ResumenImportacion, ResumenImportacionConceptosPrevistos } from '@/api/tipos'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import { Button } from '@/componentes/ui/button'
+import { Progress } from '@/componentes/ui/progress'
+import ModalComparacionDuplicados from '@/componentes/importacion/ModalComparacionDuplicados.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
+import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 
 const router = useRouter()
 const tiendaPrevisiones = useTiendaPrevisiones()
+const tiendaCategorias = useTiendaCategorias()
+
+onMounted(() => {
+  // Necesaria para resolver categoria_id/subcategoria_id a nombres en la
+  // modal de comparación de duplicados.
+  tiendaCategorias.cargar()
+})
 
 interface ResultadoImportacionFichero {
   nombreFichero: string
@@ -22,6 +32,8 @@ interface ResultadoImportacionFichero {
 const ficherosSeleccionados = ref<File[]>([])
 const importando = ref(false)
 const resultados = ref<ResultadoImportacionFichero[]>([])
+const ficheroEnProceso = ref<string | null>(null)
+const progreso = ref<{ procesadas: number; total: number } | null>(null)
 
 const resumenAgregado = computed(() => {
   const conExito = resultados.value.filter(
@@ -43,6 +55,10 @@ const resumenAgregado = computed(() => {
     subcategorias_creadas: [...new Set(conExito.flatMap((r) => r.resumen.subcategorias_creadas))],
   }
 })
+
+const duplicadosAgregados = computed(() =>
+  resultados.value.flatMap((resultado) => resultado.resumen?.duplicados ?? []),
+)
 
 const ficherosConError = computed(() => resultados.value.filter((r) => r.error !== undefined))
 
@@ -75,11 +91,16 @@ async function importar(): Promise<void> {
   // soportada), no debe impedir que se importen el resto ("procesamiento
   // masivo" resiliente a fallos parciales).
   for (const fichero of ficherosSeleccionados.value) {
+    ficheroEnProceso.value = fichero.name
+    progreso.value = null
     try {
-      const resumen = await clienteApi.subirArchivo<ResumenImportacion>(
+      const resumen = await clienteApi.subirArchivoConProgreso<ResumenImportacion>(
         '/movimientos/importar',
         'fichero',
         fichero,
+        (procesadas, total) => {
+          progreso.value = { procesadas, total }
+        },
       )
       resultados.value.push({ nombreFichero: fichero.name, resumen })
     } catch (motivo) {
@@ -90,6 +111,13 @@ async function importar(): Promise<void> {
       })
     }
   }
+  ficheroEnProceso.value = null
+  progreso.value = null
+  // La importación puede haber creado categorías/subcategorías nuevas: se
+  // recarga la tienda para que la modal de comparación de duplicados pueda
+  // resolver sus nombres (si no, un duplicado cuya categoría se creó en esta
+  // misma importación se quedaría sin nombre por no estar aún en caché).
+  await tiendaCategorias.cargar()
   importando.value = false
 }
 
@@ -181,6 +209,19 @@ function verResumenAnual(): void {
       </Button>
     </form>
 
+    <div
+      v-if="importando && ficheroEnProceso"
+      class="mt-4 w-full max-w-md"
+      data-test="progreso-importacion"
+    >
+      <p class="text-sm text-muted-foreground">
+        Procesando {{ ficheroEnProceso }}:
+        <template v-if="progreso">{{ progreso.procesadas }} de {{ progreso.total }} filas</template>
+        <template v-else>preparando…</template>
+      </p>
+      <Progress class="mt-2" :model-value="progreso?.procesadas ?? 0" :max="progreso?.total || 1" />
+    </div>
+
     <div v-if="ficherosConError.length > 0" class="mt-4 text-sm text-destructive" role="alert">
       <p v-for="resultado in ficherosConError" :key="resultado.nombreFichero">
         {{ resultado.nombreFichero }}: {{ resultado.error }}
@@ -192,9 +233,16 @@ function verResumenAnual(): void {
       <h3 class="font-medium">Resumen de la importación</h3>
       <ul class="mt-2 text-sm">
         <li>Movimientos importados: {{ resumenAgregado.movimientos_importados }}</li>
-        <li>
+        <li class="flex items-center gap-2">
           Movimientos omitidos por duplicado:
           {{ resumenAgregado.movimientos_omitidos_por_duplicado }}
+          <ModalComparacionDuplicados
+            v-if="duplicadosAgregados.length > 0"
+            :nombre-fichero="
+              resultados.length === 1 ? (resultados[0]?.nombreFichero ?? '') : 'Todos los ficheros'
+            "
+            :duplicados="duplicadosAgregados"
+          />
         </li>
         <li>Categorías nuevas: {{ resumenAgregado.categorias_creadas.join(', ') || 'ninguna' }}</li>
         <li>

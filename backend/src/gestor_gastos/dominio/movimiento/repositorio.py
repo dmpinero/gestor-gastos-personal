@@ -26,14 +26,14 @@ class RepositorioMovimientos(Protocol):
 
     def eliminar(self, id_movimiento: int) -> None: ...
 
-    def existe_duplicado(
+    def buscar_duplicado(
         self,
         id_cuenta: int,
         fecha_valor: datetime.date,
         importe: Decimal,
         saldo: Decimal,
         descripcion: str,
-    ) -> bool: ...
+    ) -> Movimiento | None: ...
 
     def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int: ...
 

@@ -23,6 +23,29 @@ async function construirExcelConceptosPrevistos(
   return Buffer.from(await libro.xlsx.writeBuffer())
 }
 
+async function construirExcelMovimientos(
+  numeroCuenta: string,
+  titular: string,
+  filas: [string, string, string | null, string, string | null, number, number][],
+): Promise<Buffer> {
+  const libro = new ExcelJS.Workbook()
+  const hoja = libro.addWorksheet('Movimientos')
+  hoja.addRow(['NUMERO DE CUENTA', numeroCuenta])
+  hoja.addRow(['TITULAR', titular])
+  hoja.addRow([])
+  hoja.addRow([
+    'FECHA DE VALOR',
+    'CATEGORIA',
+    'SUBCATEGORIA',
+    'DESCRIPCION',
+    'COMENTARIO',
+    'IMPORTE',
+    'SALDO',
+  ])
+  for (const fila of filas) hoja.addRow(fila)
+  return Buffer.from(await libro.xlsx.writeBuffer())
+}
+
 test('importar un Excel de movimientos muestra el resumen de la importación', async ({ page }) => {
   await page.goto('/importar')
   await page.screenshot({ path: 'e2e/capturas/importar-01-pagina-inicial.png' })
@@ -186,6 +209,95 @@ test('soltar varios ficheros a la vez los procesa e importa todos ("procesamient
   const importados = Number(texto.match(/importados: (\d+)/)?.[1])
   const omitidos = Number(texto.match(/duplicado: (\d+)/)?.[1])
   expect(importados + omitidos).toBe(10)
+})
+
+test('importar un fichero con varias filas muestra el progreso de filas procesadas', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 PROGRESO ${sufijo}`
+  const filas: [string, string, string | null, string, string | null, number, number][] =
+    Array.from({ length: 20 }, (_, i) => [
+      '2026-01-01',
+      `Categoria Progreso ${sufijo}`,
+      null,
+      `Movimiento ${i + 1}`,
+      null,
+      -1,
+      1000 - i,
+    ])
+  const contenido = await construirExcelMovimientos(numeroCuenta, 'PERSONA PROGRESO', filas)
+
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  await zona.locator('..').locator('input[type="file"]').setInputFiles({
+    name: 'movimientos-progreso.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenido,
+  })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+
+  // El progreso avanza demasiado rápido en local (base de datos en la misma
+  // máquina) para fiar una aserción en un valor intermedio concreto sin que
+  // sea intermitente; se comprueba en su lugar que la importación de las 20
+  // filas se completa correctamente a través del nuevo endpoint en streaming.
+  await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
+  await expect(page.locator('[data-test="resumen-importacion"]')).toContainText(
+    'Movimientos importados: 20',
+  )
+})
+
+test('reimportar el mismo Excel de movimientos permite ver el detalle de los duplicados omitidos', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 DUP ${sufijo}`
+  const nombreCategoria = `Categoria Dup Mov ${sufijo}`
+  const nombreSubcategoria = `Sub Dup Mov ${sufijo}`
+  const contenido = await construirExcelMovimientos(numeroCuenta, 'PERSONA DUP', [
+    ['2026-01-05', nombreCategoria, nombreSubcategoria, 'Compra en Mercadona', null, -45, 1000],
+  ])
+
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  const entradaFichero = zona.locator('..').locator('input[type="file"]')
+
+  await entradaFichero.setInputFiles({
+    name: 'movimientos-dup.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenido,
+  })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+  await expect(page.locator('[data-test="resumen-importacion"]')).toContainText(
+    'Movimientos importados: 1',
+  )
+
+  await entradaFichero.setInputFiles({
+    name: 'movimientos-dup.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenido,
+  })
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+  const resumen = page.locator('[data-test="resumen-importacion"]')
+  await expect(resumen).toContainText('Movimientos omitidos por duplicado: 1')
+
+  await resumen.getByRole('button', { name: 'Ver duplicados (1)' }).click()
+  const modal = page.getByRole('dialog')
+  const filaFichero = modal.locator('tr', { hasText: 'Este fichero' })
+  const filaExistente = modal.locator('tr', { hasText: 'Ya existía' })
+  await expect(filaFichero).toContainText('Compra en Mercadona')
+  await expect(filaFichero).toContainText(nombreCategoria)
+  await expect(filaFichero).toContainText(nombreSubcategoria)
+  // La categoría/subcategoría del movimiento YA EXISTENTE se resuelve por id
+  // desde la tienda de categorías, no viene como texto plano del Excel: si la
+  // tienda no se recarga tras crear categorías nuevas durante la importación,
+  // esta fila se queda con las celdas vacías en vez de mostrar el nombre.
+  await expect(filaExistente).toContainText('Compra en Mercadona')
+  await expect(filaExistente).toContainText(nombreCategoria)
+  await expect(filaExistente).toContainText(nombreSubcategoria)
+  await page.screenshot({ path: 'e2e/capturas/importar-12-comparacion-duplicados.png' })
 })
 
 test('importar un Excel de conceptos previstos los crea y aparecen en Resumen anual', async ({

@@ -76,7 +76,11 @@ const filasParaExportar = computed(() =>
             :filas="filasParaExportar"
           />
         </div>
-        <DialogDescription>Total: {{ formatearImporte(total) }}</DialogDescription>
+        <DialogDescription>
+          Total: {{ formatearImporte(total) }} · {{ movimientos.length }} movimiento{{
+            movimientos.length === 1 ? '' : 's'
+          }}
+        </DialogDescription>
       </DialogHeader>
       <div class="min-h-0 flex-1 overflow-auto">
         <Table>

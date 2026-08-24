@@ -101,4 +101,35 @@ describe('TablaResumenAnual', () => {
     const celdasTotal = wrapper.findAll('tbody tr')[1]?.findAll('td') ?? []
     expect(celdasTotal[1]?.classes()).toContain('text-destructive')
   })
+
+  it('muestra el número de conceptos, en singular si solo hay uno', () => {
+    const wrapper = mount(TablaResumenAnual, {
+      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    })
+
+    expect(wrapper.text()).toContain('1 concepto')
+    expect(wrapper.text()).not.toContain('1 conceptos')
+  })
+
+  it('con varios conceptos, pluraliza el contador', () => {
+    const wrapper = mount(TablaResumenAnual, {
+      props: {
+        titulo: 'Gastos',
+        filas: [crearFila(), { ...crearFila(), concepto_id: 2, nombre: 'Netflix' }],
+        totales,
+        mensajeVacio: 'Vacío',
+      },
+    })
+
+    expect(wrapper.text()).toContain('2 conceptos')
+  })
+
+  it('sin filas, no muestra el contador (solo el mensaje de vacío)', () => {
+    const wrapper = mount(TablaResumenAnual, {
+      props: { titulo: 'Gastos', filas: [], totales, mensajeVacio: 'Nada que mostrar' },
+    })
+
+    expect(wrapper.text()).toContain('Nada que mostrar')
+    expect(wrapper.text()).not.toContain('concepto')
+  })
 })

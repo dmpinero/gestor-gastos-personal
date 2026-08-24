@@ -161,6 +161,11 @@ const {
             :filas="filasDetallesOrdenadas"
           />
         </div>
+        <p v-if="!cargandoDetalles" class="text-muted-foreground text-sm">
+          {{ filasDetallesOrdenadas.length }} registro{{
+            filasDetallesOrdenadas.length === 1 ? '' : 's'
+          }}
+        </p>
       </DialogHeader>
       <p v-if="cargandoDetalles" class="text-muted-foreground text-sm">Cargando…</p>
       <div v-else class="min-h-0 flex-1 overflow-auto">

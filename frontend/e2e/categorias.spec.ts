@@ -31,6 +31,7 @@ test('gestión de categoría y subcategoría', async ({ page }) => {
   await tarjetaCategoriaEditada.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
   await tarjetaCategoriaEditada.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoriaEditada.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+  await expect(tarjetaCategoriaEditada).toContainText('(1 subcategoría)')
   await page.screenshot({ path: 'e2e/capturas/categorias-04-tras-crear-subcategoria.png' })
 
   await tarjetaCategoriaEditada

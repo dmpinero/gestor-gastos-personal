@@ -95,6 +95,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   for (let mes = 1; mes <= 12; mes++) {
     await expect(celdaMes(filaMensual, mes)).toContainText('-50,00 €')
   }
+  await expect(page.locator('section:has(> h3:text-is("Gastos"))')).toContainText('1 concepto')
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-01-previsto.png' })
 
   // Un movimiento real en el mes actual sustituye la previsión de ese mes.
@@ -131,6 +132,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await expect(filaAnual).toBeVisible()
   await expect(celdaMes(filaAnual, 3)).toContainText('-120,00 €')
   await expect(celdaMes(filaAnual, 4)).toContainText('0,00 €')
+  await expect(page.locator('section:has(> h3:text-is("Gastos"))')).toContainText('2 conceptos')
 
   // Editar el concepto mensual: cambia el importe previsto para los meses sin movimiento real.
   await filaMensual.getByRole('button', { name: 'Editar' }).click()
@@ -175,6 +177,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await filaAnual.getByRole('button', { name: 'Eliminar' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
   await expect(filaAnual).toHaveCount(0)
+  await expect(page.locator('section:has(> h3:text-is("Gastos"))')).toContainText('1 concepto')
 
   // Regresión del bug: un concepto con Tipo=Ingreso debe aparecer en "Ingresos", no en "Gastos".
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
@@ -195,6 +198,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
     .filter({ has: page.getByText(nombreCategoria, { exact: true }) })
   await expect(filaIngreso).toBeVisible()
   await expect(celdaMes(filaIngreso, 1)).toContainText('500,00 €')
+  await expect(seccionIngresos).toContainText('1 concepto')
   const seccionGastos = page.locator('section:has(> h3:text-is("Gastos"))')
   await expect(
     seccionGastos

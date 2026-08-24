@@ -313,6 +313,13 @@ test('eliminar una categoría con subcategorías y movimientos asociados los bor
   const dialogo = page.getByRole('alertdialog')
   await expect(dialogo).toContainText('También se eliminarán: 1 subcategoría, 1 movimiento.')
 
+  await dialogo.getByRole('button', { name: 'Ver detalles' }).click()
+  const modalDetalles = page.getByRole('dialog')
+  await expect(modalDetalles).toContainText('Subcategorías que se eliminarán')
+  await expect(modalDetalles).toContainText(nombreSubcategoria)
+  await page.screenshot({ path: 'e2e/capturas/categorias-07-detalle-subcategorias.png' })
+  await modalDetalles.getByRole('button', { name: 'Cerrar' }).click()
+
   await dialogo.getByRole('button', { name: 'Eliminar' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toHaveCount(0)
 })

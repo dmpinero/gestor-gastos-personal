@@ -2,9 +2,12 @@
 import { ChevronRight, Pencil, Search, X } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 
-import type { Categoria, Subcategoria } from '@/api/tipos'
+import { clienteApi } from '@/api/cliente'
+import type { Categoria, Movimiento, Subcategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
+import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaCuentas } from '@/stores/cuentas'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
@@ -25,6 +28,7 @@ import DialogoConfirmarEliminacion, {
 } from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const tienda = useTiendaCategorias()
+const tiendaCuentas = useTiendaCuentas()
 const error = ref<string | null>(null)
 const errorPanel = ref<string | null>(null)
 const subcategoriaNuevaPorCategoria = ref<Record<number, string>>({})
@@ -70,6 +74,7 @@ const todasSeleccionadas = computed(
 
 onMounted(() => {
   tienda.cargar()
+  tiendaCuentas.cargar()
 })
 
 function abrirParaCrear(): void {
@@ -154,6 +159,53 @@ async function dependenciasDeSubcategoria(
     })
   }
   return items
+}
+
+function nombreCuentaPorId(id: number): string {
+  const cuenta = tiendaCuentas.cuentas.find((c) => c.id === id)
+  return cuenta ? (cuenta.alias ?? cuenta.numero_cuenta) : ''
+}
+
+const COLUMNAS_DETALLES_MOVIMIENTOS = [
+  'Fecha',
+  'Cuenta',
+  'Categoría',
+  'Subcategoría',
+  'Descripción',
+  'Importe',
+  'Saldo',
+]
+
+function filasDetalleDeMovimientos(
+  movimientos: Movimiento[],
+  nombreCategoria: string,
+  nombreSubcategoria: string,
+): (string | number)[][] {
+  return movimientos.map((m) => [
+    formatearFecha(m.fecha_valor),
+    nombreCuentaPorId(m.cuenta_id),
+    nombreCategoria,
+    nombreSubcategoria,
+    m.descripcion,
+    formatearImporte(m.importe),
+    formatearImporte(m.saldo),
+  ])
+}
+
+// Se consulta directamente vía clienteApi (no a través del store de
+// movimientos) para no pisar el estado global de `movimientos`, que otras
+// vistas usan para su propio listado.
+async function movimientosDeSubcategoria(idSubcategoria: number): Promise<Movimiento[]> {
+  return clienteApi.obtener<Movimiento[]>(`/movimientos?subcategoria_id=${idSubcategoria}`)
+}
+
+async function filasDetalleDeSubcategoria(
+  idSubcategoria: number,
+  nombreCategoria: string,
+  nombreSubcategoria: string,
+): Promise<(string | number)[][]> {
+  const movimientos = await movimientosDeSubcategoria(idSubcategoria)
+  return filasDetalleDeMovimientos(movimientos, nombreCategoria, nombreSubcategoria)
 }
 
 async function eliminarCategoria(id: number, cascada = false): Promise<void> {
@@ -440,6 +492,11 @@ async function guardarSubcategoria(): Promise<void> {
                       :descripcion="`la subcategoría ${sub.nombre}`"
                       :obtener-dependencias="
                         () => dependenciasDeSubcategoria(item.categoria.id, sub.id)
+                      "
+                      titulo-detalles="Movimientos que se eliminarán"
+                      :columnas-detalles="COLUMNAS_DETALLES_MOVIMIENTOS"
+                      :obtener-filas-detalles="
+                        () => filasDetalleDeSubcategoria(sub.id, item.categoria.nombre, sub.nombre)
                       "
                       @confirmar="
                         (cascada) => eliminarSubcategoria(item.categoria.id, sub.id, cascada)

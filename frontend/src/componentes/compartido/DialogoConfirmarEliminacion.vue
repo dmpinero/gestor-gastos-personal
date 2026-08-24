@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ChevronDown, ChevronUp, ChevronsUpDown } from '@lucide/vue'
+import { compararCeldas } from '@/lib/compararCeldas'
+import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +86,27 @@ async function abrirDetalles(): Promise<void> {
     cargandoDetalles.value = false
   }
 }
+
+// Las columnas de esta tabla varían según quién use el componente (una
+// cuenta, una categoría...), así que se ordena de forma genérica por índice
+// de columna en vez de por nombre de campo, comparando los valores ya
+// formateados con compararCeldas (reconoce fechas e importes es-ES).
+const comparadoresPorColumna: Record<
+  string,
+  (a: (string | number)[], b: (string | number)[]) => number
+> = Object.fromEntries(
+  (props.columnasDetalles ?? []).map((_, indice) => [
+    String(indice),
+    (a: (string | number)[], b: (string | number)[]) =>
+      compararCeldas(a[indice] ?? '', b[indice] ?? ''),
+  ]),
+)
+const {
+  campo: campoDetalles,
+  direccion: direccionDetalles,
+  ordenarPor: ordenarDetallesPor,
+  filasOrdenadas: filasDetallesOrdenadas,
+} = useOrdenacionTabla(filasDetalles, comparadoresPorColumna)
 </script>
 
 <template>
@@ -134,7 +158,7 @@ async function abrirDetalles(): Promise<void> {
             :nombre-fichero="tituloDetalles ?? 'Detalles'"
             :titulo="tituloDetalles ?? 'Detalles'"
             :columnas="columnasDetalles ?? []"
-            :filas="filasDetalles"
+            :filas="filasDetallesOrdenadas"
           />
         </div>
       </DialogHeader>
@@ -143,13 +167,29 @@ async function abrirDetalles(): Promise<void> {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead v-for="columna in columnasDetalles" :key="columna">{{
-                columna
-              }}</TableHead>
+              <TableHead v-for="(columna, indice) in columnasDetalles" :key="columna">
+                <button
+                  type="button"
+                  class="hover:text-foreground flex w-full min-w-0 items-center gap-1.5"
+                  @click="ordenarDetallesPor(String(indice))"
+                >
+                  <span class="min-w-0 truncate">{{ columna }}</span>
+                  <component
+                    :is="
+                      campoDetalles === String(indice)
+                        ? direccionDetalles === 'asc'
+                          ? ChevronUp
+                          : ChevronDown
+                        : ChevronsUpDown
+                    "
+                    class="text-muted-foreground size-3.5 shrink-0"
+                  />
+                </button>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="(fila, indice) in filasDetalles" :key="indice">
+            <TableRow v-for="(fila, indice) in filasDetallesOrdenadas" :key="indice">
               <TableCell v-for="(valor, indiceColumna) in fila" :key="indiceColumna">{{
                 valor
               }}</TableCell>

@@ -1,26 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TotalCategoria } from '@/api/tipos'
-import { formatearFecha, formatearImporte } from '@/lib/formato'
+import { formatearImporte } from '@/lib/formato'
 import { cn } from '@/lib/utils'
-import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
-import { Button } from '@/componentes/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/componentes/ui/dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/componentes/ui/table'
+import ModalDetalleMovimientos from './ModalDetalleMovimientos.vue'
 
 export interface MovimientoDeCategoria {
   fecha: string
@@ -68,18 +51,6 @@ function tituloDe(item: TotalCategoria): string {
   if (restantes > 0) lineas.push(`… y ${restantes} más`)
   return lineas.join('\n')
 }
-
-const COLUMNAS_DETALLE = ['Fecha', 'Descripción', 'Categoría', 'Subcategoría', 'Importe']
-
-function filasDetalleDe(item: TotalCategoria): (string | number)[][] {
-  return movimientosDe(item).map((m) => [
-    formatearFecha(m.fecha),
-    m.descripcion,
-    item.nombre,
-    m.subcategoria,
-    formatearImporte(m.importe),
-  ])
-}
 </script>
 
 <template>
@@ -109,49 +80,12 @@ function filasDetalleDe(item: TotalCategoria): (string | number)[][] {
           "
           >{{ formatearImporte(item.total) }}</span
         >
-        <Dialog v-if="movimientosDe(item).length > 0">
-          <DialogTrigger as-child>
-            <Button variant="link" class="h-auto shrink-0 p-0 text-xs">Detalles</Button>
-          </DialogTrigger>
-          <DialogContent class="max-w-5xl max-h-[85vh] flex flex-col">
-            <DialogHeader class="shrink-0">
-              <div class="flex items-center justify-between gap-4 pr-6">
-                <DialogTitle>{{ item.nombre }}</DialogTitle>
-                <BotonesExportarTabla
-                  :nombre-fichero="item.nombre"
-                  :titulo="item.nombre"
-                  :columnas="COLUMNAS_DETALLE"
-                  :filas="filasDetalleDe(item)"
-                />
-              </div>
-              <DialogDescription>Total: {{ formatearImporte(item.total) }}</DialogDescription>
-            </DialogHeader>
-            <div class="min-h-0 flex-1 overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Subcategoría</TableHead>
-                    <TableHead class="text-right">Importe</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow v-for="(movimiento, indice) in movimientosDe(item)" :key="indice">
-                    <TableCell>{{ formatearFecha(movimiento.fecha) }}</TableCell>
-                    <TableCell>{{ movimiento.descripcion }}</TableCell>
-                    <TableCell>{{ item.nombre }}</TableCell>
-                    <TableCell>{{ movimiento.subcategoria }}</TableCell>
-                    <TableCell class="text-right tabular-nums">{{
-                      formatearImporte(movimiento.importe)
-                    }}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <ModalDetalleMovimientos
+          v-if="movimientosDe(item).length > 0"
+          :nombre-categoria="item.nombre"
+          :total="item.total"
+          :movimientos="movimientosDe(item)"
+        />
       </li>
     </ul>
   </div>

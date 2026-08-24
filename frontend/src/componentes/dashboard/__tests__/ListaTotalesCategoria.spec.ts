@@ -36,6 +36,24 @@ describe('ListaTotalesCategoria', () => {
     expect(wrapper.text()).toContain(formatearImporte('-30.00'))
   })
 
+  it('cada fila lleva un title con el nombre completo e importe, visible al pasar el ratón', () => {
+    const wrapper = mount(ListaTotalesCategoria, {
+      props: {
+        titulo: 'Gastos por categoría',
+        items: [
+          { categoria_id: 1, nombre: 'Alimentación y bebidas no alcohólicas', total: '-30.00' },
+        ],
+        acento: 'gasto',
+        mensajeVacio: 'No hay gastos registrados todavía.',
+      },
+    })
+
+    const fila = wrapper.get('li')
+    expect(fila.attributes('title')).toBe(
+      `Alimentación y bebidas no alcohólicas: ${formatearImporte('-30.00')}`,
+    )
+  })
+
   it('la barra de la categoría con mayor importe ocupa el 100% del ancho', () => {
     const wrapper = mount(ListaTotalesCategoria, {
       props: {

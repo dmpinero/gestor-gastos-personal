@@ -15,7 +15,7 @@ import {
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import type { DatosMovimiento, Movimiento } from '@/api/tipos'
+import type { DatosMovimiento, Movimiento, TotalCategoria } from '@/api/tipos'
 import { aTextoOULlo } from '@/api/utilidades'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
@@ -28,8 +28,10 @@ import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
+import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
+import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
@@ -255,6 +257,32 @@ function datosGraficoDe(movimientos: Movimiento[]): { periodo: string; total: nu
 
 const datosGraficoGastos = computed(() => datosGraficoDe(movimientosGastados.value))
 const datosGraficoIngresos = computed(() => datosGraficoDe(movimientosIngresados.value))
+
+const MAXIMO_TOP_CATEGORIAS = 10
+
+// Top 10 categorías con mayor importe acumulado (sobre las mismas filas ya
+// filtradas que el resto de la zona de Gráficos), para el desglose que
+// acompaña al comparativo de gastos vs ingresos.
+function topCategoriasDe(movimientos: Movimiento[]): TotalCategoria[] {
+  const totalesPorCategoria = new Map<number, number>()
+  for (const m of movimientos) {
+    totalesPorCategoria.set(
+      m.categoria_id,
+      (totalesPorCategoria.get(m.categoria_id) ?? 0) + Number(m.importe),
+    )
+  }
+  return [...totalesPorCategoria.entries()]
+    .map(([idCategoria, total]) => ({
+      categoria_id: idCategoria,
+      nombre: nombreCategoria(idCategoria),
+      total: String(total),
+    }))
+    .sort((a, b) => Math.abs(Number(b.total)) - Math.abs(Number(a.total)))
+    .slice(0, MAXIMO_TOP_CATEGORIAS)
+}
+
+const topCategoriasGastos = computed(() => topCategoriasDe(movimientosGastados.value))
+const topCategoriasIngresos = computed(() => topCategoriasDe(movimientosIngresados.value))
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
@@ -713,6 +741,35 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             </div>
             <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
             <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
+          </div>
+
+          <div
+            v-if="movimientosGastados.length > 0 && movimientosIngresados.length > 0"
+            class="lg:col-span-2"
+          >
+            <h3 class="text-muted-foreground text-sm font-medium">
+              Evolución de gastos vs ingresos
+            </h3>
+            <GraficoComparativoEvolucion
+              :items-gastos="datosGraficoGastos"
+              :items-ingresos="datosGraficoIngresos"
+              class="mt-3"
+            />
+
+            <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <ListaTotalesCategoria
+                titulo="Top 10 gastos por categoría"
+                :items="topCategoriasGastos"
+                acento="gasto"
+                mensaje-vacio="No hay gastos en el periodo mostrado."
+              />
+              <ListaTotalesCategoria
+                titulo="Top 10 ingresos por categoría"
+                :items="topCategoriasIngresos"
+                acento="ingreso"
+                mensaje-vacio="No hay ingresos en el periodo mostrado."
+              />
+            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>

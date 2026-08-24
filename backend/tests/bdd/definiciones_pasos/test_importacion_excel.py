@@ -1,4 +1,6 @@
+import json
 from pathlib import Path
+from typing import Any
 
 from fastapi.testclient import TestClient
 from pytest_bdd import given, scenarios, then, when
@@ -6,6 +8,14 @@ from pytest_bdd import given, scenarios, then, when
 scenarios("importacion-excel.feature")
 
 RUTA_FIXTURE = Path(__file__).parent.parent.parent / "fixtures" / "movimientos_ejemplo.xlsx"
+
+
+def _resumen_final(respuesta) -> dict[str, Any]:
+    """La importación devuelve NDJSON: una línea de progreso por fila y, al
+    final, una línea {"tipo": "resumen", ...} con el resultado completo."""
+    lineas = [linea for linea in respuesta.text.strip().split("\n") if linea]
+    eventos = [json.loads(linea) for linea in lineas]
+    return next(evento for evento in reversed(eventos) if evento["tipo"] == "resumen")
 
 
 def _contenido_fichero_valido() -> tuple[str, bytes, str]:
@@ -42,13 +52,15 @@ def importar(cliente: TestClient, fichero: tuple[str, bytes, str]):
 @then("el resumen indica que se importaron 5 movimientos")
 def resumen_importados(respuesta) -> None:
     assert respuesta.status_code == 200
-    assert respuesta.json()["movimientos_importados"] == 5
+    assert _resumen_final(respuesta)["movimientos_importados"] == 5
 
 
 @then("el resumen indica que se omitieron 5 movimientos por duplicado")
 def resumen_omitidos(respuesta) -> None:
     assert respuesta.status_code == 200
-    assert respuesta.json()["movimientos_omitidos_por_duplicado"] == 5
+    resumen = _resumen_final(respuesta)
+    assert resumen["movimientos_omitidos_por_duplicado"] == 5
+    assert len(resumen["duplicados"]) == 5
 
 
 @then("se ha creado la cuenta del fichero")

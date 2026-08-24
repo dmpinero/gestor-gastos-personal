@@ -1,9 +1,17 @@
+from collections.abc import Iterator
+
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.categoria.repositorio import RepositorioCategorias
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.cuenta.repositorio import RepositorioCuentas
 from gestor_gastos.dominio.importacion.lector_excel import LectorExcel
-from gestor_gastos.dominio.importacion.valores import FilaMovimientoExcel, ResumenImportacion
+from gestor_gastos.dominio.importacion.valores import (
+    DatosExcelLeidos,
+    DuplicadoDetectado,
+    EventoProgreso,
+    FilaMovimientoExcel,
+    ResumenImportacion,
+)
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
 
@@ -27,16 +35,27 @@ class ImportarMovimientosExcel:
         self._movimientos = repositorio_movimientos
         self._lector = lector
 
-    def ejecutar(self, contenido: bytes, nombre_fichero: str) -> ResumenImportacion:
-        datos = self._lector.leer(contenido, nombre_fichero)
+    def leer(self, contenido: bytes, nombre_fichero: str) -> DatosExcelLeidos:
+        """Solo parsea el fichero; no toca la base de datos.
 
+        Se llama por separado de `ejecutar` para que un fichero mal formado
+        (extensión no soportada, cabecera no reconocida, sin filas) se
+        rechace de inmediato con un error, antes de empezar a informar del
+        progreso del procesamiento.
+        """
+        return self._lector.leer(contenido, nombre_fichero)
+
+    def ejecutar(self, datos: DatosExcelLeidos) -> Iterator[EventoProgreso | ResumenImportacion]:
+        """Generador: emite un EventoProgreso tras procesar cada fila y, al
+        terminar, el ResumenImportacion final (siempre el último elemento)."""
         cuenta = self._obtener_o_crear_cuenta(datos.cabecera.numero_cuenta, datos.cabecera.titular)
 
         resumen = ResumenImportacion(cuenta_id=cuenta.id)
         cache_categorias: dict[str, Categoria] = {}
         cache_subcategorias: dict[tuple[int, str], Subcategoria] = {}
+        total = len(datos.filas)
 
-        for fila in datos.filas:
+        for indice, fila in enumerate(datos.filas, start=1):
             categoria = self._obtener_o_crear_categoria(fila.categoria, cache_categorias, resumen)
             subcategoria = None
             if fila.subcategoria:
@@ -44,17 +63,24 @@ class ImportarMovimientosExcel:
                     categoria.id, fila.subcategoria, cache_subcategorias, resumen
                 )
 
-            if self._movimientos.existe_duplicado(
+            duplicado = self._movimientos.buscar_duplicado(
                 cuenta.id, fila.fecha_valor, fila.importe, fila.saldo, fila.descripcion
-            ):
+            )
+            if duplicado is not None:
                 resumen.movimientos_omitidos_por_duplicado += 1
-                continue
+                resumen.duplicados.append(
+                    DuplicadoDetectado(fila_excel=fila, movimiento_existente=duplicado)
+                )
+            else:
+                nuevo_movimiento = self._construir_movimiento(
+                    cuenta.id, categoria, subcategoria, fila
+                )
+                self._movimientos.crear(nuevo_movimiento)
+                resumen.movimientos_importados += 1
 
-            nuevo_movimiento = self._construir_movimiento(cuenta.id, categoria, subcategoria, fila)
-            self._movimientos.crear(nuevo_movimiento)
-            resumen.movimientos_importados += 1
+            yield EventoProgreso(procesadas=indice, total=total)
 
-        return resumen
+        yield resumen
 
     def _obtener_o_crear_cuenta(self, numero_cuenta: str, titular: str | None) -> CuentaBancaria:
         cuenta = self._cuentas.obtener_por_numero_cuenta(numero_cuenta)

@@ -168,21 +168,25 @@ class RepositorioMovimientosFalso:
     def eliminar(self, id_movimiento: int) -> None:
         self._movimientos.pop(id_movimiento, None)
 
-    def existe_duplicado(
+    def buscar_duplicado(
         self,
         id_cuenta: int,
         fecha_valor: datetime.date,
         importe: Decimal,
         saldo: Decimal,
         descripcion: str,
-    ) -> bool:
-        return any(
-            m.cuenta_id == id_cuenta
-            and m.fecha_valor == fecha_valor
-            and m.importe == importe
-            and m.saldo == saldo
-            and m.descripcion == descripcion
-            for m in self._movimientos.values()
+    ) -> Movimiento | None:
+        return next(
+            (
+                m
+                for m in self._movimientos.values()
+                if m.cuenta_id == id_cuenta
+                and m.fecha_valor == fecha_valor
+                and m.importe == importe
+                and m.saldo == saldo
+                and m.descripcion == descripcion
+            ),
+            None,
         )
 
     def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int:

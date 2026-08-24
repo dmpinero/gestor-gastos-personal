@@ -430,8 +430,8 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
   await expect(tarjetaIngresado).toContainText('1000,00 €')
 
-  await expect(page.getByText('Evolución de gastos')).toBeVisible()
-  await expect(page.getByText('Evolución de ingresos')).toBeVisible()
+  await expect(page.getByText('Evolución de gastos', { exact: true })).toBeVisible()
+  await expect(page.getByText('Evolución de ingresos', { exact: true })).toBeVisible()
 })
 
 test('el gráfico de evolución se puede ver como distribución circular', async ({ page }) => {
@@ -474,6 +474,63 @@ test('el gráfico de evolución se puede ver como distribución circular', async
   await page.getByRole('button', { name: 'Ver como circular' }).first().click()
   await expect(page.getByText('75%')).toBeVisible()
   await expect(page.getByText('25%')).toBeVisible()
+})
+
+test('el gráfico comparativo de gastos vs ingresos muestra la evolución de ambos juntos', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-VS ${sufijo}`
+  const nombreCategoria = `Categoria MOV-VS ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  // Con un único gasto y ningún ingreso, la comparativa no debe aparecer
+  // (no hay nada que comparar).
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  let panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-05')
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panel.getByPlaceholder('Descripción').fill('Solo gasto')
+  await panel.getByPlaceholder('Importe').fill('-30.00')
+  await panel.getByPlaceholder('Saldo').fill('970.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: 'Solo gasto' })).toBeVisible()
+  await expect(page.getByText('Evolución de gastos vs ingresos')).toBeHidden()
+
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-10')
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panel.getByPlaceholder('Descripción').fill('Con ingreso')
+  await panel.getByPlaceholder('Importe').fill('500.00')
+  await panel.getByPlaceholder('Saldo').fill('970.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: 'Con ingreso' })).toBeVisible()
+
+  const comparativa = page.getByText('Evolución de gastos vs ingresos')
+  await expect(comparativa).toBeVisible()
+  const zonaComparativa = comparativa.locator('..')
+
+  await zonaComparativa.getByRole('button', { name: 'Ver como circular' }).click()
+  const listaCircular = zonaComparativa.locator('ul')
+  await expect(listaCircular.getByText('Gastos', { exact: true })).toBeVisible()
+  await expect(listaCircular.getByText('Ingresos', { exact: true })).toBeVisible()
 })
 
 test('las zonas de gráficos y de resultados se pueden contraer y expandir de forma independiente', async ({

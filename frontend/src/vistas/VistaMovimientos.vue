@@ -28,6 +28,7 @@ import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
+import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import { Button } from '@/componentes/ui/button'
@@ -713,6 +714,20 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             </div>
             <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
             <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
+          </div>
+
+          <div
+            v-if="movimientosGastados.length > 0 && movimientosIngresados.length > 0"
+            class="lg:col-span-2"
+          >
+            <h3 class="text-muted-foreground text-sm font-medium">
+              Evolución de gastos vs ingresos
+            </h3>
+            <GraficoComparativoEvolucion
+              :items-gastos="datosGraficoGastos"
+              :items-ingresos="datosGraficoIngresos"
+              class="mt-3"
+            />
           </div>
         </CollapsibleContent>
       </Collapsible>

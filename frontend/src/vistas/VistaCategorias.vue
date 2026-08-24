@@ -208,6 +208,22 @@ async function filasDetalleDeSubcategoria(
   return filasDetalleDeMovimientos(movimientos, nombreCategoria, nombreSubcategoria)
 }
 
+const COLUMNAS_DETALLES_SUBCATEGORIAS = ['Subcategoría', 'Movimientos']
+
+// A diferencia del detalle de una cuenta o una subcategoría (que listan sus
+// movimientos), aquí lo que interesa ver es QUÉ subcategorías se van a
+// eliminar junto con la categoría, no todos sus movimientos uno a uno.
+async function filasDetalleDeCategoria(idCategoria: number): Promise<(string | number)[][]> {
+  const categoria = tienda.categorias.find((c) => c.categoria.id === idCategoria)
+  const subcategorias = categoria?.subcategorias ?? []
+  return Promise.all(
+    subcategorias.map(async (sub) => {
+      const dependencias = await tienda.obtenerDependenciasSubcategoria(idCategoria, sub.id)
+      return [sub.nombre, dependencias.movimientos]
+    }),
+  )
+}
+
 async function eliminarCategoria(id: number, cascada = false): Promise<void> {
   error.value = null
   try {
@@ -476,6 +492,9 @@ async function guardarSubcategoria(): Promise<void> {
                 :descripcion="`la categoría ${item.categoria.nombre}`"
                 texto-boton="Eliminar categoría"
                 :obtener-dependencias="() => dependenciasDeCategoria(item.categoria.id)"
+                titulo-detalles="Subcategorías que se eliminarán"
+                :columnas-detalles="COLUMNAS_DETALLES_SUBCATEGORIAS"
+                :obtener-filas-detalles="() => filasDetalleDeCategoria(item.categoria.id)"
                 @confirmar="(cascada) => eliminarCategoria(item.categoria.id, cascada)"
               />
             </div>

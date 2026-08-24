@@ -39,6 +39,16 @@ function celdaMes(fila: Locator, mesNumero: number): Locator {
   return fila.locator('td').nth(mesNumero)
 }
 
+// El contador de conceptos de una sección (Gastos/Ingresos) es un total del
+// año en curso, no algo aislado por test: en CI la base de datos se comparte
+// entre ejecuciones/tests, así que puede haber otros conceptos previstos ya
+// creados. Por eso se comprueba el INCREMENTO respecto a un valor leído antes
+// de actuar, no un valor absoluto como "1 concepto".
+async function contarConceptos(seccion: Locator): Promise<number> {
+  const texto = (await seccion.textContent()) ?? ''
+  return Number(texto.match(/(\d+) concepto/)?.[1] ?? 0)
+}
+
 test('crear, editar y eliminar conceptos previstos, combinando importes reales y previstos', async ({
   page,
 }) => {
@@ -76,6 +86,8 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   // signo lo aplica el formulario según el Tipo elegido (regresión del bug
   // donde un importe positivo terminaba siempre en Ingresos).
   await page.goto('/resumen-anual')
+  const seccionGastos = page.locator('section:has(> h3:text-is("Gastos"))')
+  const conceptosGastosIniciales = await contarConceptos(seccionGastos)
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
   await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
@@ -95,7 +107,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   for (let mes = 1; mes <= 12; mes++) {
     await expect(celdaMes(filaMensual, mes)).toContainText('-50,00 €')
   }
-  await expect(page.locator('section:has(> h3:text-is("Gastos"))')).toContainText('1 concepto')
+  await expect(seccionGastos).toContainText(`${conceptosGastosIniciales + 1} concepto`)
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-01-previsto.png' })
 
   // Un movimiento real en el mes actual sustituye la previsión de ese mes.
@@ -132,7 +144,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await expect(filaAnual).toBeVisible()
   await expect(celdaMes(filaAnual, 3)).toContainText('-120,00 €')
   await expect(celdaMes(filaAnual, 4)).toContainText('0,00 €')
-  await expect(page.locator('section:has(> h3:text-is("Gastos"))')).toContainText('2 conceptos')
+  await expect(seccionGastos).toContainText(`${conceptosGastosIniciales + 2} concepto`)
 
   // Editar el concepto mensual: cambia el importe previsto para los meses sin movimiento real.
   await filaMensual.getByRole('button', { name: 'Editar' }).click()
@@ -177,9 +189,11 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await filaAnual.getByRole('button', { name: 'Eliminar' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
   await expect(filaAnual).toHaveCount(0)
-  await expect(page.locator('section:has(> h3:text-is("Gastos"))')).toContainText('1 concepto')
+  await expect(seccionGastos).toContainText(`${conceptosGastosIniciales + 1} concepto`)
 
   // Regresión del bug: un concepto con Tipo=Ingreso debe aparecer en "Ingresos", no en "Gastos".
+  const seccionIngresos = page.locator('section:has(> h3:text-is("Ingresos"))')
+  const conceptosIngresosIniciales = await contarConceptos(seccionIngresos)
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
   await panelConcepto.getByLabel('Tipo', { exact: true }).click()
@@ -192,14 +206,12 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   // también matchearía el contenedor exterior); y la fila se localiza por el
   // texto EXACTO del nombre (no "hasText", que en modo insensible a mayúsculas
   // también encontraría "Subcategoría..." como substring de "Categoría...").
-  const seccionIngresos = page.locator('section:has(> h3:text-is("Ingresos"))')
   const filaIngreso = seccionIngresos
     .locator('tbody tr')
     .filter({ has: page.getByText(nombreCategoria, { exact: true }) })
   await expect(filaIngreso).toBeVisible()
   await expect(celdaMes(filaIngreso, 1)).toContainText('500,00 €')
-  await expect(seccionIngresos).toContainText('1 concepto')
-  const seccionGastos = page.locator('section:has(> h3:text-is("Gastos"))')
+  await expect(seccionIngresos).toContainText(`${conceptosIngresosIniciales + 1} concepto`)
   await expect(
     seccionGastos
       .locator('tbody tr')

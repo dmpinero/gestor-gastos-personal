@@ -1,2 +1,5 @@
 allowBuilds:
+  # core-js: transitiva de jspdf/jspdf-autotable; su script de postinstalación
+  # solo imprime un aviso de patrocinio, no hace falta para que funcione.
+  core-js: false
   vue-demi: true

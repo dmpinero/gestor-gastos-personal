@@ -427,8 +427,24 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   const tarjetaGastado = page.locator('[data-slot="card"]', { hasText: 'Total gastado' })
   await expect(tarjetaGastado).toContainText('-30,00 €')
 
+  await tarjetaGastado.getByRole('button', { name: 'Detalles' }).click()
+  const modalGastado = page.getByRole('dialog')
+  await expect(modalGastado).toContainText('Total gastado')
+  await expect(modalGastado).toContainText('1 movimiento')
+  await expect(modalGastado).toContainText(descripcionGasto)
+  await expect(modalGastado).not.toContainText(descripcionIngreso)
+  await page.screenshot({ path: 'e2e/capturas/movimientos-10-detalle-total-gastado.png' })
+  await modalGastado.getByRole('button', { name: 'Cerrar' }).click()
+
   const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
   await expect(tarjetaIngresado).toContainText('1000,00 €')
+
+  await tarjetaIngresado.getByRole('button', { name: 'Detalles' }).click()
+  const modalIngresado = page.getByRole('dialog')
+  await expect(modalIngresado).toContainText('Total ingresado')
+  await expect(modalIngresado).toContainText(descripcionIngreso)
+  await expect(modalIngresado).not.toContainText(descripcionGasto)
+  await modalIngresado.getByRole('button', { name: 'Cerrar' }).click()
 
   // Saldo = -30,00 + 1000,00 = 970,00 €, positivo → verde.
   const tarjetaSaldo = page.locator('[data-slot="card"]', { hasText: 'Saldo' })

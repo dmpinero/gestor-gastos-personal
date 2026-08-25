@@ -38,6 +38,7 @@ import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
@@ -762,10 +763,14 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           <div v-if="movimientosGastados.length > 0">
             <div class="grid grid-cols-2 gap-4">
               <Card>
-                <CardHeader>
+                <CardHeader class="flex flex-row items-center justify-between">
                   <CardTitle class="text-muted-foreground text-sm font-medium"
                     >Total gastado</CardTitle
                   >
+                  <ModalListaMovimientos
+                    titulo="Total gastado"
+                    :movimientos="movimientosGastados"
+                  />
                 </CardHeader>
                 <CardContent class="text-destructive text-2xl font-semibold">
                   {{ formatearImporte(totalGastado) }}
@@ -789,10 +794,14 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           <div v-if="movimientosIngresados.length > 0">
             <div class="grid grid-cols-2 gap-4">
               <Card>
-                <CardHeader>
+                <CardHeader class="flex flex-row items-center justify-between">
                   <CardTitle class="text-muted-foreground text-sm font-medium"
                     >Total ingresado</CardTitle
                   >
+                  <ModalListaMovimientos
+                    titulo="Total ingresado"
+                    :movimientos="movimientosIngresados"
+                  />
                 </CardHeader>
                 <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
                   {{ formatearImporte(totalIngresado) }}

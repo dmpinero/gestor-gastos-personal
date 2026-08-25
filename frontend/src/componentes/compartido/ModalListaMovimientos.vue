@@ -1,0 +1,209 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { CalendarDays, Euro, FileText, Landmark, Tag, Tags, Wallet } from '@lucide/vue'
+import type { Movimiento } from '@/api/tipos'
+import { formatearFecha, formatearImporte } from '@/lib/formato'
+import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaCuentas } from '@/stores/cuentas'
+import BotonesExportarTabla from './BotonesExportarTabla.vue'
+import CabeceraOrdenable from './CabeceraOrdenable.vue'
+import { Button } from '@/componentes/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/componentes/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/componentes/ui/table'
+
+const props = defineProps<{
+  titulo: string
+  movimientos: Movimiento[]
+}>()
+
+const tiendaCuentas = useTiendaCuentas()
+const tiendaCategorias = useTiendaCategorias()
+
+function nombreCuenta(id: number): string {
+  const cuenta = tiendaCuentas.cuentas.find((c) => c.id === id)
+  return cuenta ? (cuenta.alias ?? cuenta.numero_cuenta) : ''
+}
+
+function nombreCategoria(id: number): string {
+  return tiendaCategorias.categorias.find((c) => c.categoria.id === id)?.categoria.nombre ?? ''
+}
+
+function nombreSubcategoria(id: number | null): string {
+  if (id === null) return ''
+  for (const c of tiendaCategorias.categorias) {
+    const sub = c.subcategorias.find((s) => s.id === id)
+    if (sub) return sub.nombre
+  }
+  return ''
+}
+
+const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(
+  computed(() => props.movimientos),
+  {
+    cuenta_id: (a: Movimiento, b: Movimiento) =>
+      nombreCuenta(a.cuenta_id).localeCompare(nombreCuenta(b.cuenta_id)),
+    fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
+    descripcion: (a: Movimiento, b: Movimiento) => a.descripcion.localeCompare(b.descripcion),
+    categoria_id: (a: Movimiento, b: Movimiento) =>
+      nombreCategoria(a.categoria_id).localeCompare(nombreCategoria(b.categoria_id)),
+    subcategoria_id: (a: Movimiento, b: Movimiento) =>
+      nombreSubcategoria(a.subcategoria_id).localeCompare(nombreSubcategoria(b.subcategoria_id)),
+    importe: (a: Movimiento, b: Movimiento) => Number(a.importe) - Number(b.importe),
+    saldo: (a: Movimiento, b: Movimiento) => Number(a.saldo) - Number(b.saldo),
+  },
+)
+
+const COLUMNAS_DETALLE = [
+  'Cuenta',
+  'Fecha',
+  'Descripción',
+  'Categoría',
+  'Subcategoría',
+  'Importe',
+  'Saldo',
+]
+
+const filasParaExportar = computed(() =>
+  filasOrdenadas.value.map((m) => [
+    nombreCuenta(m.cuenta_id),
+    formatearFecha(m.fecha_valor),
+    m.descripcion,
+    nombreCategoria(m.categoria_id),
+    nombreSubcategoria(m.subcategoria_id),
+    formatearImporte(m.importe),
+    formatearImporte(m.saldo),
+  ]),
+)
+</script>
+
+<template>
+  <Dialog>
+    <DialogTrigger as-child>
+      <Button variant="link" class="h-auto shrink-0 p-0 text-xs">Detalles</Button>
+    </DialogTrigger>
+    <DialogContent class="flex max-h-[85vh] max-w-5xl flex-col">
+      <DialogHeader class="shrink-0">
+        <div class="flex items-center justify-between gap-4 pr-6">
+          <DialogTitle>{{ titulo }}</DialogTitle>
+          <BotonesExportarTabla
+            :nombre-fichero="titulo"
+            :titulo="titulo"
+            :columnas="COLUMNAS_DETALLE"
+            :filas="filasParaExportar"
+          />
+        </div>
+        <DialogDescription>
+          {{ movimientos.length }} movimiento{{ movimientos.length === 1 ? '' : 's' }}
+        </DialogDescription>
+      </DialogHeader>
+      <div class="min-h-0 flex-1 overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <CabeceraOrdenable
+                  :icono="Landmark"
+                  color-icono="text-indigo-500"
+                  :activo="campo === 'cuenta_id'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('cuenta_id')"
+                  >Cuenta</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead>
+                <CabeceraOrdenable
+                  :icono="CalendarDays"
+                  color-icono="text-blue-500"
+                  :activo="campo === 'fecha_valor'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('fecha_valor')"
+                  >Fecha</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead>
+                <CabeceraOrdenable
+                  :icono="FileText"
+                  color-icono="text-slate-500"
+                  :activo="campo === 'descripcion'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('descripcion')"
+                  >Descripción</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead>
+                <CabeceraOrdenable
+                  :icono="Tag"
+                  color-icono="text-violet-500"
+                  :activo="campo === 'categoria_id'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('categoria_id')"
+                  >Categoría</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead>
+                <CabeceraOrdenable
+                  :icono="Tags"
+                  color-icono="text-rose-500"
+                  :activo="campo === 'subcategoria_id'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('subcategoria_id')"
+                  >Subcategoría</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead class="text-right">
+                <CabeceraOrdenable
+                  :icono="Euro"
+                  color-icono="text-amber-500"
+                  :activo="campo === 'importe'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('importe')"
+                  >Importe</CabeceraOrdenable
+                >
+              </TableHead>
+              <TableHead class="text-right">
+                <CabeceraOrdenable
+                  :icono="Wallet"
+                  color-icono="text-teal-500"
+                  :activo="campo === 'saldo'"
+                  :direccion="direccion"
+                  @ordenar="ordenarPor('saldo')"
+                  >Saldo</CabeceraOrdenable
+                >
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="movimiento in filasOrdenadas" :key="movimiento.id">
+              <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
+              <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
+              <TableCell>{{ movimiento.descripcion }}</TableCell>
+              <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
+              <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
+              <TableCell class="text-right tabular-nums">{{
+                formatearImporte(movimiento.importe)
+              }}</TableCell>
+              <TableCell class="text-right tabular-nums">{{
+                formatearImporte(movimiento.saldo)
+              }}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </DialogContent>
+  </Dialog>
+</template>

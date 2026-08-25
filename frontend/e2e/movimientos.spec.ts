@@ -654,6 +654,12 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await expect(barrasComparativa.getByText('30,00 €')).toBeVisible()
   await expect(barrasComparativa.getByText('500,00 €')).toBeVisible()
 
+  // A la derecha, una etiqueta con el saldo del mes (500 - 30 = 470, verde).
+  const filaSaldoComparativa = barrasComparativa.locator('..').locator('ul li').first()
+  await expect(filaSaldoComparativa).toContainText('470,00 €')
+  await expect(filaSaldoComparativa.locator('span.tabular-nums')).toHaveClass(/text-success/)
+  await page.screenshot({ path: 'e2e/capturas/movimientos-11-comparativa-saldo-mes.png' })
+
   // Debajo, el top 10 por categoría de cada serie.
   await expect(page.getByText('Top 10 gastos por categoría')).toBeVisible()
   await expect(page.getByText('Top 10 ingresos por categoría')).toBeVisible()

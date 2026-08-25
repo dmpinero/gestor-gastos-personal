@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { AreaChart, BarChart3, LineChart, PieChart } from '@lucide/vue'
 import { computed, ref } from 'vue'
-import { formatearImporte, formatearPeriodo } from '@/lib/formato'
+import { claseColorImporte, formatearImporte, formatearPeriodo } from '@/lib/formato'
 import type { TotalPeriodo } from './GraficoEvolucion.vue'
 
 const props = defineProps<{
@@ -24,11 +24,13 @@ const filas = computed(() => {
   ])
   return [...periodos]
     .sort((a, b) => a.localeCompare(b))
-    .map((periodo) => ({
-      periodo,
-      gasto: totalPara(props.itemsGastos, periodo),
-      ingreso: totalPara(props.itemsIngresos, periodo),
-    }))
+    .map((periodo) => {
+      const gasto = totalPara(props.itemsGastos, periodo)
+      const ingreso = totalPara(props.itemsIngresos, periodo)
+      // gasto llega como magnitud positiva (Math.abs ya aplicado por quien
+      // llama), no como importe negativo: el saldo es ingreso menos gasto.
+      return { periodo, gasto, ingreso, saldo: ingreso - gasto }
+    })
 })
 
 const maximo = computed(() =>
@@ -84,7 +86,7 @@ const descripcionAccesible = computed(() =>
   filas.value
     .map(
       (fila) =>
-        `${formatearPeriodo(fila.periodo)}: gastos ${formatearImporte(fila.gasto)}, ingresos ${formatearImporte(fila.ingreso)}`,
+        `${formatearPeriodo(fila.periodo)}: gastos ${formatearImporte(fila.gasto)}, ingresos ${formatearImporte(fila.ingreso)}, saldo ${formatearImporte(fila.saldo)}`,
     )
     .join(', '),
 )
@@ -207,47 +209,61 @@ const sectoresComparativos = computed(() => {
       </div>
     </div>
 
-    <div
-      v-if="modo === 'barras'"
-      class="flex items-end gap-4 overflow-x-auto pb-1"
-      tabindex="0"
-      role="group"
-      :aria-label="`Evolución comparada: ${descripcionAccesible}`"
-    >
+    <div v-if="modo === 'barras'" class="flex flex-wrap items-start gap-4">
       <div
-        v-for="fila in filas"
-        :key="fila.periodo"
-        class="flex min-w-16 shrink-0 flex-col items-center gap-1"
+        class="flex items-end gap-4 overflow-x-auto pb-1"
+        tabindex="0"
+        role="group"
+        :aria-label="`Evolución comparada: ${descripcionAccesible}`"
       >
-        <div class="flex items-end gap-1">
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-destructive text-xs whitespace-nowrap tabular-nums">{{
-              formatearImporte(fila.gasto)
-            }}</span>
-            <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
-              <div
-                class="bg-destructive w-full rounded-t-md transition-all"
-                :style="{ height: `${alturaPorcentaje(fila.gasto)}%` }"
-              />
+        <div
+          v-for="fila in filas"
+          :key="fila.periodo"
+          class="flex min-w-16 shrink-0 flex-col items-center gap-1"
+        >
+          <div class="flex items-end gap-1">
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-destructive text-xs whitespace-nowrap tabular-nums">{{
+                formatearImporte(fila.gasto)
+              }}</span>
+              <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
+                <div
+                  class="bg-destructive w-full rounded-t-md transition-all"
+                  :style="{ height: `${alturaPorcentaje(fila.gasto)}%` }"
+                />
+              </div>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span
+                class="text-success dark:text-emerald-500 text-xs whitespace-nowrap tabular-nums"
+                >{{ formatearImporte(fila.ingreso) }}</span
+              >
+              <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
+                <div
+                  class="bg-success w-full rounded-t-md transition-all"
+                  :style="{ height: `${alturaPorcentaje(fila.ingreso)}%` }"
+                />
+              </div>
             </div>
           </div>
-          <div class="flex flex-col items-center gap-1">
-            <span
-              class="text-success dark:text-emerald-500 text-xs whitespace-nowrap tabular-nums"
-              >{{ formatearImporte(fila.ingreso) }}</span
-            >
-            <div class="bg-muted flex h-32 w-4 items-end overflow-hidden rounded-t-md">
-              <div
-                class="bg-success w-full rounded-t-md transition-all"
-                :style="{ height: `${alturaPorcentaje(fila.ingreso)}%` }"
-              />
-            </div>
-          </div>
+          <span class="text-muted-foreground text-xs whitespace-nowrap capitalize">{{
+            formatearPeriodo(fila.periodo)
+          }}</span>
         </div>
-        <span class="text-muted-foreground text-xs whitespace-nowrap capitalize">{{
-          formatearPeriodo(fila.periodo)
-        }}</span>
       </div>
+
+      <ul class="flex shrink-0 flex-col gap-1">
+        <li
+          v-for="fila in filas"
+          :key="fila.periodo"
+          class="flex items-center justify-between gap-3 text-xs whitespace-nowrap"
+        >
+          <span class="text-muted-foreground capitalize">{{ formatearPeriodo(fila.periodo) }}</span>
+          <span class="tabular-nums" :class="claseColorImporte(fila.saldo)">{{
+            formatearImporte(fila.saldo)
+          }}</span>
+        </li>
+      </ul>
     </div>
 
     <div v-else-if="modo === 'circular'" class="flex flex-wrap items-center gap-4">
@@ -289,63 +305,78 @@ const sectoresComparativos = computed(() => {
       </ul>
     </div>
 
-    <div v-else class="overflow-x-auto pb-1" tabindex="0" role="group">
-      <svg
-        :viewBox="`0 0 ${anchoTotal} ${ALTO_GRAFICO}`"
-        :width="anchoTotal"
-        :height="ALTO_GRAFICO"
-        role="img"
-        :aria-label="`Evolución comparada: ${descripcionAccesible}`"
-      >
-        <polygon
-          v-if="modo === 'area'"
-          :points="areaGasto"
-          fill="var(--destructive)"
-          fill-opacity="0.15"
-        />
-        <polygon
-          v-if="modo === 'area'"
-          :points="areaIngreso"
-          fill="var(--success)"
-          fill-opacity="0.15"
-        />
-        <polyline :points="lineaGasto" fill="none" stroke="var(--destructive)" stroke-width="2" />
-        <polyline :points="lineaIngreso" fill="none" stroke="var(--success)" stroke-width="2" />
-        <template v-for="punto in puntosGasto" :key="`gasto-${punto.periodo}`">
-          <text
-            :x="punto.x"
-            :y="Math.max(punto.y - 8, 10)"
-            text-anchor="middle"
-            font-size="10"
-            fill="var(--muted-foreground)"
+    <div v-else class="flex flex-wrap items-start gap-4">
+      <div class="overflow-x-auto pb-1" tabindex="0" role="group">
+        <svg
+          :viewBox="`0 0 ${anchoTotal} ${ALTO_GRAFICO}`"
+          :width="anchoTotal"
+          :height="ALTO_GRAFICO"
+          role="img"
+          :aria-label="`Evolución comparada: ${descripcionAccesible}`"
+        >
+          <polygon
+            v-if="modo === 'area'"
+            :points="areaGasto"
+            fill="var(--destructive)"
+            fill-opacity="0.15"
+          />
+          <polygon
+            v-if="modo === 'area'"
+            :points="areaIngreso"
+            fill="var(--success)"
+            fill-opacity="0.15"
+          />
+          <polyline :points="lineaGasto" fill="none" stroke="var(--destructive)" stroke-width="2" />
+          <polyline :points="lineaIngreso" fill="none" stroke="var(--success)" stroke-width="2" />
+          <template v-for="punto in puntosGasto" :key="`gasto-${punto.periodo}`">
+            <text
+              :x="punto.x"
+              :y="Math.max(punto.y - 8, 10)"
+              text-anchor="middle"
+              font-size="10"
+              fill="var(--muted-foreground)"
+            >
+              {{ formatearImporte(punto.total) }}
+            </text>
+            <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--destructive)" />
+          </template>
+          <template v-for="punto in puntosIngreso" :key="`ingreso-${punto.periodo}`">
+            <text
+              :x="punto.x"
+              :y="Math.max(punto.y - 18, 10)"
+              text-anchor="middle"
+              font-size="10"
+              fill="var(--muted-foreground)"
+            >
+              {{ formatearImporte(punto.total) }}
+            </text>
+            <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--success)" />
+          </template>
+        </svg>
+        <div class="flex" :style="{ width: `${anchoTotal}px` }">
+          <span
+            v-for="fila in filas"
+            :key="fila.periodo"
+            class="text-muted-foreground shrink-0 truncate px-1 text-center text-xs capitalize"
+            :style="{ width: `${ANCHO_PUNTO}px` }"
           >
-            {{ formatearImporte(punto.total) }}
-          </text>
-          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--destructive)" />
-        </template>
-        <template v-for="punto in puntosIngreso" :key="`ingreso-${punto.periodo}`">
-          <text
-            :x="punto.x"
-            :y="Math.max(punto.y - 18, 10)"
-            text-anchor="middle"
-            font-size="10"
-            fill="var(--muted-foreground)"
-          >
-            {{ formatearImporte(punto.total) }}
-          </text>
-          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--success)" />
-        </template>
-      </svg>
-      <div class="flex" :style="{ width: `${anchoTotal}px` }">
-        <span
+            {{ formatearPeriodo(fila.periodo) }}
+          </span>
+        </div>
+      </div>
+
+      <ul class="flex shrink-0 flex-col gap-1">
+        <li
           v-for="fila in filas"
           :key="fila.periodo"
-          class="text-muted-foreground shrink-0 truncate px-1 text-center text-xs capitalize"
-          :style="{ width: `${ANCHO_PUNTO}px` }"
+          class="flex items-center justify-between gap-3 text-xs whitespace-nowrap"
         >
-          {{ formatearPeriodo(fila.periodo) }}
-        </span>
-      </div>
+          <span class="text-muted-foreground capitalize">{{ formatearPeriodo(fila.periodo) }}</span>
+          <span class="tabular-nums" :class="claseColorImporte(fila.saldo)">{{
+            formatearImporte(fila.saldo)
+          }}</span>
+        </li>
+      </ul>
     </div>
   </div>
 </template>

@@ -56,6 +56,51 @@ describe('GraficoComparativoEvolucion', () => {
     expect(wrapper.text()).toContain(formatearImporte(100))
   })
 
+  it('junto al gráfico de barras, muestra una etiqueta con el saldo de cada mes', () => {
+    // itemsGastos llega como magnitud positiva (ya con Math.abs aplicado por
+    // quien llama, ver VistaMovimientos.vue), no como importe negativo.
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    // Saldo = 100 - 30 = 70, positivo → verde (text-success).
+    const listaSaldo = wrapper.findAll('ul li')
+    expect(listaSaldo).toHaveLength(1)
+    expect(listaSaldo[0]?.text()).toContain(formatearImporte(70))
+    expect(listaSaldo[0]?.find('span.tabular-nums').classes()).toContain('text-success')
+  })
+
+  it('con gasto mayor que ingreso, el saldo del mes se muestra en rojo', () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 130 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    const celdaSaldo = wrapper.find('ul li span.tabular-nums')
+    expect(celdaSaldo.text()).toContain(formatearImporte(-30))
+    expect(celdaSaldo.classes()).toContain('text-destructive')
+  })
+
+  it('en modo líneas, también se muestra la etiqueta de saldo por mes', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+
+    const celdaSaldo = wrapper.find('ul li span.tabular-nums')
+    expect(celdaSaldo.text()).toContain(formatearImporte(70))
+    expect(celdaSaldo.classes()).toContain('text-success')
+  })
+
   it('muestra barras por defecto y cambia a líneas al pulsar el botón correspondiente', async () => {
     const wrapper = mount(GraficoComparativoEvolucion, {
       props: {

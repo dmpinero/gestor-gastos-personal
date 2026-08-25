@@ -430,8 +430,52 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
   await expect(tarjetaIngresado).toContainText('1000,00 €')
 
+  // Saldo = -30,00 + 1000,00 = 970,00 €, positivo → verde.
+  const tarjetaSaldo = page.locator('[data-slot="card"]', { hasText: 'Saldo' })
+  await expect(tarjetaSaldo).toContainText('970,00 €')
+  await expect(tarjetaSaldo.locator('[data-slot="card-content"]')).toHaveClass(/text-success/)
+
   await expect(page.getByText('Evolución de gastos', { exact: true })).toBeVisible()
   await expect(page.getByText('Evolución de ingresos', { exact: true })).toBeVisible()
+})
+
+test('el saldo se muestra en rojo cuando el total de gastos supera al de ingresos', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-SALDO-NEG ${sufijo}`
+  const nombreCategoria = `Categoria MOV-SALDO-NEG ${sufijo}`
+  const descripcionGasto = `Gasto saldo negativo ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-15')
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panel.getByPlaceholder('Descripción').fill(descripcionGasto)
+  await panel.getByPlaceholder('Importe').fill('-50.00')
+  await panel.getByPlaceholder('Saldo').fill('950.00')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: descripcionGasto })).toBeVisible()
+
+  const tarjetaSaldo = page.locator('[data-slot="card"]', { hasText: 'Saldo' })
+  await expect(tarjetaSaldo).toContainText('-50,00 €')
+  await expect(tarjetaSaldo.locator('[data-slot="card-content"]')).toHaveClass(/text-destructive/)
 })
 
 test('el gráfico de evolución se puede ver como distribución circular', async ({ page }) => {

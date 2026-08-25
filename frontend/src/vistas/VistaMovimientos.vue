@@ -28,6 +28,7 @@ import {
   formatearImporte,
 } from '@/lib/formato'
 import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
+import { detectarMesCompleto, rangoDelMes } from '@/lib/rangoMeses'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -128,6 +129,22 @@ const subcategoriasDeLaCategoria = computed(() => {
 // saldo por rango. '' en fecha/importe/saldo significa "sin límite".
 const fechaDesde = ref('')
 const fechaHasta = ref('')
+
+const mesCompleto = computed(() => detectarMesCompleto(fechaDesde.value, fechaHasta.value))
+
+function mesAnterior(): void {
+  if (!mesCompleto.value) return
+  const rango = rangoDelMes(mesCompleto.value.anio, mesCompleto.value.mes - 1)
+  fechaDesde.value = rango.desde
+  fechaHasta.value = rango.hasta
+}
+
+function mesSiguiente(): void {
+  if (!mesCompleto.value) return
+  const rango = rangoDelMes(mesCompleto.value.anio, mesCompleto.value.mes + 1)
+  fechaDesde.value = rango.desde
+  fechaHasta.value = rango.hasta
+}
 
 const importeMin = ref('')
 const importeMax = ref('')
@@ -686,6 +703,12 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             <Label for="filtro-fecha-hasta">Fecha hasta</Label>
             <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
           </div>
+          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesAnterior"
+            >Mes anterior</Button
+          >
+          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesSiguiente"
+            >Mes siguiente</Button
+          >
 
           <div class="flex flex-col gap-1.5">
             <Label>Filtrar por categoría</Label>

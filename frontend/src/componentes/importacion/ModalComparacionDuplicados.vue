@@ -64,25 +64,31 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
           :key="indice"
           class="rounded-lg border p-3"
         >
-          <Table>
+          <Table class="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead>Origen</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Subcategoría</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead class="text-right">Importe</TableHead>
-                <TableHead class="text-right">Saldo</TableHead>
+                <TableHead class="w-[12%] whitespace-normal">Origen</TableHead>
+                <TableHead class="w-[11%] whitespace-normal">Fecha</TableHead>
+                <TableHead class="w-[15%] whitespace-normal">Categoría</TableHead>
+                <TableHead class="w-[15%] whitespace-normal">Subcategoría</TableHead>
+                <TableHead class="w-[27%] whitespace-normal">Descripción</TableHead>
+                <TableHead class="w-[10%] text-right whitespace-normal">Importe</TableHead>
+                <TableHead class="w-[10%] text-right whitespace-normal">Saldo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell class="font-medium">Este fichero</TableCell>
+                <TableCell class="truncate font-medium">Este fichero</TableCell>
                 <TableCell>{{ formatearFecha(duplicado.fila_excel.fecha_valor) }}</TableCell>
-                <TableCell>{{ duplicado.fila_excel.categoria }}</TableCell>
-                <TableCell>{{ duplicado.fila_excel.subcategoria ?? '' }}</TableCell>
-                <TableCell>{{ duplicado.fila_excel.descripcion }}</TableCell>
+                <TableCell class="truncate" :title="duplicado.fila_excel.categoria">{{
+                  duplicado.fila_excel.categoria
+                }}</TableCell>
+                <TableCell class="truncate" :title="duplicado.fila_excel.subcategoria ?? ''">{{
+                  duplicado.fila_excel.subcategoria ?? ''
+                }}</TableCell>
+                <TableCell class="truncate" :title="duplicado.fila_excel.descripcion">{{
+                  duplicado.fila_excel.descripcion
+                }}</TableCell>
                 <TableCell class="text-right tabular-nums">{{
                   formatearImporte(duplicado.fila_excel.importe)
                 }}</TableCell>
@@ -91,17 +97,25 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
                 }}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell class="font-medium">Ya existía</TableCell>
+                <TableCell class="truncate font-medium">Ya existía</TableCell>
                 <TableCell>{{
                   formatearFecha(duplicado.movimiento_existente.fecha_valor)
                 }}</TableCell>
-                <TableCell>{{
-                  nombreCategoria(duplicado.movimiento_existente.categoria_id)
+                <TableCell
+                  class="truncate"
+                  :title="nombreCategoria(duplicado.movimiento_existente.categoria_id)"
+                  >{{ nombreCategoria(duplicado.movimiento_existente.categoria_id) }}</TableCell
+                >
+                <TableCell
+                  class="truncate"
+                  :title="nombreSubcategoria(duplicado.movimiento_existente.subcategoria_id)"
+                  >{{
+                    nombreSubcategoria(duplicado.movimiento_existente.subcategoria_id)
+                  }}</TableCell
+                >
+                <TableCell class="truncate" :title="duplicado.movimiento_existente.descripcion">{{
+                  duplicado.movimiento_existente.descripcion
                 }}</TableCell>
-                <TableCell>{{
-                  nombreSubcategoria(duplicado.movimiento_existente.subcategoria_id)
-                }}</TableCell>
-                <TableCell>{{ duplicado.movimiento_existente.descripcion }}</TableCell>
                 <TableCell class="text-right tabular-nums">{{
                   formatearImporte(duplicado.movimiento_existente.importe)
                 }}</TableCell>

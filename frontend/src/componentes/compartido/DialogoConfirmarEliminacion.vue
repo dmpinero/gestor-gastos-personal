@@ -169,10 +169,15 @@ const {
       </DialogHeader>
       <p v-if="cargandoDetalles" class="text-muted-foreground text-sm">Cargando…</p>
       <div v-else class="min-h-0 flex-1 overflow-auto">
-        <Table>
+        <Table class="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead v-for="(columna, indice) in columnasDetalles" :key="columna">
+              <TableHead
+                v-for="(columna, indice) in columnasDetalles"
+                :key="columna"
+                class="whitespace-normal"
+                :style="{ width: `${100 / (columnasDetalles?.length || 1)}%` }"
+              >
                 <button
                   type="button"
                   class="hover:text-foreground flex w-full min-w-0 items-center gap-1.5"
@@ -195,9 +200,13 @@ const {
           </TableHeader>
           <TableBody>
             <TableRow v-for="(fila, indice) in filasDetallesOrdenadas" :key="indice">
-              <TableCell v-for="(valor, indiceColumna) in fila" :key="indiceColumna">{{
-                valor
-              }}</TableCell>
+              <TableCell
+                v-for="(valor, indiceColumna) in fila"
+                :key="indiceColumna"
+                class="truncate"
+                :title="String(valor)"
+                >{{ valor }}</TableCell
+              >
             </TableRow>
           </TableBody>
         </Table>

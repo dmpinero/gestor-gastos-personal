@@ -112,10 +112,10 @@ const filasParaExportar = computed(() =>
         </DialogDescription>
       </DialogHeader>
       <div class="min-h-0 flex-1 overflow-auto">
-        <Table>
+        <Table class="table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>
+              <TableHead class="w-[13%] whitespace-normal">
                 <CabeceraOrdenable
                   :icono="Landmark"
                   color-icono="text-indigo-500"
@@ -125,7 +125,7 @@ const filasParaExportar = computed(() =>
                   >Cuenta</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead>
+              <TableHead class="w-[11%] whitespace-normal">
                 <CabeceraOrdenable
                   :icono="CalendarDays"
                   color-icono="text-blue-500"
@@ -135,7 +135,7 @@ const filasParaExportar = computed(() =>
                   >Fecha</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead>
+              <TableHead class="w-[27%] whitespace-normal">
                 <CabeceraOrdenable
                   :icono="FileText"
                   color-icono="text-slate-500"
@@ -145,7 +145,7 @@ const filasParaExportar = computed(() =>
                   >Descripción</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead>
+              <TableHead class="w-[15%] whitespace-normal">
                 <CabeceraOrdenable
                   :icono="Tag"
                   color-icono="text-violet-500"
@@ -155,7 +155,7 @@ const filasParaExportar = computed(() =>
                   >Categoría</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead>
+              <TableHead class="w-[16%] whitespace-normal">
                 <CabeceraOrdenable
                   :icono="Tags"
                   color-icono="text-rose-500"
@@ -165,7 +165,7 @@ const filasParaExportar = computed(() =>
                   >Subcategoría</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead class="text-right">
+              <TableHead class="w-[9%] text-right whitespace-normal">
                 <CabeceraOrdenable
                   :icono="Euro"
                   color-icono="text-amber-500"
@@ -175,7 +175,7 @@ const filasParaExportar = computed(() =>
                   >Importe</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead class="text-right">
+              <TableHead class="w-[9%] text-right whitespace-normal">
                 <CabeceraOrdenable
                   :icono="Wallet"
                   color-icono="text-teal-500"
@@ -189,11 +189,19 @@ const filasParaExportar = computed(() =>
           </TableHeader>
           <TableBody>
             <TableRow v-for="movimiento in filasOrdenadas" :key="movimiento.id">
-              <TableCell>{{ nombreCuenta(movimiento.cuenta_id) }}</TableCell>
+              <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
+                nombreCuenta(movimiento.cuenta_id)
+              }}</TableCell>
               <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-              <TableCell>{{ movimiento.descripcion }}</TableCell>
-              <TableCell>{{ nombreCategoria(movimiento.categoria_id) }}</TableCell>
-              <TableCell>{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell>
+              <TableCell class="truncate" :title="movimiento.descripcion">{{
+                movimiento.descripcion
+              }}</TableCell>
+              <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
+                nombreCategoria(movimiento.categoria_id)
+              }}</TableCell>
+              <TableCell class="truncate" :title="nombreSubcategoria(movimiento.subcategoria_id)">{{
+                nombreSubcategoria(movimiento.subcategoria_id)
+              }}</TableCell>
               <TableCell class="text-right tabular-nums">{{
                 formatearImporte(movimiento.importe)
               }}</TableCell>

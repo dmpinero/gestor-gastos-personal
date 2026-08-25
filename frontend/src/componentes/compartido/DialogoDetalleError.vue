@@ -38,7 +38,9 @@ async function copiar(): Promise<void> {
         <DialogTitle>Detalle del error</DialogTitle>
         <DialogDescription>{{ mensaje }}</DialogDescription>
       </DialogHeader>
-      <pre class="bg-muted max-h-96 overflow-auto rounded-md p-3 text-xs">{{ traza }}</pre>
+      <pre
+        class="bg-muted max-h-96 overflow-y-auto rounded-md p-3 text-xs break-words whitespace-pre-wrap"
+        >{{ traza }}</pre>
       <DialogFooter>
         <Button type="button" variant="outline" @click="copiar">
           {{ copiado ? 'Copiado' : 'Copiar' }}

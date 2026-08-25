@@ -1,10 +1,12 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 import type { Movimiento } from '@/api/tipos'
 import { formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
+import { useTiendaMovimientos } from '@/stores/movimientos'
 import ModalListaMovimientos from '../ModalListaMovimientos.vue'
 
 const movimientos: Movimiento[] = [
@@ -112,6 +114,7 @@ describe('ModalListaMovimientos', () => {
       'Cine',
       formatearImporte('-5.00'),
       formatearImporte('95.00'),
+      '',
     ])
     expect(filas[1]?.[0]).toBe('Nómina')
     expect(filas[1]?.[4]).toBe('') // sin subcategoría
@@ -149,6 +152,42 @@ describe('ModalListaMovimientos', () => {
       formatearImporte('-5.00'),
       formatearImporte('-1.00'),
     ])
+    wrapper.unmount()
+  })
+
+  it('el botón Editar de una fila abre el panel de edición sobre la modal, sin cerrarla', async () => {
+    const wrapper = montar()
+    await wrapper.get('button').trigger('click')
+
+    const tiendaMovimientos = useTiendaMovimientos()
+    vi.spyOn(tiendaMovimientos, 'actualizar').mockResolvedValue({
+      ...movimientos[0]!,
+      descripcion: 'Ba pago editado',
+    })
+
+    const botonesEditar = document.body.querySelectorAll('tbody button[aria-label="Editar"]')
+    ;(botonesEditar[0] as HTMLButtonElement).click()
+    await nextTick()
+
+    // Ambas capas (la modal de lista y el panel de edición) conviven en el DOM.
+    const dialogos = document.body.querySelectorAll('[role="dialog"]')
+    expect(dialogos.length).toBeGreaterThanOrEqual(2)
+    expect(document.body.querySelector('[data-slot="sheet-title"]')?.textContent).toBe(
+      'Editar movimiento',
+    )
+    expect((document.body.querySelector('#descripcion') as HTMLInputElement).value).toBe('Ba pago')
+
+    const formulario = document.body.querySelector('form') as HTMLFormElement
+    formulario.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await nextTick()
+    await nextTick()
+
+    expect(tiendaMovimientos.actualizar).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ descripcion: 'Ba pago' }),
+    )
+    // Al cerrarse el panel de edición, la modal de lista sigue abierta.
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
     wrapper.unmount()
   })
 })

@@ -5,6 +5,7 @@ import {
   Euro,
   FileText,
   Landmark,
+  Pencil,
   Search,
   Tag,
   Tags,
@@ -25,7 +26,9 @@ import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
+import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
 import { Input } from '@/componentes/ui/input'
@@ -43,6 +46,7 @@ const ruta = useRoute()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaMovimientos = useTiendaMovimientos()
+const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
 
 function compararTexto(a: string, b: string): number {
   return a.localeCompare(b)
@@ -130,13 +134,25 @@ const { busqueda, filasFiltradas } = useBusquedaTabla(movimientosDelPeriodo, (m)
   m.saldo,
 ])
 
-const totalGastado = computed(() =>
-  filasFiltradas.value.reduce((suma, m) => suma + Number(m.importe), 0),
+// Una categoría/subcategoría puede tener tanto gastos como ingresos (p. ej.
+// "Nómina y otras prestaciones"): se separan igual que en VistaMovimientos.vue.
+const movimientosGastados = computed(() =>
+  filasFiltradas.value.filter((m) => Number(m.importe) < 0),
+)
+const movimientosIngresados = computed(() =>
+  filasFiltradas.value.filter((m) => Number(m.importe) > 0),
 )
 
-const datosGrafico = computed(() => {
+const totalGastado = computed(() =>
+  movimientosGastados.value.reduce((suma, m) => suma + Number(m.importe), 0),
+)
+const totalIngresado = computed(() =>
+  movimientosIngresados.value.reduce((suma, m) => suma + Number(m.importe), 0),
+)
+
+function datosGraficoDe(movimientos: Movimiento[]): { periodo: string; total: number }[] {
   const totalesPorPeriodo = new Map<string, number>()
-  for (const m of filasFiltradas.value) {
+  for (const m of movimientos) {
     const periodo = m.fecha_valor.slice(0, 7)
     totalesPorPeriodo.set(
       periodo,
@@ -146,7 +162,10 @@ const datosGrafico = computed(() => {
   return [...totalesPorPeriodo.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([periodo, total]) => ({ periodo, total }))
-})
+}
+
+const datosGraficoGastos = computed(() => datosGraficoDe(movimientosGastados.value))
+const datosGraficoIngresos = computed(() => datosGraficoDe(movimientosIngresados.value))
 
 const { campo, direccion, ordenarPor, filasOrdenadas } = useOrdenacionTabla(filasFiltradas, {
   fecha_valor: (a: Movimiento, b: Movimiento) => a.fecha_valor.localeCompare(b.fecha_valor),
@@ -205,7 +224,7 @@ const filasTablaParaExportar = computed(() =>
 
 <template>
   <section>
-    <h2 class="text-xl font-semibold">{{ titulo ?? 'Historial de gastos' }}</h2>
+    <h2 class="text-xl font-semibold">{{ titulo ?? 'Historial' }}</h2>
 
     <p v-if="!ruta.params.id" class="text-muted-foreground mt-4 text-sm">
       Selecciona una categoría o subcategoría en el menú lateral para ver su evolución.
@@ -216,28 +235,58 @@ const filasTablaParaExportar = computed(() =>
         {{ tiendaMovimientos.error }}
       </p>
 
-      <div class="mt-4 grid grid-cols-2 gap-4 sm:max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-muted-foreground text-sm font-medium">Total gastado</CardTitle>
-          </CardHeader>
-          <CardContent class="text-destructive text-2xl font-semibold">
-            {{ formatearImporte(totalGastado) }}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
-          </CardHeader>
-          <CardContent class="text-2xl font-semibold">
-            {{ filasFiltradas.length }}
-          </CardContent>
-        </Card>
-      </div>
+      <PanelEdicionMovimiento ref="panelEdicion" />
 
-      <div v-if="datosGrafico.length > 0" class="mt-4">
-        <h3 class="text-muted-foreground text-sm font-medium">Evolución</h3>
-        <GraficoEvolucion :items="datosGrafico" acento="gasto" class="mt-3" />
+      <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div v-if="movimientosGastados.length > 0">
+          <div class="grid grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle class="text-muted-foreground text-sm font-medium"
+                  >Total gastado</CardTitle
+                >
+              </CardHeader>
+              <CardContent class="text-destructive text-2xl font-semibold">
+                {{ formatearImporte(totalGastado) }}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+              </CardHeader>
+              <CardContent class="text-2xl font-semibold">
+                {{ movimientosGastados.length }}
+              </CardContent>
+            </Card>
+          </div>
+          <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de gastos</h3>
+          <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
+        </div>
+
+        <div v-if="movimientosIngresados.length > 0">
+          <div class="grid grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle class="text-muted-foreground text-sm font-medium"
+                  >Total ingresado</CardTitle
+                >
+              </CardHeader>
+              <CardContent class="text-success text-2xl font-semibold dark:text-emerald-500">
+                {{ formatearImporte(totalIngresado) }}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle class="text-muted-foreground text-sm font-medium">Movimientos</CardTitle>
+              </CardHeader>
+              <CardContent class="text-2xl font-semibold">
+                {{ movimientosIngresados.length }}
+              </CardContent>
+            </Card>
+          </div>
+          <h3 class="text-muted-foreground mt-4 text-sm font-medium">Evolución de ingresos</h3>
+          <GraficoEvolucion :items="datosGraficoIngresos" acento="ingreso" class="mt-3" />
+        </div>
       </div>
 
       <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
@@ -270,7 +319,7 @@ const filasTablaParaExportar = computed(() =>
                 <Input
                   id="buscar-historial"
                   v-model="busqueda"
-                  placeholder="Buscar gastos…"
+                  placeholder="Buscar movimientos…"
                   class="pl-8"
                 />
               </div>
@@ -296,11 +345,12 @@ const filasTablaParaExportar = computed(() =>
               <SelectorTamanoPagina v-model="tamanoPagina" id-base="historial" />
               <div class="flex items-center gap-3">
                 <p class="text-muted-foreground text-sm">
-                  Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} gastos
+                  Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }}
+                  movimientos
                 </p>
                 <BotonesExportarTabla
-                  nombre-fichero="Historial de gastos"
-                  titulo="Historial de gastos"
+                  nombre-fichero="Historial"
+                  titulo="Historial"
                   :columnas="COLUMNAS_TABLA"
                   :filas="filasTablaParaExportar"
                 />
@@ -380,6 +430,7 @@ const filasTablaParaExportar = computed(() =>
                       >Saldo</CabeceraOrdenable
                     >
                   </TableHead>
+                  <TableHead class="w-9"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -405,6 +456,16 @@ const filasTablaParaExportar = computed(() =>
                   }}</TableCell>
                   <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
                   <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
+                  <TableCell class="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Editar"
+                      @click="panelEdicion?.abrirParaEditar(movimiento)"
+                    >
+                      <Pencil class="size-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -424,7 +485,7 @@ const filasTablaParaExportar = computed(() =>
         v-if="filasOrdenadas.length === 0 && !tiendaMovimientos.cargando"
         class="text-muted-foreground mt-4 text-sm"
       >
-        No hay gastos registrados para {{ titulo }}.
+        No hay movimientos registrados para {{ titulo }}.
       </p>
     </template>
   </section>

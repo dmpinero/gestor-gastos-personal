@@ -65,10 +65,16 @@ describe('agruparMovimientosPorCategoria', () => {
 
     expect(resultado[10]).toEqual([
       {
+        id: 1,
+        cuenta_id: 1,
+        categoria_id: 10,
+        subcategoria_id: 42,
         fecha: '2026-03-15',
         descripcion: 'Pago en tienda',
+        comentario: null,
         subcategoria: 'Sub 42',
         importe: '-15.50',
+        saldo: '0',
       },
     ])
   })

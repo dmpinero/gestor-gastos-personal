@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { CalendarDays, Euro, FileText, Landmark, Tag, Tags, Wallet } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { CalendarDays, Euro, FileText, Landmark, Pencil, Tag, Tags, Wallet } from '@lucide/vue'
 import type { Movimiento } from '@/api/tipos'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
@@ -8,6 +8,7 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import BotonesExportarTabla from './BotonesExportarTabla.vue'
 import CabeceraOrdenable from './CabeceraOrdenable.vue'
+import PanelEdicionMovimiento from './PanelEdicionMovimiento.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -33,6 +34,7 @@ const props = defineProps<{
 
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
+const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
 
 function nombreCuenta(id: number): string {
   const cuenta = tiendaCuentas.cuentas.find((c) => c.id === id)
@@ -111,6 +113,7 @@ const filasParaExportar = computed(() =>
           {{ movimientos.length }} movimiento{{ movimientos.length === 1 ? '' : 's' }}
         </DialogDescription>
       </DialogHeader>
+      <PanelEdicionMovimiento ref="panelEdicion" />
       <div class="min-h-0 flex-1 overflow-auto">
         <Table class="table-fixed">
           <TableHeader>
@@ -185,6 +188,7 @@ const filasParaExportar = computed(() =>
                   >Saldo</CabeceraOrdenable
                 >
               </TableHead>
+              <TableHead class="w-9"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -208,6 +212,16 @@ const filasParaExportar = computed(() =>
               <TableCell class="text-right tabular-nums">{{
                 formatearImporte(movimiento.saldo)
               }}</TableCell>
+              <TableCell class="text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Editar"
+                  @click="panelEdicion?.abrirParaEditar(movimiento)"
+                >
+                  <Pencil class="size-4" />
+                </Button>
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>

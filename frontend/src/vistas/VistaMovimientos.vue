@@ -12,11 +12,10 @@ import {
   Trash2,
   Wallet,
 } from '@lucide/vue'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import type { DatosMovimiento, Movimiento, TotalCategoria } from '@/api/tipos'
-import { aTextoOULlo } from '@/api/utilidades'
+import type { Movimiento, TotalCategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
@@ -41,6 +40,7 @@ import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoCompara
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
+import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Button } from '@/componentes/ui/button'
@@ -49,14 +49,6 @@ import { Checkbox } from '@/componentes/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/componentes/ui/select'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 import {
   Table,
   TableBody,
@@ -74,55 +66,9 @@ const tiendaMovimientos = useTiendaMovimientos()
 
 const cuentasSeleccionadas = ref<number[]>([])
 const error = ref<string | null>(null)
-const idEnEdicion = ref<number | null>(null)
-const panelAbierto = ref(false)
 const seleccionados = ref<Set<number>>(new Set())
 const progresoEliminacion = useProgresoTareas()
-
-const formulario = reactive<DatosMovimiento>({
-  cuenta_id: 0,
-  categoria_id: 0,
-  subcategoria_id: null,
-  fecha_valor: '',
-  descripcion: '',
-  comentario: '',
-  importe: '',
-  saldo: '',
-})
-
-// Los componentes Select trabajan con valores de texto; estos proxies traducen
-// entre esa representación y los identificadores numéricos del formulario.
-const cuentaFormularioTexto = computed<string | undefined>({
-  get: () => (formulario.cuenta_id ? String(formulario.cuenta_id) : undefined),
-  set: (valor) => {
-    formulario.cuenta_id = valor === undefined ? 0 : Number(valor)
-  },
-})
-
-const categoriaSeleccionadaTexto = computed<string | undefined>({
-  get: () => (formulario.categoria_id ? String(formulario.categoria_id) : undefined),
-  set: (valor) => {
-    formulario.categoria_id = valor === undefined ? 0 : Number(valor)
-    formulario.subcategoria_id = null
-  },
-})
-
-const SIN_SUBCATEGORIA = 'sin-subcategoria'
-
-const subcategoriaSeleccionadaTexto = computed<string>({
-  get: () =>
-    formulario.subcategoria_id === null ? SIN_SUBCATEGORIA : String(formulario.subcategoria_id),
-  set: (valor) => {
-    formulario.subcategoria_id = valor === SIN_SUBCATEGORIA ? null : Number(valor)
-  },
-})
-
-const subcategoriasDeLaCategoria = computed(() => {
-  const categoria = tiendaCategorias.categorias.find(
-    (c) => c.categoria.id === formulario.categoria_id,
-  )
-  return categoria?.subcategorias ?? []
-})
+const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
 
 // Filtros avanzados de la barra de búsqueda (independientes del formulario
 // de alta/edición): fecha desde/hasta, categoría, subcategoría, e importe y
@@ -425,56 +371,6 @@ watch(
   { deep: true },
 )
 
-function limpiarFormulario(): void {
-  formulario.cuenta_id = 0
-  formulario.categoria_id = 0
-  formulario.subcategoria_id = null
-  formulario.fecha_valor = ''
-  formulario.descripcion = ''
-  formulario.comentario = ''
-  formulario.importe = ''
-  formulario.saldo = ''
-  idEnEdicion.value = null
-}
-
-function abrirParaCrear(): void {
-  limpiarFormulario()
-  formulario.cuenta_id = cuentasSeleccionadas.value[0] ?? 0
-  panelAbierto.value = true
-}
-
-function abrirParaEditar(movimiento: Movimiento): void {
-  idEnEdicion.value = movimiento.id
-  formulario.cuenta_id = movimiento.cuenta_id
-  formulario.categoria_id = movimiento.categoria_id
-  formulario.subcategoria_id = movimiento.subcategoria_id
-  formulario.fecha_valor = movimiento.fecha_valor
-  formulario.descripcion = movimiento.descripcion
-  formulario.comentario = movimiento.comentario ?? ''
-  formulario.importe = movimiento.importe
-  formulario.saldo = movimiento.saldo
-  panelAbierto.value = true
-}
-
-async function guardar(): Promise<void> {
-  error.value = null
-  const datos: DatosMovimiento = {
-    ...formulario,
-    comentario: aTextoOULlo(formulario.comentario ?? ''),
-  }
-  try {
-    if (idEnEdicion.value === null) {
-      await tiendaMovimientos.crear(datos)
-    } else {
-      await tiendaMovimientos.actualizar(idEnEdicion.value, datos)
-    }
-    panelAbierto.value = false
-    limpiarFormulario()
-  } catch (motivo) {
-    error.value = (motivo as Error).message
-  }
-}
-
 async function eliminar(id: number): Promise<void> {
   error.value = null
   try {
@@ -521,7 +417,9 @@ function alternarSeleccion(id: number, marcado: boolean): void {
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Movimientos</h2>
-      <Button variant="success" @click="abrirParaCrear">Crear movimiento</Button>
+      <Button variant="success" @click="panelEdicion?.abrirParaCrear(cuentasSeleccionadas[0])"
+        >Crear movimiento</Button
+      >
     </div>
 
     <ModalProgresoBloqueante
@@ -534,113 +432,9 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       }"
     />
 
-    <Sheet v-model:open="panelAbierto">
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>{{
-            idEnEdicion === null ? 'Crear movimiento' : 'Editar movimiento'
-          }}</SheetTitle>
-        </SheetHeader>
+    <PanelEdicionMovimiento ref="panelEdicion" />
 
-        <form class="flex flex-col gap-3 px-4" @submit.prevent="guardar">
-          <div class="flex flex-col gap-1.5">
-            <Label id="etiqueta-cuenta-formulario" for="selector-cuenta-formulario">Cuenta</Label>
-            <Select v-model="cuentaFormularioTexto">
-              <SelectTrigger
-                id="selector-cuenta-formulario"
-                aria-labelledby="etiqueta-cuenta-formulario"
-              >
-                <SelectValue placeholder="Selecciona una cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="cuenta in tiendaCuentas.cuentas"
-                  :key="cuenta.id"
-                  :value="String(cuenta.id)"
-                >
-                  {{ cuenta.alias ?? cuenta.numero_cuenta }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="fecha-valor">Fecha</Label>
-            <Input id="fecha-valor" v-model="formulario.fecha_valor" type="date" required />
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label id="etiqueta-categoria" for="selector-categoria">Categoría</Label>
-            <Select v-model="categoriaSeleccionadaTexto">
-              <SelectTrigger id="selector-categoria" aria-labelledby="etiqueta-categoria">
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="c in tiendaCategorias.categorias"
-                  :key="c.categoria.id"
-                  :value="String(c.categoria.id)"
-                >
-                  {{ c.categoria.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label id="etiqueta-subcategoria" for="selector-subcategoria">Subcategoría</Label>
-            <Select v-model="subcategoriaSeleccionadaTexto">
-              <SelectTrigger id="selector-subcategoria" aria-labelledby="etiqueta-subcategoria">
-                <SelectValue placeholder="(sin subcategoría)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-                <SelectItem
-                  v-for="s in subcategoriasDeLaCategoria"
-                  :key="s.id"
-                  :value="String(s.id)"
-                >
-                  {{ s.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="descripcion">Descripción</Label>
-            <Input
-              id="descripcion"
-              v-model="formulario.descripcion"
-              placeholder="Descripción"
-              required
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="comentario">Comentario</Label>
-            <Input id="comentario" v-model="formulario.comentario" placeholder="Comentario" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="importe">Importe</Label>
-            <Input id="importe" v-model="formulario.importe" placeholder="Importe" required />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="saldo">Saldo</Label>
-            <Input id="saldo" v-model="formulario.saldo" placeholder="Saldo" required />
-          </div>
-
-          <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
-
-          <div class="flex gap-2">
-            <Button type="submit" variant="success">
-              {{ idEnEdicion === null ? 'Crear movimiento' : 'Guardar cambios' }}
-            </Button>
-            <Button type="button" variant="destructive" @click="panelAbierto = false"
-              >Cancelar</Button
-            >
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
+    <p v-if="error" class="text-destructive mt-4 text-sm" role="alert">{{ error }}</p>
 
     <div
       v-if="seleccionados.size > 0"
@@ -1027,7 +821,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     variant="ghost"
                     size="icon"
                     aria-label="Editar"
-                    @click="abrirParaEditar(movimiento)"
+                    @click="panelEdicion?.abrirParaEditar(movimiento)"
                   >
                     <Pencil class="size-4" />
                   </Button>

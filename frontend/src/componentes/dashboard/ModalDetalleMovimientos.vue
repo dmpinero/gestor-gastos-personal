@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { CalendarDays, Euro, FileText, Tags } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { CalendarDays, Euro, FileText, Pencil, Tags } from '@lucide/vue'
+import type { Movimiento } from '@/api/tipos'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -58,6 +60,22 @@ const filasParaExportar = computed(() =>
     formatearImporte(m.importe),
   ]),
 )
+
+const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
+
+function aMovimiento(m: MovimientoDeCategoria): Movimiento {
+  return {
+    id: m.id,
+    cuenta_id: m.cuenta_id,
+    categoria_id: m.categoria_id,
+    subcategoria_id: m.subcategoria_id,
+    fecha_valor: m.fecha,
+    descripcion: m.descripcion,
+    comentario: m.comentario,
+    importe: m.importe,
+    saldo: m.saldo,
+  }
+}
 </script>
 
 <template>
@@ -82,6 +100,7 @@ const filasParaExportar = computed(() =>
           }}
         </DialogDescription>
       </DialogHeader>
+      <PanelEdicionMovimiento ref="panelEdicion" />
       <div class="min-h-0 flex-1 overflow-auto">
         <Table class="table-fixed">
           <TableHeader>
@@ -127,10 +146,11 @@ const filasParaExportar = computed(() =>
                   >Importe</CabeceraOrdenable
                 >
               </TableHead>
+              <TableHead class="w-9"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="(movimiento, indice) in filasOrdenadas" :key="indice">
+            <TableRow v-for="movimiento in filasOrdenadas" :key="movimiento.id">
               <TableCell>{{ formatearFecha(movimiento.fecha) }}</TableCell>
               <TableCell class="truncate" :title="movimiento.descripcion">{{
                 movimiento.descripcion
@@ -142,6 +162,16 @@ const filasParaExportar = computed(() =>
               <TableCell class="text-right tabular-nums">{{
                 formatearImporte(movimiento.importe)
               }}</TableCell>
+              <TableCell class="text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Editar"
+                  @click="panelEdicion?.abrirParaEditar(aMovimiento(movimiento))"
+                >
+                  <Pencil class="size-4" />
+                </Button>
+              </TableCell>
             </TableRow>
           </TableBody>
         </Table>

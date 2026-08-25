@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { DuplicadoDetectado } from '@/api/tipos'
+import { Pencil } from '@lucide/vue'
+import { ref, watch } from 'vue'
+import type { DuplicadoDetectado, Movimiento } from '@/api/tipos'
+import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -26,6 +29,32 @@ const props = defineProps<{
 }>()
 
 const tiendaCategorias = useTiendaCategorias()
+const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
+
+// Copia local editable: props.duplicados es un snapshot puntual de la
+// importación (no ligado al store), así que tras editar un "Ya existía" se
+// actualiza aquí para reflejarlo al instante, en vez de mutar la prop.
+const duplicadosLocales = ref<DuplicadoDetectado[]>([...props.duplicados])
+watch(
+  () => props.duplicados,
+  (nuevos) => {
+    duplicadosLocales.value = [...nuevos]
+  },
+)
+
+let indiceEnEdicion = -1
+
+function editar(indice: number, movimiento: Movimiento): void {
+  indiceEnEdicion = indice
+  panelEdicion.value?.abrirParaEditar(movimiento)
+}
+
+function alGuardar(movimiento: Movimiento): void {
+  if (indiceEnEdicion === -1) return
+  const duplicado = duplicadosLocales.value[indiceEnEdicion]
+  if (duplicado) duplicado.movimiento_existente = movimiento
+  indiceEnEdicion = -1
+}
 
 function nombreCategoria(idCategoria: number): string {
   return (
@@ -58,22 +87,24 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
           omitido{{ duplicados.length === 1 ? '' : 's' }} por coincidir con uno ya existente.
         </DialogDescription>
       </DialogHeader>
+      <PanelEdicionMovimiento ref="panelEdicion" @guardado="alGuardar" />
       <div class="min-h-0 flex-1 space-y-6 overflow-auto">
         <div
-          v-for="(duplicado, indice) in props.duplicados"
+          v-for="(duplicado, indice) in duplicadosLocales"
           :key="indice"
           class="rounded-lg border p-3"
         >
           <Table class="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead class="w-[12%] whitespace-normal">Origen</TableHead>
-                <TableHead class="w-[11%] whitespace-normal">Fecha</TableHead>
-                <TableHead class="w-[15%] whitespace-normal">Categoría</TableHead>
-                <TableHead class="w-[15%] whitespace-normal">Subcategoría</TableHead>
-                <TableHead class="w-[27%] whitespace-normal">Descripción</TableHead>
-                <TableHead class="w-[10%] text-right whitespace-normal">Importe</TableHead>
-                <TableHead class="w-[10%] text-right whitespace-normal">Saldo</TableHead>
+                <TableHead class="w-[11%] whitespace-normal">Origen</TableHead>
+                <TableHead class="w-[10%] whitespace-normal">Fecha</TableHead>
+                <TableHead class="w-[14%] whitespace-normal">Categoría</TableHead>
+                <TableHead class="w-[14%] whitespace-normal">Subcategoría</TableHead>
+                <TableHead class="w-[25%] whitespace-normal">Descripción</TableHead>
+                <TableHead class="w-[9%] text-right whitespace-normal">Importe</TableHead>
+                <TableHead class="w-[9%] text-right whitespace-normal">Saldo</TableHead>
+                <TableHead class="w-9"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -95,6 +126,7 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
                 <TableCell class="text-right tabular-nums">{{
                   formatearImporte(duplicado.fila_excel.saldo)
                 }}</TableCell>
+                <TableCell></TableCell>
               </TableRow>
               <TableRow>
                 <TableCell class="truncate font-medium">Ya existía</TableCell>
@@ -122,6 +154,16 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
                 <TableCell class="text-right tabular-nums">{{
                   formatearImporte(duplicado.movimiento_existente.saldo)
                 }}</TableCell>
+                <TableCell class="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Editar"
+                    @click="editar(indice, duplicado.movimiento_existente)"
+                  >
+                    <Pencil class="size-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>

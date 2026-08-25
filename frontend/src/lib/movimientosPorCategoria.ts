@@ -22,10 +22,16 @@ export function agruparMovimientosPorCategoria(
     resultado[idCategoria] = [...lista]
       .sort((a, b) => Math.abs(Number(b.importe)) - Math.abs(Number(a.importe)))
       .map((m) => ({
+        id: m.id,
+        cuenta_id: m.cuenta_id,
+        categoria_id: m.categoria_id,
+        subcategoria_id: m.subcategoria_id,
         fecha: m.fecha_valor,
         descripcion: m.descripcion,
+        comentario: m.comentario,
         subcategoria: resolverSubcategoria(m.subcategoria_id),
         importe: m.importe,
+        saldo: m.saldo,
       }))
   }
   return resultado

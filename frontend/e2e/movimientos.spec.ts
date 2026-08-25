@@ -382,6 +382,68 @@ test('el área de filtros se puede contraer y expandir', async ({ page }) => {
   await expect(page.getByLabel('Fecha desde')).toBeVisible()
 })
 
+test('"Mes anterior"/"Mes siguiente" solo aparecen cuando el rango es un mes completo, y desplazan el filtro', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-MES ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  const fechaDesde = page.getByLabel('Fecha desde')
+  const fechaHasta = page.getByLabel('Fecha hasta')
+  const botonMesAnterior = page.getByRole('button', { name: 'Mes anterior' })
+  const botonMesSiguiente = page.getByRole('button', { name: 'Mes siguiente' })
+
+  // Sin fechas, no hay botones.
+  await expect(botonMesAnterior).toBeHidden()
+  await expect(botonMesSiguiente).toBeHidden()
+
+  // Rango parcial (no empieza el día 1): tampoco.
+  await fechaDesde.fill('2026-02-05')
+  await fechaHasta.fill('2026-02-28')
+  await expect(botonMesAnterior).toBeHidden()
+  await expect(botonMesSiguiente).toBeHidden()
+
+  // Mes completo (febrero 2026, no bisiesto: 1 al 28): aparecen los botones.
+  await fechaDesde.fill('2026-02-01')
+  await fechaHasta.fill('2026-02-28')
+  await expect(botonMesAnterior).toBeVisible()
+  await expect(botonMesSiguiente).toBeVisible()
+
+  await botonMesSiguiente.click()
+  await expect(fechaDesde).toHaveValue('2026-03-01')
+  await expect(fechaHasta).toHaveValue('2026-03-31')
+  // Los botones se mantienen visibles tras el desplazamiento (el nuevo rango
+  // también es un mes completo).
+  await expect(botonMesAnterior).toBeVisible()
+  await expect(botonMesSiguiente).toBeVisible()
+
+  await botonMesAnterior.click()
+  await botonMesAnterior.click()
+  // De marzo 2026 retrocediendo dos veces: enero 2026 (cruzando febrero).
+  await expect(fechaDesde).toHaveValue('2026-01-01')
+  await expect(fechaHasta).toHaveValue('2026-01-31')
+
+  // Retroceder una vez más cruza el cambio de año: diciembre 2025.
+  await botonMesAnterior.click()
+  await expect(fechaDesde).toHaveValue('2025-12-01')
+  await expect(fechaHasta).toHaveValue('2025-12-31')
+
+  // Editar una fecha manualmente rompiendo el mes completo oculta los botones.
+  await fechaHasta.fill('2026-01-15')
+  await expect(botonMesAnterior).toBeHidden()
+  await expect(botonMesSiguiente).toBeHidden()
+})
+
 test('el resumen muestra el total y la evolución de gastos e ingresos por separado', async ({
   page,
 }) => {

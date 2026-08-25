@@ -170,6 +170,7 @@ test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) 
   const sufijo = Date.now()
   const nombreCategoriaA = `Categoria BLOQUE-A ${sufijo}`
   const nombreCategoriaB = `Categoria BLOQUE-B ${sufijo}`
+  const nombreSubcategoria = `Subcategoria BLOQUE ${sufijo}`
 
   await page.goto('/gestion/categorias')
 
@@ -181,10 +182,12 @@ test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) 
     await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
   }
 
-  await page
-    .locator('[data-slot="card"]', { hasText: nombreCategoriaA })
-    .getByRole('checkbox')
-    .click()
+  const tarjetaA = page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })
+  await tarjetaA.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaA.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaA.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  await tarjetaA.getByRole('checkbox').click()
   await page
     .locator('[data-slot="card"]', { hasText: nombreCategoriaB })
     .getByRole('checkbox')
@@ -199,7 +202,18 @@ test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) 
   await expect(page.getByText('2 seleccionados')).toBeVisible()
 
   await page.getByRole('button', { name: 'Eliminar seleccionados' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
+  const dialogo = page.getByRole('alertdialog')
+  await expect(dialogo).toContainText('También se eliminarán: 1 subcategoría.')
+
+  await dialogo.getByRole('button', { name: 'Ver detalles' }).click()
+  const modalDetalles = page.getByRole('dialog')
+  await expect(modalDetalles).toContainText('Subcategorías que se eliminarán')
+  await expect(modalDetalles).toContainText(nombreCategoriaA)
+  await expect(modalDetalles).toContainText(nombreSubcategoria)
+  await page.screenshot({ path: 'e2e/capturas/categorias-08-detalle-subcategorias-bloque.png' })
+  await modalDetalles.getByRole('button', { name: 'Cerrar' }).click()
+
+  await dialogo.getByRole('button', { name: 'Eliminar' }).click()
 
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })).toHaveCount(0)
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toHaveCount(0)

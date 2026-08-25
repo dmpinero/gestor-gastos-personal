@@ -21,7 +21,12 @@ import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { useProgresoTareas } from '@/composables/useProgresoTareas'
-import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
+import {
+  claseColorImporte,
+  claseFondoImporte,
+  formatearFecha,
+  formatearImporte,
+} from '@/lib/formato'
 import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
@@ -245,6 +250,7 @@ const totalGastado = computed(() =>
 const totalIngresado = computed(() =>
   movimientosIngresados.value.reduce((suma, m) => suma + Number(m.importe), 0),
 )
+const saldoTotal = computed(() => totalGastado.value + totalIngresado.value)
 
 function datosGraficoDe(movimientos: Movimiento[]): { periodo: string; total: number }[] {
   const totalesPorPeriodo = new Map<string, number>()
@@ -744,6 +750,15 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           Gráficos
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card class="lg:col-span-2">
+            <CardHeader>
+              <CardTitle class="text-muted-foreground text-sm font-medium">Saldo</CardTitle>
+            </CardHeader>
+            <CardContent class="text-2xl font-semibold" :class="claseColorImporte(saldoTotal)">
+              {{ formatearImporte(saldoTotal) }}
+            </CardContent>
+          </Card>
+
           <div v-if="movimientosGastados.length > 0">
             <div class="grid grid-cols-2 gap-4">
               <Card>

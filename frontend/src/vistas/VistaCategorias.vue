@@ -211,20 +211,27 @@ async function filasDetalleDeSubcategoria(
   return filasDetalleDeMovimientos(movimientos, nombreCategoria, nombreSubcategoria)
 }
 
-const COLUMNAS_DETALLES_SUBCATEGORIAS = ['Subcategoría', 'Movimientos']
+const COLUMNAS_DETALLES_SUBCATEGORIAS = ['Categoría', 'Subcategoría', 'Movimientos']
 
 // A diferencia del detalle de una cuenta o una subcategoría (que listan sus
 // movimientos), aquí lo que interesa ver es QUÉ subcategorías se van a
-// eliminar junto con la categoría, no todos sus movimientos uno a uno.
+// eliminar junto con la(s) categoría(s), no todos sus movimientos uno a uno.
 async function filasDetalleDeCategoria(idCategoria: number): Promise<(string | number)[][]> {
   const categoria = tienda.categorias.find((c) => c.categoria.id === idCategoria)
   const subcategorias = categoria?.subcategorias ?? []
   return Promise.all(
     subcategorias.map(async (sub) => {
       const dependencias = await tienda.obtenerDependenciasSubcategoria(idCategoria, sub.id)
-      return [sub.nombre, dependencias.movimientos]
+      return [categoria?.categoria.nombre ?? '', sub.nombre, dependencias.movimientos]
     }),
   )
+}
+
+async function filasDetalleDeSeleccionadas(): Promise<(string | number)[][]> {
+  const resultados = await Promise.all(
+    [...seleccionadas.value].map((id) => filasDetalleDeCategoria(id)),
+  )
+  return resultados.flat()
 }
 
 async function eliminarCategoria(id: number, cascada = false): Promise<void> {
@@ -425,6 +432,9 @@ async function guardarSubcategoria(): Promise<void> {
         texto-boton="Eliminar seleccionados"
         disparador-solido
         :obtener-dependencias="dependenciasDeSeleccionadas"
+        titulo-detalles="Subcategorías que se eliminarán"
+        :columnas-detalles="COLUMNAS_DETALLES_SUBCATEGORIAS"
+        :obtener-filas-detalles="filasDetalleDeSeleccionadas"
         @confirmar="(cascada) => eliminarSeleccionadas(cascada)"
       />
     </div>

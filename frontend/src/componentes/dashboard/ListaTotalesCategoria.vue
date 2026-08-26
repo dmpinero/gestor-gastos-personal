@@ -5,11 +5,21 @@ import { formatearImporte } from '@/lib/formato'
 import { cn } from '@/lib/utils'
 import ModalDetalleMovimientos from './ModalDetalleMovimientos.vue'
 
+// Incluye los campos crudos del Movimiento original (id, cuenta_id,
+// categoria_id, subcategoria_id, comentario, saldo), además de los ya
+// resueltos para mostrar/exportar (subcategoria), para poder reconstruir un
+// Movimiento completo y editarlo desde ModalDetalleMovimientos.
 export interface MovimientoDeCategoria {
+  id: number
+  cuenta_id: number
+  categoria_id: number
+  subcategoria_id: number | null
   fecha: string
   descripcion: string
+  comentario: string | null
   subcategoria: string
   importe: string
+  saldo: string
 }
 
 const props = defineProps<{

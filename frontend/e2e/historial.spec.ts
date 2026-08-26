@@ -41,7 +41,7 @@ test('sin selección muestra un mensaje para elegir categoría o subcategoría',
   ).toBeVisible()
 })
 
-test('navegar por categoría y subcategoría en el historial muestra solo los gastos, cruzando cuentas', async ({
+test('navegar por categoría y subcategoría en el historial muestra gastos e ingresos, cruzando cuentas', async ({
   page,
 }) => {
   const sufijo = Date.now()
@@ -97,31 +97,36 @@ test('navegar por categoría y subcategoría en el historial muestra solo los ga
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
   await expect(filas.filter({ hasText: descripcionGastoB })).toBeVisible()
   await expect(filas.filter({ hasText: descripcionGastoSub })).toBeVisible()
-  await expect(filas.filter({ hasText: descripcionIngreso })).toHaveCount(0)
+  await expect(filas.filter({ hasText: descripcionIngreso })).toBeVisible()
   await expect(filas.filter({ hasText: descripcionGastoA })).toContainText(numeroCuentaA)
   await expect(filas.filter({ hasText: descripcionGastoB })).toContainText(numeroCuentaB)
 
-  // Resumen: 15 + 25 + 8 = 48 € gastados en 3 movimientos.
+  // Resumen: 15 + 25 + 8 = 48 € gastados en 3 movimientos, 300 € ingresados en 1.
   const tarjetaTotalGastado = page.locator('[data-slot="card"]', { hasText: 'Total gastado' })
-  const tarjetaMovimientos = page.locator('[data-slot="card"]', { hasText: 'Movimientos' })
+  const tarjetaMovimientosGastos = tarjetaTotalGastado.locator('xpath=following-sibling::*[1]')
+  const tarjetaTotalIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
+  const tarjetaMovimientosIngresos = tarjetaTotalIngresado.locator('xpath=following-sibling::*[1]')
   await expect(tarjetaTotalGastado).toContainText('-48,00 €')
-  await expect(tarjetaMovimientos).toContainText('3')
+  await expect(tarjetaMovimientosGastos).toContainText('3')
+  await expect(tarjetaTotalIngresado).toContainText('300,00 €')
+  await expect(tarjetaMovimientosIngresos).toContainText('1')
   await page.screenshot({ path: 'e2e/capturas/historial-01-categoria.png' })
 
-  // El gráfico de evolución muestra una barra para el periodo con datos,
-  // y se puede cambiar a visualización de líneas.
-  await expect(page.getByText('Evolución')).toBeVisible()
+  // Los gráficos de evolución de gastos y de ingresos se muestran por
+  // separado, y cada uno se puede cambiar a visualización de líneas.
+  await expect(page.getByText('Evolución de gastos', { exact: true })).toBeVisible()
+  await expect(page.getByText('Evolución de ingresos', { exact: true })).toBeVisible()
   await expect(page.locator('svg[role="img"]')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Ver como líneas' }).click()
+  await page.getByRole('button', { name: 'Ver como líneas' }).first().click()
   await expect(page.locator('svg[role="img"]')).toBeVisible()
   await expect(page.locator('polygon')).toHaveCount(0)
   await page.screenshot({ path: 'e2e/capturas/historial-02-grafico-lineas.png' })
 
-  await page.getByRole('button', { name: 'Ver como área' }).click()
+  await page.getByRole('button', { name: 'Ver como área' }).first().click()
   await expect(page.locator('polygon')).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/historial-03-grafico-area.png' })
 
-  await page.getByRole('button', { name: 'Ver como barras' }).click()
+  await page.getByRole('button', { name: 'Ver como barras' }).first().click()
   await expect(page.locator('svg[role="img"]')).toHaveCount(0)
 
   // Rango que incluye el periodo de los movimientos (enero 2026): los mantiene.
@@ -130,14 +135,18 @@ test('navegar por categoría y subcategoría en el historial muestra solo los ga
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
   await expect(tarjetaTotalGastado).toContainText('-48,00 €')
 
-  // Rango que no incluye ningún movimiento: la tabla, el resumen y el gráfico quedan a cero.
+  // Rango que no incluye ningún movimiento: la tabla, el resumen y los
+  // gráficos desaparecen (igual que en Movimientos cuando no hay datos).
   await page.getByLabel('Desde').fill('2026-02')
   await page.getByLabel('Hasta').fill('2026-03')
   await expect(filas.filter({ hasText: descripcionGastoA })).toHaveCount(0)
-  await expect(tarjetaTotalGastado).toContainText('0,00 €')
-  await expect(tarjetaMovimientos).toContainText('0')
-  await expect(page.getByText(`No hay gastos registrados para ${nombreCategoria}.`)).toBeVisible()
-  await expect(page.getByText('Evolución')).toHaveCount(0)
+  await expect(page.getByText('Total gastado', { exact: true })).toBeHidden()
+  await expect(page.getByText('Total ingresado', { exact: true })).toBeHidden()
+  await expect(
+    page.getByText(`No hay movimientos registrados para ${nombreCategoria}.`),
+  ).toBeVisible()
+  await expect(page.getByText('Evolución de gastos', { exact: true })).toBeHidden()
+  await expect(page.getByText('Evolución de ingresos', { exact: true })).toBeHidden()
 
   // Vaciar el rango restaura los datos.
   await page.getByLabel('Desde').fill('')
@@ -156,4 +165,45 @@ test('navegar por categoría y subcategoría en el historial muestra solo los ga
   await expect(filas.filter({ hasText: descripcionGastoSub })).toBeVisible()
   await expect(filas.filter({ hasText: descripcionGastoA })).toHaveCount(0)
   await expect(filas.filter({ hasText: descripcionGastoB })).toHaveCount(0)
+})
+
+test('un movimiento se puede editar directamente desde el historial', async ({ page }) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 HIST-EDIT ${sufijo}`
+  const nombreCategoria = `Categoria HIST-EDIT ${sufijo}`
+  const descripcionOriginal = `Gasto original ${sufijo}`
+  const descripcionEditada = `Gasto editado ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(page, numeroCuenta, nombreCategoria, null, descripcionOriginal, '-12.00')
+
+  await page.getByRole('button', { name: 'Expandir Historial' }).click()
+  await page.getByRole('link', { name: nombreCategoria, exact: true }).click()
+  await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
+
+  const fila = page.locator('tbody tr', { hasText: descripcionOriginal })
+  await expect(fila).toBeVisible()
+  await fila.getByRole('button', { name: 'Editar' }).click()
+
+  const panelEdicion = page.getByRole('dialog')
+  await expect(panelEdicion.getByRole('heading', { name: 'Editar movimiento' })).toBeVisible()
+  await panelEdicion.getByPlaceholder('Descripción').fill(descripcionEditada)
+  await panelEdicion.getByRole('button', { name: 'Guardar cambios' }).click()
+
+  await expect(page.locator('tbody tr', { hasText: descripcionEditada })).toBeVisible()
+  await expect(page.locator('tbody tr', { hasText: descripcionOriginal })).toHaveCount(0)
 })

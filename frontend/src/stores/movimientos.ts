@@ -63,23 +63,28 @@ export const useTiendaMovimientos = defineStore('movimientos', () => {
     }
   }
 
+  // Sin solo_gastos: una categoría/subcategoría puede tener tanto gastos
+  // como ingresos (p. ej. "Nómina y otras prestaciones"), y el Historial
+  // debe poder mostrar ambos.
   async function cargarPorCategoria(categoriaId: number): Promise<void> {
-    await cargarConFiltro(`/movimientos?categoria_id=${categoriaId}&solo_gastos=true`)
+    await cargarConFiltro(`/movimientos?categoria_id=${categoriaId}`)
   }
 
   async function cargarPorSubcategoria(subcategoriaId: number): Promise<void> {
-    await cargarConFiltro(`/movimientos?subcategoria_id=${subcategoriaId}&solo_gastos=true`)
+    await cargarConFiltro(`/movimientos?subcategoria_id=${subcategoriaId}`)
   }
 
-  async function crear(datos: DatosMovimiento): Promise<void> {
+  async function crear(datos: DatosMovimiento): Promise<Movimiento> {
     const movimiento = await clienteApi.crear<Movimiento>('/movimientos', datos)
     movimientos.value.unshift(movimiento)
+    return movimiento
   }
 
-  async function actualizar(id: number, datos: DatosMovimiento): Promise<void> {
+  async function actualizar(id: number, datos: DatosMovimiento): Promise<Movimiento> {
     const movimiento = await clienteApi.actualizar<Movimiento>(`/movimientos/${id}`, datos)
     const indice = movimientos.value.findIndex((m) => m.id === id)
     if (indice !== -1) movimientos.value[indice] = movimiento
+    return movimiento
   }
 
   async function eliminar(id: number): Promise<void> {

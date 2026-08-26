@@ -298,6 +298,23 @@ test('reimportar el mismo Excel de movimientos permite ver el detalle de los dup
   await expect(filaExistente).toContainText(nombreCategoria)
   await expect(filaExistente).toContainText(nombreSubcategoria)
   await page.screenshot({ path: 'e2e/capturas/importar-12-comparacion-duplicados.png' })
+
+  // Solo la fila "Ya existía" (el movimiento ya guardado) es editable; "Este
+  // fichero" no tiene botón porque aún no se ha importado.
+  await expect(filaFichero.getByRole('button', { name: 'Editar' })).toHaveCount(0)
+  await filaExistente.getByRole('button', { name: 'Editar' }).click()
+  const panelEdicion = page.getByRole('dialog').filter({ hasText: 'Editar movimiento' })
+  await expect(panelEdicion).toBeVisible()
+  await expect(modal).toBeVisible()
+  await panelEdicion.getByPlaceholder('Descripción').fill('Compra en Mercadona (corregida)')
+  await panelEdicion.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(panelEdicion).toBeHidden()
+
+  // La modal de comparación refleja el cambio al instante, sin cerrarla; la
+  // fila "Este fichero" no se toca.
+  await expect(filaExistente).toContainText('Compra en Mercadona (corregida)')
+  await expect(filaFichero).toContainText('Compra en Mercadona')
+  await expect(filaFichero).not.toContainText('corregida')
 })
 
 test('importar un Excel de conceptos previstos los crea y aparecen en Resumen anual', async ({

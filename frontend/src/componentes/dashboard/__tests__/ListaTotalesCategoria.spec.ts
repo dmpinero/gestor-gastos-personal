@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { formatearImporte } from '@/lib/formato'
 import { exportarTablaExcel, exportarTablaPDF } from '@/lib/exportarTabla'
 import ListaTotalesCategoria from '../ListaTotalesCategoria.vue'
@@ -8,6 +9,13 @@ vi.mock('@/lib/exportarTabla', () => ({
   exportarTablaExcel: vi.fn<(...args: unknown[]) => Promise<void>>(),
   exportarTablaPDF: vi.fn<(...args: unknown[]) => void>(),
 }))
+
+// Al pulsar "Detalles" se monta ModalDetalleMovimientos, que a su vez monta
+// PanelEdicionMovimiento: necesita una Pinia activa aunque estos tests no
+// pasen el plugin explícitamente al montar.
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
 
 describe('ListaTotalesCategoria', () => {
   it('muestra el mensaje de vacío cuando no hay elementos', () => {
@@ -71,12 +79,29 @@ describe('ListaTotalesCategoria', () => {
         movimientosPorCategoria: {
           1: [
             {
+              id: 1,
+              cuenta_id: 1,
+              categoria_id: 1,
+              subcategoria_id: 10,
               fecha: '2026-01-05',
               descripcion: 'Pago en PELUQUERIA LAS ROZAS DE ES',
+              comentario: null,
               subcategoria: 'Peluquería',
               importe: '-45.00',
+              saldo: '0.00',
             },
-            { fecha: '2026-01-10', descripcion: 'Otro pago', subcategoria: '', importe: '-5.00' },
+            {
+              id: 2,
+              cuenta_id: 1,
+              categoria_id: 1,
+              subcategoria_id: null,
+              fecha: '2026-01-10',
+              descripcion: 'Otro pago',
+              comentario: null,
+              subcategoria: '',
+              importe: '-5.00',
+              saldo: '0.00',
+            },
           ],
         },
       },
@@ -99,12 +124,29 @@ describe('ListaTotalesCategoria', () => {
         movimientosPorCategoria: {
           1: [
             {
+              id: 1,
+              cuenta_id: 1,
+              categoria_id: 1,
+              subcategoria_id: 10,
               fecha: '2026-01-05',
               descripcion: 'Pago en PELUQUERIA LAS ROZAS DE ES',
+              comentario: null,
               subcategoria: 'Peluquería',
               importe: '-45.00',
+              saldo: '0.00',
             },
-            { fecha: '2026-01-10', descripcion: 'Otro pago', subcategoria: '', importe: '-5.00' },
+            {
+              id: 2,
+              cuenta_id: 1,
+              categoria_id: 1,
+              subcategoria_id: null,
+              fecha: '2026-01-10',
+              descripcion: 'Otro pago',
+              comentario: null,
+              subcategoria: '',
+              importe: '-5.00',
+              saldo: '0.00',
+            },
           ],
         },
       },
@@ -140,10 +182,16 @@ describe('ListaTotalesCategoria', () => {
         movimientosPorCategoria: {
           1: [
             {
+              id: 1,
+              cuenta_id: 1,
+              categoria_id: 1,
+              subcategoria_id: 10,
               fecha: '2026-01-05',
               descripcion: 'Pago en PELUQUERIA LAS ROZAS DE ES',
+              comentario: null,
               subcategoria: 'Peluquería',
               importe: '-45.00',
+              saldo: '0.00',
             },
           ],
         },

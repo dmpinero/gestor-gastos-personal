@@ -1,9 +1,11 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 
 import type { DuplicadoDetectado } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaMovimientos } from '@/stores/movimientos'
 import ModalComparacionDuplicados from '../ModalComparacionDuplicados.vue'
 
 const DUPLICADO: DuplicadoDetectado = {
@@ -88,6 +90,37 @@ describe('ModalComparacionDuplicados', () => {
     // "Ya existía" queda vacía porque subcategoria_id es null.
     expect(modal?.textContent?.match(/Supermercado/g)).toHaveLength(1)
 
+    wrapper.unmount()
+  })
+
+  it('editar el movimiento "Ya existía" actualiza esa fila en la propia modal, sin tocar "Este fichero"', async () => {
+    const wrapper = montar([DUPLICADO])
+    await wrapper.get('button').trigger('click')
+
+    const tiendaMovimientos = useTiendaMovimientos()
+    vi.spyOn(tiendaMovimientos, 'actualizar').mockResolvedValue({
+      ...DUPLICADO.movimiento_existente,
+      descripcion: 'Compra en Mercadona (corregida)',
+    })
+
+    const botonesEditar = document.body.querySelectorAll('tbody button[aria-label="Editar"]')
+    expect(botonesEditar).toHaveLength(1) // solo la fila "Ya existía" es editable
+    ;(botonesEditar[0] as HTMLButtonElement).click()
+    await nextTick()
+
+    expect(document.body.querySelector('[data-slot="sheet-title"]')?.textContent).toBe(
+      'Editar movimiento',
+    )
+
+    const formulario = document.body.querySelector('form') as HTMLFormElement
+    formulario.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await nextTick()
+    await nextTick()
+
+    const modal = document.body.querySelector('[role="dialog"]')
+    expect(modal?.textContent).toContain('Compra en Mercadona (corregida)')
+    // "Este fichero" sigue mostrando el texto original de la fila del Excel.
+    expect(modal?.textContent?.match(/Compra en Mercadona(?! \(corregida\))/g)).toHaveLength(1)
     wrapper.unmount()
   })
 })

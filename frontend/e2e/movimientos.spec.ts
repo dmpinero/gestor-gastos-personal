@@ -496,6 +496,23 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   await expect(modalGastado).toContainText(descripcionGasto)
   await expect(modalGastado).not.toContainText(descripcionIngreso)
   await page.screenshot({ path: 'e2e/capturas/movimientos-10-detalle-total-gastado.png' })
+
+  // Editar desde dentro de la modal de detalle (anidamiento Dialog→Sheet): el
+  // panel de edición se abre por delante sin cerrar la modal, y al guardar la
+  // tarjeta "Total gastado" refleja el nuevo importe al momento.
+  await modalGastado
+    .locator('tbody tr', { hasText: descripcionGasto })
+    .getByRole('button', { name: 'Editar' })
+    .click()
+  const panelEdicionDetalle = page.getByRole('dialog').filter({ hasText: 'Editar movimiento' })
+  await expect(panelEdicionDetalle).toBeVisible()
+  await expect(modalGastado).toBeVisible()
+  await panelEdicionDetalle.getByPlaceholder('Importe').fill('-40.00')
+  await panelEdicionDetalle.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(panelEdicionDetalle).toBeHidden()
+  await expect(tarjetaGastado).toContainText('-40,00 €')
+  await expect(modalGastado).toContainText('-40,00 €')
+
   await modalGastado.getByRole('button', { name: 'Cerrar' }).click()
 
   const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
@@ -508,9 +525,10 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   await expect(modalIngresado).not.toContainText(descripcionGasto)
   await modalIngresado.getByRole('button', { name: 'Cerrar' }).click()
 
-  // Saldo = -30,00 + 1000,00 = 970,00 €, positivo → verde.
+  // Saldo = -40,00 + 1000,00 = 960,00 € (el gasto se editó de -30 a -40 más
+  // arriba), positivo → verde.
   const tarjetaSaldo = page.locator('[data-slot="card"]', { hasText: 'Saldo' })
-  await expect(tarjetaSaldo).toContainText('970,00 €')
+  await expect(tarjetaSaldo).toContainText('960,00 €')
   await expect(tarjetaSaldo.locator('[data-slot="card-content"]')).toHaveClass(/text-success/)
 
   await expect(page.getByText('Evolución de gastos', { exact: true })).toBeVisible()
@@ -684,6 +702,22 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   ).toBeVisible()
   await expect(modalDetalle.getByRole('columnheader', { name: 'Subcategoría' })).toBeVisible()
   await expect(modalDetalle.getByRole('cell', { name: 'Solo gasto' })).toBeVisible()
+
+  // Editar desde el Top 10 por categoría (segundo caso de anidamiento
+  // Dialog→Sheet): el panel se abre por delante sin cerrar la modal de
+  // detalle, y al guardar el nuevo importe se refleja en ambas.
+  await modalDetalle
+    .locator('tbody tr', { hasText: 'Solo gasto' })
+    .getByRole('button', { name: 'Editar' })
+    .click()
+  const panelEdicionTop10 = page.getByRole('dialog').filter({ hasText: 'Editar movimiento' })
+  await expect(panelEdicionTop10).toBeVisible()
+  await expect(modalDetalle).toBeVisible()
+  await panelEdicionTop10.getByPlaceholder('Importe').fill('-35.00')
+  await panelEdicionTop10.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(panelEdicionTop10).toBeHidden()
+  await expect(modalDetalle).toContainText('-35,00 €')
+  await expect(filaTopGasto).toContainText('-35,00 €')
 
   const nombreCategoriaEscapado = nombreCategoria.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const patronMarcaTemporal = /_\d{8}_\d{6}/.source

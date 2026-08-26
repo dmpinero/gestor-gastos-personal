@@ -5,6 +5,7 @@ import {
   Euro,
   FileText,
   Landmark,
+  Layers,
   Pencil,
   Search,
   Tag,
@@ -28,6 +29,7 @@ import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
 import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
+import TablaMovimientosAgrupada from '@/componentes/compartido/TablaMovimientosAgrupada.vue'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
@@ -98,6 +100,7 @@ const hasta = ref('')
 
 const filtrosAbiertos = ref(true)
 const resultadosAbiertos = ref(true)
+const agrupadoPorCategoria = ref(false)
 
 watch(
   () => ruta.fullPath,
@@ -310,7 +313,7 @@ const filasTablaParaExportar = computed(() =>
               <Label for="periodo-hasta">Hasta</Label>
               <Input id="periodo-hasta" v-model="hasta" type="month" :min="desde || undefined" />
             </div>
-            <div class="flex max-w-xs flex-col gap-1.5">
+            <div v-if="!agrupadoPorCategoria" class="flex max-w-xs flex-col gap-1.5">
               <Label for="buscar-historial">Buscar</Label>
               <div class="relative">
                 <Search
@@ -342,12 +345,27 @@ const filasTablaParaExportar = computed(() =>
           </CollapsibleTrigger>
           <CollapsibleContent class="mt-4">
             <div class="flex flex-wrap items-end justify-between gap-4">
-              <SelectorTamanoPagina v-model="tamanoPagina" id-base="historial" />
+              <div>
+                <SelectorTamanoPagina
+                  v-if="!agrupadoPorCategoria"
+                  v-model="tamanoPagina"
+                  id-base="historial"
+                />
+              </div>
               <div class="flex items-center gap-3">
-                <p class="text-muted-foreground text-sm">
+                <p v-if="!agrupadoPorCategoria" class="text-muted-foreground text-sm">
                   Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }}
                   movimientos
                 </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  @click="agrupadoPorCategoria = !agrupadoPorCategoria"
+                >
+                  <Layers class="size-4" />
+                  {{ agrupadoPorCategoria ? 'Ver todos los movimientos' : 'Agrupar por categoría' }}
+                </Button>
                 <BotonesExportarTabla
                   nombre-fichero="Historial"
                   titulo="Historial"
@@ -357,7 +375,14 @@ const filasTablaParaExportar = computed(() =>
               </div>
             </div>
 
-            <Table class="mt-4 table-fixed">
+            <TablaMovimientosAgrupada
+              v-if="agrupadoPorCategoria"
+              :movimientos="filasFiltradas"
+              class="mt-4"
+              @editar="panelEdicion?.abrirParaEditar"
+            />
+
+            <Table v-else class="mt-4 table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead class="w-[11%] whitespace-normal">
@@ -471,7 +496,7 @@ const filasTablaParaExportar = computed(() =>
             </Table>
 
             <BarraPaginacion
-              v-if="totalPaginas > 1"
+              v-if="!agrupadoPorCategoria && totalPaginas > 1"
               :pagina-actual="paginaActual"
               :total-paginas="totalPaginas"
               @anterior="paginaAnterior"

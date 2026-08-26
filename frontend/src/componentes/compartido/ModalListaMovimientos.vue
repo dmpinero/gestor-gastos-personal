@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { CalendarDays, Euro, FileText, Landmark, Pencil, Tag, Tags, Wallet } from '@lucide/vue'
+import {
+  CalendarDays,
+  Euro,
+  FileText,
+  Landmark,
+  Layers,
+  Pencil,
+  Tag,
+  Tags,
+  Wallet,
+} from '@lucide/vue'
 import type { Movimiento } from '@/api/tipos'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
@@ -9,6 +19,7 @@ import { useTiendaCuentas } from '@/stores/cuentas'
 import BotonesExportarTabla from './BotonesExportarTabla.vue'
 import CabeceraOrdenable from './CabeceraOrdenable.vue'
 import PanelEdicionMovimiento from './PanelEdicionMovimiento.vue'
+import TablaMovimientosAgrupada from './TablaMovimientosAgrupada.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -35,6 +46,7 @@ const props = defineProps<{
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
+const agrupadoPorCategoria = ref(false)
 
 function nombreCuenta(id: number): string {
   const cuenta = tiendaCuentas.cuentas.find((c) => c.id === id)
@@ -102,19 +114,36 @@ const filasParaExportar = computed(() =>
       <DialogHeader class="shrink-0">
         <div class="flex items-center justify-between gap-4 pr-6">
           <DialogTitle>{{ titulo }}</DialogTitle>
-          <BotonesExportarTabla
-            :nombre-fichero="titulo"
-            :titulo="titulo"
-            :columnas="COLUMNAS_DETALLE"
-            :filas="filasParaExportar"
-          />
+          <div class="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              @click="agrupadoPorCategoria = !agrupadoPorCategoria"
+            >
+              <Layers class="size-4" />
+              {{ agrupadoPorCategoria ? 'Ver todos los movimientos' : 'Agrupar por categoría' }}
+            </Button>
+            <BotonesExportarTabla
+              :nombre-fichero="titulo"
+              :titulo="titulo"
+              :columnas="COLUMNAS_DETALLE"
+              :filas="filasParaExportar"
+            />
+          </div>
         </div>
         <DialogDescription>
           {{ movimientos.length }} movimiento{{ movimientos.length === 1 ? '' : 's' }}
         </DialogDescription>
       </DialogHeader>
       <PanelEdicionMovimiento ref="panelEdicion" />
-      <div class="min-h-0 flex-1 overflow-auto">
+      <TablaMovimientosAgrupada
+        v-if="agrupadoPorCategoria"
+        :movimientos="movimientos"
+        class="min-h-0 flex-1 overflow-auto"
+        @editar="panelEdicion?.abrirParaEditar"
+      />
+      <div v-else class="min-h-0 flex-1 overflow-auto">
         <Table class="table-fixed">
           <TableHeader>
             <TableRow>

@@ -56,7 +56,7 @@ describe('GraficoComparativoEvolucion', () => {
     expect(wrapper.text()).toContain(formatearImporte(100))
   })
 
-  it('junto al gráfico de barras, muestra una etiqueta con el saldo de cada mes', () => {
+  it('junto al gráfico de barras, muestra una tabla a ancho completo con el saldo de cada mes', () => {
     // itemsGastos llega como magnitud positiva (ya con Math.abs aplicado por
     // quien llama, ver VistaMovimientos.vue), no como importe negativo.
     const wrapper = mount(GraficoComparativoEvolucion, {
@@ -66,11 +66,18 @@ describe('GraficoComparativoEvolucion', () => {
       },
     })
 
+    const tabla = wrapper.find('table')
+    expect(tabla.exists()).toBe(true)
+    expect(tabla.classes()).toContain('w-full')
+    expect(tabla.find('thead').text()).toContain('Periodo')
+    expect(tabla.find('thead').text()).toContain('Saldo')
+
     // Saldo = 100 - 30 = 70, positivo → verde (text-success).
-    const listaSaldo = wrapper.findAll('ul li')
-    expect(listaSaldo).toHaveLength(1)
-    expect(listaSaldo[0]?.text()).toContain(formatearImporte(70))
-    expect(listaSaldo[0]?.find('span.tabular-nums').classes()).toContain('text-success')
+    const filas = wrapper.findAll('tbody tr')
+    expect(filas).toHaveLength(1)
+    const celdaSaldo = filas[0]!.findAll('td')[1]!
+    expect(celdaSaldo.text()).toContain(formatearImporte(70))
+    expect(celdaSaldo.classes()).toContain('text-success')
   })
 
   it('con gasto mayor que ingreso, el saldo del mes se muestra en rojo', () => {
@@ -81,12 +88,12 @@ describe('GraficoComparativoEvolucion', () => {
       },
     })
 
-    const celdaSaldo = wrapper.find('ul li span.tabular-nums')
+    const celdaSaldo = wrapper.findAll('tbody tr td')[1]!
     expect(celdaSaldo.text()).toContain(formatearImporte(-30))
     expect(celdaSaldo.classes()).toContain('text-destructive')
   })
 
-  it('en modo líneas, también se muestra la etiqueta de saldo por mes', async () => {
+  it('en modo líneas, también se muestra la tabla de saldo por mes', async () => {
     const wrapper = mount(GraficoComparativoEvolucion, {
       props: {
         itemsGastos: [{ periodo: '2026-01', total: 30 }],
@@ -96,9 +103,39 @@ describe('GraficoComparativoEvolucion', () => {
 
     await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
 
-    const celdaSaldo = wrapper.find('ul li span.tabular-nums')
+    const celdaSaldo = wrapper.findAll('tbody tr td')[1]!
     expect(celdaSaldo.text()).toContain(formatearImporte(70))
     expect(celdaSaldo.classes()).toContain('text-success')
+  })
+
+  it('la tabla de saldo por mes se puede contraer y expandir', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    expect(wrapper.find('table').exists()).toBe(true) // abierta por defecto
+
+    await wrapper.get('[aria-label="Contraer saldo por mes"]').trigger('click')
+    expect(wrapper.find('table').exists()).toBe(false)
+
+    await wrapper.get('[aria-label="Expandir saldo por mes"]').trigger('click')
+    expect(wrapper.find('table').exists()).toBe(true)
+  })
+
+  it('en modo circular no se muestra la tabla de saldo por mes', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como circular"]').trigger('click')
+
+    expect(wrapper.find('table').exists()).toBe(false)
   })
 
   it('muestra barras por defecto y cambia a líneas al pulsar el botón correspondiente', async () => {

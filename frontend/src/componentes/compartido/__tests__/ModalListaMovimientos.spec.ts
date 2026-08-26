@@ -190,4 +190,30 @@ describe('ModalListaMovimientos', () => {
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
     wrapper.unmount()
   })
+
+  it('el botón "Agrupar por categoría" alterna entre la tabla plana y la agrupada', async () => {
+    const wrapper = montar()
+    await wrapper.get('button').trigger('click')
+
+    expect(document.body.querySelector('table')).not.toBeNull()
+
+    const botonAgrupar = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Agrupar por categoría'),
+    ) as HTMLButtonElement
+    botonAgrupar.click()
+    await nextTick()
+
+    expect(document.body.querySelector('table')).toBeNull() // sin nada expandido
+    expect(document.body.textContent).toContain('Ocio')
+    expect(document.body.textContent).toContain('3 mov.')
+
+    const botonVerTodos = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Ver todos los movimientos'),
+    ) as HTMLButtonElement
+    botonVerTodos.click()
+    await nextTick()
+
+    expect(document.body.querySelector('table')).not.toBeNull()
+    wrapper.unmount()
+  })
 })

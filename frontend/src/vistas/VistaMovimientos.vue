@@ -5,6 +5,7 @@ import {
   Euro,
   FileText,
   Landmark,
+  Layers,
   Pencil,
   Search,
   Tag,
@@ -42,6 +43,7 @@ import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimiento
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
+import TablaMovimientosAgrupada from '@/componentes/compartido/TablaMovimientosAgrupada.vue'
 import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
@@ -197,6 +199,7 @@ function limpiarFiltros(): void {
 const filtrosAbiertos = ref(true)
 const graficosAbiertos = ref(true)
 const resultadosAbiertos = ref(true)
+const agrupadoPorCategoria = ref(false)
 
 // Resumen de gastos e ingresos (sobre las filas ya filtradas, antes de
 // ordenar/paginar), igual que en VistaHistorialGastos.vue pero separando
@@ -474,7 +477,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             />
           </div>
 
-          <div class="flex max-w-xs flex-col gap-1.5">
+          <div v-if="!agrupadoPorCategoria" class="flex max-w-xs flex-col gap-1.5">
             <Label for="buscar-movimientos">Buscar</Label>
             <div class="relative">
               <Search
@@ -687,11 +690,26 @@ function alternarSeleccion(id: number, marcado: boolean): void {
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4">
           <div class="flex flex-wrap items-end justify-between gap-4">
-            <SelectorTamanoPagina v-model="tamanoPagina" id-base="movimientos" />
+            <div>
+              <SelectorTamanoPagina
+                v-if="!agrupadoPorCategoria"
+                v-model="tamanoPagina"
+                id-base="movimientos"
+              />
+            </div>
             <div class="flex items-center gap-3">
-              <p class="text-muted-foreground text-sm">
+              <p v-if="!agrupadoPorCategoria" class="text-muted-foreground text-sm">
                 Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} movimientos
               </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="agrupadoPorCategoria = !agrupadoPorCategoria"
+              >
+                <Layers class="size-4" />
+                {{ agrupadoPorCategoria ? 'Ver todos los movimientos' : 'Agrupar por categoría' }}
+              </Button>
               <BotonesExportarTabla
                 nombre-fichero="Movimientos"
                 titulo="Movimientos"
@@ -701,7 +719,14 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             </div>
           </div>
 
-          <Table class="mt-4 table-fixed">
+          <TablaMovimientosAgrupada
+            v-if="agrupadoPorCategoria"
+            :movimientos="filasFiltradas"
+            class="mt-4"
+            @editar="panelEdicion?.abrirParaEditar"
+          />
+
+          <Table v-else class="mt-4 table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead class="w-9">
@@ -846,7 +871,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           </Table>
 
           <BarraPaginacion
-            v-if="totalPaginas > 1"
+            v-if="!agrupadoPorCategoria && totalPaginas > 1"
             :pagina-actual="paginaActual"
             :total-paginas="totalPaginas"
             @anterior="paginaAnterior"

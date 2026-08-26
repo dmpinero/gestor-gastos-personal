@@ -207,3 +207,71 @@ test('un movimiento se puede editar directamente desde el historial', async ({ p
   await expect(page.locator('tbody tr', { hasText: descripcionEditada })).toBeVisible()
   await expect(page.locator('tbody tr', { hasText: descripcionOriginal })).toHaveCount(0)
 })
+
+test('"Agrupar por categoría" en el Historial muestra el total por subcategoría', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 HIST-AGRUP ${sufijo}`
+  const nombreCategoria = `Categoria HIST-AGRUP ${sufijo}`
+  const nombreSubcategoria = `Subcategoria HIST-AGRUP ${sufijo}`
+  const descripcionGasto = `Gasto agrupado ${sufijo}`
+  const descripcionIngreso = `Ingreso agrupado ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  const tarjetaCategoria = page.locator('[data-slot="card"]', { hasText: nombreCategoria })
+  await expect(tarjetaCategoria).toBeVisible()
+  await tarjetaCategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoria,
+    nombreSubcategoria,
+    descripcionGasto,
+    '-15.00',
+  )
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoria,
+    nombreSubcategoria,
+    descripcionIngreso,
+    '200.00',
+  )
+
+  await page.getByRole('button', { name: 'Expandir Historial' }).click()
+  await page.getByRole('link', { name: nombreCategoria, exact: true }).click()
+  await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
+
+  await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  await expect(page.locator('table')).toHaveCount(0)
+
+  const filaCategoria = page.locator('button[aria-expanded]', { hasText: nombreCategoria })
+  await expect(filaCategoria).toContainText('-15,00 €')
+  await expect(filaCategoria).toContainText('200,00 €')
+  await filaCategoria.click()
+
+  const filaSubcategoria = page.locator('button[aria-expanded]', { hasText: nombreSubcategoria })
+  await expect(filaSubcategoria).toContainText('2 mov.')
+  await filaSubcategoria.click()
+  await expect(page.locator('table', { hasText: descripcionGasto })).toBeVisible()
+  await expect(page.locator('table', { hasText: descripcionIngreso })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+  await expect(page.locator('table')).toBeVisible()
+})

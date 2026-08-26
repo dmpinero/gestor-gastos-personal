@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Movimiento } from '@/api/tipos'
-import { agruparMovimientosPorCategoria } from '../movimientosPorCategoria'
+import {
+  agruparMovimientosParaTabla,
+  agruparMovimientosPorCategoria,
+} from '../movimientosPorCategoria'
 
 function crearMovimiento(datos: Partial<Movimiento>): Movimiento {
   return {
@@ -81,5 +84,84 @@ describe('agruparMovimientosPorCategoria', () => {
 
   it('sin movimientos devuelve un objeto vacío', () => {
     expect(agruparMovimientosPorCategoria([], resolverSubcategoria)).toEqual({})
+  })
+})
+
+const nombreCategoria = (id: number): string => `Cat ${id}`
+
+describe('agruparMovimientosParaTabla', () => {
+  it('agrupa por categoría y subcategoría, separando totales de gasto e ingreso sin netear', () => {
+    const movimientos = [
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 10, importe: '-30' }),
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 10, importe: '100' }),
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 20, importe: '-5' }),
+    ]
+
+    const grupos = agruparMovimientosParaTabla(movimientos, nombreCategoria, resolverSubcategoria)
+
+    expect(grupos).toHaveLength(1)
+    const categoria = grupos[0]!
+    expect(categoria.categoriaId).toBe(1)
+    expect(categoria.nombre).toBe('Cat 1')
+    expect(categoria.totalGastado).toBe(-35)
+    expect(categoria.totalIngresado).toBe(100)
+    expect(categoria.numMovimientos).toBe(3)
+    expect(categoria.subcategorias).toHaveLength(2)
+
+    const subSub10 = categoria.subcategorias.find((s) => s.subcategoriaId === 10)!
+    expect(subSub10.totalGastado).toBe(-30)
+    expect(subSub10.totalIngresado).toBe(100)
+    const subSub20 = categoria.subcategorias.find((s) => s.subcategoriaId === 20)!
+    expect(subSub20.totalGastado).toBe(-5)
+    expect(subSub20.totalIngresado).toBe(0)
+  })
+
+  it('los movimientos sin subcategoría se agrupan en un bucket "(sin subcategoría)"', () => {
+    const movimientos = [
+      crearMovimiento({ categoria_id: 1, subcategoria_id: null, importe: '-10' }),
+    ]
+
+    const grupos = agruparMovimientosParaTabla(movimientos, nombreCategoria, resolverSubcategoria)
+
+    expect(grupos[0]!.subcategorias).toEqual([
+      expect.objectContaining({ subcategoriaId: null, nombre: '(sin subcategoría)' }),
+    ])
+  })
+
+  it('ordena categorías y subcategorías alfabéticamente por nombre', () => {
+    const nombrePorId: Record<number, string> = { 1: 'Zeta', 2: 'Alfa' }
+    const movimientos = [
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 100 }),
+      crearMovimiento({ categoria_id: 2, subcategoria_id: 200 }),
+    ]
+    const nombreSubPorId: Record<number, string> = { 100: 'Sub Z', 200: 'Sub A' }
+
+    const grupos = agruparMovimientosParaTabla(
+      movimientos,
+      (id) => nombrePorId[id]!,
+      (id) => (id === null ? '' : nombreSubPorId[id]!),
+    )
+
+    expect(grupos.map((g) => g.nombre)).toEqual(['Alfa', 'Zeta'])
+  })
+
+  it('ordena los movimientos de cada subcategoría por fecha descendente', () => {
+    const movimientos = [
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 10, fecha_valor: '2026-01-05' }),
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 10, fecha_valor: '2026-01-20' }),
+      crearMovimiento({ categoria_id: 1, subcategoria_id: 10, fecha_valor: '2026-01-10' }),
+    ]
+
+    const grupos = agruparMovimientosParaTabla(movimientos, nombreCategoria, resolverSubcategoria)
+
+    expect(grupos[0]!.subcategorias[0]!.movimientos.map((m) => m.fecha_valor)).toEqual([
+      '2026-01-20',
+      '2026-01-10',
+      '2026-01-05',
+    ])
+  })
+
+  it('sin movimientos devuelve un array vacío', () => {
+    expect(agruparMovimientosParaTabla([], nombreCategoria, resolverSubcategoria)).toEqual([])
   })
 })

@@ -513,6 +513,14 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   await expect(tarjetaGastado).toContainText('-40,00 €')
   await expect(modalGastado).toContainText('-40,00 €')
 
+  // "Agrupar por categoría" también funciona dentro de esta modal.
+  await modalGastado.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  await expect(modalGastado.locator('table')).toHaveCount(0)
+  await expect(modalGastado).toContainText(nombreCategoria)
+  await expect(modalGastado).toContainText('-40,00 €')
+  await modalGastado.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+  await expect(modalGastado.locator('table')).toBeVisible()
+
   await modalGastado.getByRole('button', { name: 'Cerrar' }).click()
 
   const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
@@ -988,4 +996,110 @@ test('los filtros de categoría y subcategoría permiten seleccionar varios elem
   // Se marcan ambas categorías de nuevo: reaparece el movimiento de Y.
   await seleccionarCategorias(page, [nombreCategoriaX, nombreCategoriaY])
   await expect(page.locator('tr', { hasText: descripcion3 })).toBeVisible()
+})
+
+test('"Agrupar por categoría" muestra totales por categoría/subcategoría, y permite editar desde ahí', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-AGRUP ${sufijo}`
+  const nombreCategoriaX = `Categoria MOV-AGRUP-X ${sufijo}`
+  const nombreCategoriaY = `Categoria MOV-AGRUP-Y ${sufijo}`
+  const nombreSubcategoria = `Subcategoria MOV-AGRUP ${sufijo}`
+  const descripcionGastoConSub = `Gasto con sub ${sufijo}`
+  const descripcionIngresoConSub = `Ingreso con sub ${sufijo}`
+  const descripcionSinSub = `Gasto sin sub ${sufijo}`
+  const descripcionOtraCategoria = `Gasto otra categoría ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombreCategoria of [nombreCategoriaX, nombreCategoriaY]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+  }
+  const tarjetaCategoriaX = page.locator('[data-slot="card"]', { hasText: nombreCategoriaX })
+  await tarjetaCategoriaX.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaCategoriaX.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaCategoriaX.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  async function crear(
+    nombreCategoria: string,
+    subcategoria: string | null,
+    descripcion: string,
+    importe: string,
+  ): Promise<void> {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill('2026-01-01')
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    if (subcategoria) {
+      await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
+    }
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill(importe)
+    await panel.getByPlaceholder('Saldo').fill('1000.00')
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  await crear(nombreCategoriaX, nombreSubcategoria, descripcionGastoConSub, '-20.00')
+  await crear(nombreCategoriaX, nombreSubcategoria, descripcionIngresoConSub, '50.00')
+  await crear(nombreCategoriaX, null, descripcionSinSub, '-10.00')
+  await crear(nombreCategoriaY, null, descripcionOtraCategoria, '-5.00')
+
+  await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  await expect(page.locator('table')).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/capturas/movimientos-12-agrupado-por-categoria.png' })
+
+  const filaCategoriaX = page.locator('button[aria-expanded]', { hasText: nombreCategoriaX })
+  await expect(filaCategoriaX).toContainText('-30,00 €') // -20 - 10
+  await expect(filaCategoriaX).toContainText('50,00 €')
+  await expect(filaCategoriaX).toContainText('3 mov.')
+
+  const filaCategoriaY = page.locator('button[aria-expanded]', { hasText: nombreCategoriaY })
+  await expect(filaCategoriaY).toContainText('-5,00 €')
+  await expect(filaCategoriaY).toContainText('1 mov.')
+
+  await filaCategoriaX.click()
+  const filaSubcategoria = page.locator('button[aria-expanded]', { hasText: nombreSubcategoria })
+  await expect(filaSubcategoria).toContainText('-20,00 €')
+  await expect(filaSubcategoria).toContainText('50,00 €')
+  await expect(filaSubcategoria).toContainText('2 mov.')
+  const filaSinSubcategoria = page.locator('button[aria-expanded]', {
+    hasText: '(sin subcategoría)',
+  })
+  await expect(filaSinSubcategoria).toContainText('-10,00 €')
+  await expect(filaSinSubcategoria).toContainText('1 mov.')
+
+  await filaSubcategoria.click()
+  await expect(page.locator('table', { hasText: descripcionGastoConSub })).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/movimientos-13-agrupado-subcategoria-expandida.png' })
+
+  // Editar un movimiento desde dentro de la vista agrupada actualiza el total.
+  const filaMovimiento = page.locator('tbody tr', { hasText: descripcionGastoConSub })
+  await filaMovimiento.getByRole('button', { name: 'Editar' }).click()
+  const panelEdicion = page.getByRole('dialog').filter({ hasText: 'Editar movimiento' })
+  await expect(panelEdicion).toBeVisible()
+  await panelEdicion.getByPlaceholder('Importe').fill('-25.00')
+  await panelEdicion.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(panelEdicion).toBeHidden()
+  await expect(filaSubcategoria).toContainText('-25,00 €')
+  await expect(filaCategoriaX).toContainText('-35,00 €') // -25 - 10
+
+  // Volver a la vista plana restaura la tabla y el buscador.
+  await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+  await expect(page.locator('table')).toBeVisible()
+  await expect(page.getByPlaceholder('Buscar movimientos…')).toBeVisible()
 })

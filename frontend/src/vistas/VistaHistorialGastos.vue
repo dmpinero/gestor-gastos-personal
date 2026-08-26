@@ -240,7 +240,7 @@ const filasTablaParaExportar = computed(() =>
 
       <PanelEdicionMovimiento ref="panelEdicion" />
 
-      <div class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div class="mt-4 flex flex-col gap-6">
         <div v-if="movimientosGastados.length > 0">
           <div class="grid grid-cols-2 gap-4">
             <Card>

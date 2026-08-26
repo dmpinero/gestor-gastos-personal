@@ -8,13 +8,13 @@ const router = useRouter()
 
 const pestanas = [
   {
-    nombre: 'administracion-exportar-datos',
-    ruta: '/administracion/exportar-datos',
-    etiqueta: 'Exportar datos',
+    nombre: 'administracion-backup',
+    ruta: '/administracion/backup',
+    etiqueta: 'Realizar backup',
   },
 ]
 
-const PESTANA_POR_DEFECTO = 'administracion-exportar-datos'
+const PESTANA_POR_DEFECTO = 'administracion-backup'
 
 const pestanaActiva = computed<string>({
   get: () => (typeof ruta.name === 'string' ? ruta.name : PESTANA_POR_DEFECTO),

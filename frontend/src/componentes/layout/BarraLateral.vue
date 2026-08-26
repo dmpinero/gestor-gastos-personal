@@ -4,7 +4,7 @@ import {
   CalendarRange,
   ChevronRight,
   Database,
-  Download,
+  DatabaseBackup,
   History,
   LayoutDashboard,
   Settings2,
@@ -85,9 +85,9 @@ function historialActivo(path: string): boolean {
 
 const subseccionesAdministracion = [
   {
-    a: '/administracion/exportar-datos',
-    etiqueta: 'Exportar datos',
-    icono: Download,
+    a: '/administracion/backup',
+    etiqueta: 'Realizar backup',
+    icono: DatabaseBackup,
     color: 'text-sky-500',
   },
 ]

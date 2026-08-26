@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('navegar a Administración > Exportar datos y exportar los datos descarga un Excel', async ({
-  page,
-}) => {
+test('navegar a Administración > Realizar backup descarga un Excel', async ({ page }) => {
   await page.goto('/')
 
   await page.getByRole('link', { name: 'Administración' }).click()
@@ -10,10 +8,10 @@ test('navegar a Administración > Exportar datos y exportar los datos descarga u
     'aria-current',
     'page',
   )
-  await expect(page.getByRole('link', { name: 'Exportar datos' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Realizar backup' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Exportar datos' }).click()
-  await expect(page.getByRole('link', { name: 'Exportar datos' })).toHaveAttribute(
+  await page.getByRole('link', { name: 'Realizar backup' }).click()
+  await expect(page.getByRole('link', { name: 'Realizar backup' })).toHaveAttribute(
     'aria-current',
     'page',
   )
@@ -21,7 +19,7 @@ test('navegar a Administración > Exportar datos y exportar los datos descarga u
 
   const [descarga] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Exportar datos' }).click(),
+    page.getByRole('button', { name: 'Realizar backup' }).click(),
   ])
 
   expect(descarga.suggestedFilename()).toMatch(/^backup-gestor-gastos_\d{8}_\d{6}\.xlsx$/)

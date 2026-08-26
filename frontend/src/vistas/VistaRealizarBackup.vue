@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download } from '@lucide/vue'
+import { DatabaseBackup } from '@lucide/vue'
 import { ref } from 'vue'
 import { useTiendaExportacion } from '@/stores/exportacion'
 import { Button } from '@/componentes/ui/button'
@@ -25,8 +25,8 @@ async function exportar(): Promise<void> {
     </p>
 
     <Button class="mt-4" variant="outline" :disabled="exportando" @click="exportar">
-      <Download class="size-4" />
-      {{ exportando ? 'Exportando…' : 'Exportar datos' }}
+      <DatabaseBackup class="size-4" />
+      {{ exportando ? 'Generando backup…' : 'Realizar backup' }}
     </Button>
 
     <p v-if="tienda.error" class="mt-2 text-sm text-destructive" role="alert">

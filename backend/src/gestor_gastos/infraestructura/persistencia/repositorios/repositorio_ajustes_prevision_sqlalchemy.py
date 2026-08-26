@@ -57,3 +57,7 @@ class RepositorioAjustesPrevisionSqlAlchemy:
             select(AjustePrevisionMensualModelo).where(AjustePrevisionMensualModelo.anio == anio)
         ).all()
         return [_a_entidad(m) for m in modelos]
+
+    def listar_todos(self) -> list[AjusteMensual]:
+        modelos = self._sesion.scalars(select(AjustePrevisionMensualModelo)).all()
+        return [_a_entidad(m) for m in modelos]

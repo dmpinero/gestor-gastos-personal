@@ -130,6 +130,9 @@ class RepositorioMovimientosFalso:
     def obtener_por_id(self, id_movimiento: int) -> Movimiento | None:
         return self._movimientos.get(id_movimiento)
 
+    def listar_todos(self) -> list[Movimiento]:
+        return sorted(self._movimientos.values(), key=lambda m: m.fecha_valor, reverse=True)
+
     def listar_por_cuenta(self, id_cuenta: int) -> list[Movimiento]:
         movimientos = [m for m in self._movimientos.values() if m.cuenta_id == id_cuenta]
         return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
@@ -318,6 +321,9 @@ class RepositorioAjustesPrevisionFalso:
     def listar_por_anio(self, anio: int) -> list[AjusteMensual]:
         return [a for a in self._ajustes.values() if a.anio == anio]
 
+    def listar_todos(self) -> list[AjusteMensual]:
+        return list(self._ajustes.values())
+
 
 class LectorExcelFalso:
     """Doble de LectorExcel que devuelve unos datos fijos o lanza un error dado."""
@@ -379,4 +385,15 @@ class EscritorExcelResumenAnualFalso:
 
     def escribir(self, resumen) -> bytes:
         self.resumen_recibido = resumen
+        return b"contenido-falso"
+
+
+class EscritorExportacionCompletaFalso:
+    """Doble de EscritorExportacionCompleta que registra los datos recibidos."""
+
+    def __init__(self) -> None:
+        self.datos_recibidos = None
+
+    def escribir(self, datos) -> bytes:
+        self.datos_recibidos = datos
         return b"contenido-falso"

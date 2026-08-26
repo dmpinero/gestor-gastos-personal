@@ -680,10 +680,12 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await expect(barrasComparativa.getByText('30,00 €')).toBeVisible()
   await expect(barrasComparativa.getByText('500,00 €')).toBeVisible()
 
-  // A la derecha, una etiqueta con el saldo del mes (500 - 30 = 470, verde).
-  const filaSaldoComparativa = barrasComparativa.locator('..').locator('ul li').first()
+  // Debajo, una tabla a ancho completo con el saldo del mes (500 - 30 = 470, verde).
+  const tablaSaldoComparativa = zonaComparativa.locator('table')
+  await expect(tablaSaldoComparativa).toBeVisible()
+  const filaSaldoComparativa = tablaSaldoComparativa.locator('tbody tr').first()
   await expect(filaSaldoComparativa).toContainText('470,00 €')
-  await expect(filaSaldoComparativa.locator('span.tabular-nums')).toHaveClass(/text-success/)
+  await expect(filaSaldoComparativa.locator('td').nth(1)).toHaveClass(/text-success/)
   await page.screenshot({ path: 'e2e/capturas/movimientos-11-comparativa-saldo-mes.png' })
 
   // Debajo, el top 10 por categoría de cada serie.
@@ -1059,8 +1061,15 @@ test('"Agrupar por categoría" muestra totales por categoría/subcategoría, y p
   await crear(nombreCategoriaX, null, descripcionSinSub, '-10.00')
   await crear(nombreCategoriaY, null, descripcionOtraCategoria, '-5.00')
 
+  // La tabla plana de Resultados (identificada por su checkbox "seleccionar
+  // todos") desaparece; no se puede comprobar con "no hay ninguna <table> en
+  // la página" porque la tabla de saldo de "Evolución de gastos vs ingresos"
+  // (ver más abajo) es independiente de este toggle y sigue visible.
+  const checkboxSeleccionarTodos = page.getByRole('checkbox', {
+    name: 'Seleccionar todos los movimientos',
+  })
   await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
-  await expect(page.locator('table')).toHaveCount(0)
+  await expect(checkboxSeleccionarTodos).toHaveCount(0)
   await page.screenshot({ path: 'e2e/capturas/movimientos-12-agrupado-por-categoria.png' })
 
   const filaCategoriaX = page.locator('button[aria-expanded]', { hasText: nombreCategoriaX })
@@ -1100,6 +1109,6 @@ test('"Agrupar por categoría" muestra totales por categoría/subcategoría, y p
 
   // Volver a la vista plana restaura la tabla y el buscador.
   await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
-  await expect(page.locator('table')).toBeVisible()
+  await expect(checkboxSeleccionarTodos).toBeVisible()
   await expect(page.getByPlaceholder('Buscar movimientos…')).toBeVisible()
 })

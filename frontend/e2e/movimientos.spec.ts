@@ -751,6 +751,23 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await page.keyboard.press('Escape')
   await expect(modalDetalle).toBeHidden()
 
+  // Modo líneas: aparece una tercera línea con el saldo del mes (500 - 35 =
+  // 465), y una leyenda con 3 chips para elegir qué series ver.
+  await zonaComparativa.getByRole('button', { name: 'Ver como líneas' }).click()
+  const svgComparativa = zonaComparativa.locator('svg[role="img"]')
+  await expect(svgComparativa).toBeVisible()
+  await expect(svgComparativa.getByText('465,00 €')).toBeVisible()
+  await expect(svgComparativa.locator('circle')).toHaveCount(3) // gasto, ingreso, saldo
+  await page.screenshot({ path: 'e2e/capturas/movimientos-14-comparativa-lineas-saldo.png' })
+
+  // Ocultar "Gastos" deja solo ingreso y saldo dibujados.
+  await zonaComparativa.getByRole('button', { name: 'Ocultar gastos' }).click()
+  await expect(svgComparativa.locator('polyline')).toHaveCount(2)
+  await expect(svgComparativa.locator('circle')).toHaveCount(2)
+
+  await zonaComparativa.getByRole('button', { name: 'Mostrar gastos' }).click()
+  await expect(svgComparativa.locator('polyline')).toHaveCount(3)
+
   await zonaComparativa.getByRole('button', { name: 'Ver como circular' }).click()
   const listaCircular = zonaComparativa.locator('ul').first()
   await expect(listaCircular.getByText('Gastos', { exact: true })).toBeVisible()

@@ -397,3 +397,30 @@ class EscritorExportacionCompletaFalso:
     def escribir(self, datos) -> bytes:
         self.datos_recibidos = datos
         return b"contenido-falso"
+
+
+class LectorExportacionCompletaFalso:
+    """Doble de LectorExportacionCompleta que devuelve unos datos fijos o lanza un error dado."""
+
+    def __init__(self, datos=None, error: Exception | None = None) -> None:
+        self._datos = datos
+        self._error = error
+
+    def leer(self, contenido: bytes, nombre_fichero: str):
+        if self._error is not None:
+            raise self._error
+        assert self._datos is not None
+        return self._datos
+
+
+class RepositorioImportacionCompletaFalso:
+    """Doble de RepositorioImportacionCompleta que registra los datos recibidos."""
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self._error = error
+        self.datos_recibidos = None
+
+    def reemplazar_todo(self, datos) -> None:
+        if self._error is not None:
+            raise self._error
+        self.datos_recibidos = datos

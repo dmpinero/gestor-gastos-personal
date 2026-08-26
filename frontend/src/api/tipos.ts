@@ -169,3 +169,12 @@ export interface ResumenImportacionConceptosPrevistos {
   categorias_creadas: string[]
   subcategorias_creadas: string[]
 }
+
+export interface ResumenImportacionDatosCompletos {
+  cuentas_importadas: number
+  categorias_importadas: number
+  subcategorias_importadas: number
+  movimientos_importados: number
+  conceptos_previstos_importados: number
+  ajustes_importados: number
+}

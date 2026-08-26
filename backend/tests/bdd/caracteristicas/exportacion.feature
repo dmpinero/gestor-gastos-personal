@@ -12,3 +12,13 @@ Característica: Exportación completa de datos
     Entonces el Excel exportado contiene las hojas "Cuentas", "Categorías", "Subcategorías", "Movimientos", "Conceptos previstos" y "Ajustes mensuales"
     Y la hoja "Cuentas" del Excel exportado contiene la cuenta "ES00 1234"
     Y la hoja "Movimientos" del Excel exportado contiene un movimiento con descripción "Netflix"
+
+  Escenario: Importar un backup sustituye todos los datos existentes por los del Excel
+    Dado que existe la cuenta "ES00 1234"
+    Y existe la categoría "Suscripciones" con la subcategoría "Streaming"
+    Y existe un movimiento en esa cuenta y esa subcategoría con descripción "Netflix" e importe "-9.99"
+    Y he exportado todos los datos
+    Y existe la cuenta "ES00 9999"
+    Cuando importo el backup exportado
+    Entonces la restauración importa 1 cuenta, 1 categoría y 1 movimiento
+    Y solo existe la cuenta "ES00 1234"

@@ -8,6 +8,7 @@ scenarios("exportacion.feature")
 
 
 @given(parsers.parse('que existe la cuenta "{numero_cuenta}"'), target_fixture="contexto")
+@given(parsers.parse('existe la cuenta "{numero_cuenta}"'), target_fixture="contexto")
 def existe_la_cuenta(cliente: TestClient, numero_cuenta: str) -> dict:
     cuenta = cliente.post("/api/v1/cuentas", json={"numero_cuenta": numero_cuenta}).json()
     return {"cuenta_id": cuenta["id"]}
@@ -53,6 +54,7 @@ def existe_un_movimiento(
 
 
 @when("exporto todos los datos", target_fixture="excel_datos_completos")
+@given("he exportado todos los datos", target_fixture="excel_datos_completos")
 def exporto_todos_los_datos(cliente: TestClient) -> bytes:
     respuesta = cliente.get("/api/v1/exportacion/datos")
     assert respuesta.status_code == 200
@@ -90,3 +92,39 @@ def la_hoja_contiene_un_movimiento(
     libro = openpyxl.load_workbook(io.BytesIO(excel_datos_completos))
     valores_descripcion = [fila[5].value for fila in libro[hoja].iter_rows(min_row=2)]
     assert descripcion in valores_descripcion
+
+
+@when("importo el backup exportado", target_fixture="resultado_importacion")
+def importo_el_backup_exportado(cliente: TestClient, excel_datos_completos: bytes) -> dict:
+    respuesta = cliente.post(
+        "/api/v1/exportacion/datos/importar",
+        files={
+            "fichero": (
+                "backup-gestor-gastos.xlsx",
+                excel_datos_completos,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@then(
+    parsers.parse(
+        "la restauración importa {cuentas:d} cuenta, {categorias:d} categoría y "
+        "{movimientos:d} movimiento"
+    )
+)
+def la_restauracion_importa(
+    resultado_importacion: dict, cuentas: int, categorias: int, movimientos: int
+) -> None:
+    assert resultado_importacion["cuentas_importadas"] == cuentas
+    assert resultado_importacion["categorias_importadas"] == categorias
+    assert resultado_importacion["movimientos_importados"] == movimientos
+
+
+@then(parsers.parse('solo existe la cuenta "{numero_cuenta}"'))
+def solo_existe_la_cuenta(cliente: TestClient, numero_cuenta: str) -> None:
+    cuentas = cliente.get("/api/v1/cuentas").json()
+    assert [c["numero_cuenta"] for c in cuentas] == [numero_cuenta]

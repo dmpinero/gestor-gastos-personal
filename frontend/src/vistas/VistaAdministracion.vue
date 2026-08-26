@@ -12,6 +12,11 @@ const pestanas = [
     ruta: '/administracion/backup',
     etiqueta: 'Realizar backup',
   },
+  {
+    nombre: 'administracion-importar-backup',
+    ruta: '/administracion/importar-backup',
+    etiqueta: 'Importar backup',
+  },
 ]
 
 const PESTANA_POR_DEFECTO = 'administracion-backup'

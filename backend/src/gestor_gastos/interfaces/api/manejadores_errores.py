@@ -9,6 +9,12 @@ from gestor_gastos.dominio.excepciones import (
     FiltroDeListadoInvalidoError,
     NombreDuplicadoError,
 )
+from gestor_gastos.dominio.exportacion.excepciones import (
+    CabeceraExcelNoReconocidaError,
+    FilaExcelInvalidaError,
+    HojasExcelNoReconocidasError,
+    RestauracionDeDatosFallidaError,
+)
 from gestor_gastos.dominio.importacion.excepciones import (
     CabeceraNoReconocidaError,
     ExtensionNoSoportadaError,
@@ -85,6 +91,28 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
     @aplicacion.exception_handler(ImportePrevistoInvalidoError)
     async def _importe_previsto_invalido(
         _: Request, error: ImportePrevistoInvalidoError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(HojasExcelNoReconocidasError)
+    async def _hojas_no_reconocidas(
+        _: Request, error: HojasExcelNoReconocidasError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(CabeceraExcelNoReconocidaError)
+    async def _cabecera_excel_no_reconocida(
+        _: Request, error: CabeceraExcelNoReconocidaError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(FilaExcelInvalidaError)
+    async def _fila_excel_invalida(_: Request, error: FilaExcelInvalidaError) -> JSONResponse:
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(RestauracionDeDatosFallidaError)
+    async def _restauracion_fallida(
+        _: Request, error: RestauracionDeDatosFallidaError
     ) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
 

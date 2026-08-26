@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  ArchiveRestore,
   ArrowLeftRight,
   CalendarRange,
   ChevronRight,
@@ -89,6 +90,12 @@ const subseccionesAdministracion = [
     etiqueta: 'Realizar backup',
     icono: DatabaseBackup,
     color: 'text-sky-500',
+  },
+  {
+    a: '/administracion/importar-backup',
+    etiqueta: 'Importar backup',
+    icono: ArchiveRestore,
+    color: 'text-amber-500',
   },
 ]
 

@@ -8,7 +8,8 @@ from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPre
 
 @dataclass
 class DatosCompletos:
-    """Volcado completo de todas las tablas de la aplicación, para exportación."""
+    """Volcado completo de todas las tablas de la aplicación, para exportación
+    e importación (restauración de backup)."""
 
     cuentas: list[CuentaBancaria]
     categorias: list[Categoria]
@@ -16,3 +17,15 @@ class DatosCompletos:
     movimientos: list[Movimiento]
     conceptos_previstos: list[ConceptoPrevisto]
     ajustes: list[AjusteMensual]
+
+
+@dataclass
+class ResumenImportacionDatosCompletos:
+    """Cuántos registros de cada tabla trajo el Excel importado."""
+
+    cuentas_importadas: int
+    categorias_importadas: int
+    subcategorias_importadas: int
+    movimientos_importados: int
+    conceptos_previstos_importados: int
+    ajustes_importados: int

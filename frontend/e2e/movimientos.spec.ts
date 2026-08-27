@@ -66,6 +66,63 @@ test('gestión completa de un movimiento: crear, editar y eliminar', async ({ pa
   await page.screenshot({ path: 'e2e/capturas/movimientos-05-tras-eliminar.png' })
 })
 
+test('crear categoría y subcategoría desde los botones "+" del panel de movimiento, y guardarlo con ellas', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV3 ${sufijo}`
+  const nombreCategoria = `Categoria nueva MOV ${sufijo}`
+  const nombreSubcategoria = `Subcategoria nueva MOV ${sufijo}`
+  const descripcion = `Movimiento con categoria nueva ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panel = page.getByRole('dialog')
+  await expect(panel).toBeVisible()
+  await elegirCuentaDelFormulario(page, panel, numeroCuenta)
+  await panel.locator('input[type="date"]').fill('2026-01-20')
+  await panel.getByPlaceholder('Descripción').fill(descripcion)
+  await panel.getByPlaceholder('Importe').fill('-12.00')
+  await panel.getByPlaceholder('Saldo').fill('988.00')
+
+  // Sin categoría elegida, el botón de crear subcategoría está deshabilitado:
+  // una subcategoría siempre cuelga de una categoría.
+  await expect(panel.getByRole('button', { name: 'Crear subcategoría' })).toBeDisabled()
+
+  await panel.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoriaNueva = page.getByRole('dialog').filter({ hasText: 'Crear categoría' })
+  await expect(panelCategoriaNueva).toBeVisible()
+  await panelCategoriaNueva.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoriaNueva.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(panelCategoriaNueva).toBeHidden()
+  await expect(panel.getByLabel('Categoría', { exact: true })).toContainText(nombreCategoria)
+
+  await expect(panel.getByRole('button', { name: 'Crear subcategoría' })).toBeEnabled()
+  await panel.getByRole('button', { name: 'Crear subcategoría' }).click()
+  const panelSubcategoriaNueva = page
+    .getByRole('dialog')
+    .filter({ hasText: `Nueva subcategoría en "${nombreCategoria}"` })
+  await expect(panelSubcategoriaNueva).toBeVisible()
+  await panelSubcategoriaNueva.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await panelSubcategoriaNueva.getByRole('button', { name: 'Crear subcategoría' }).click()
+  await expect(panelSubcategoriaNueva).toBeHidden()
+  await expect(panel.getByLabel('Subcategoría', { exact: true })).toContainText(nombreSubcategoria)
+
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+  const fila = page.locator('tr', { hasText: descripcion })
+  await expect(fila).toBeVisible()
+  await expect(fila).toContainText(nombreCategoria)
+})
+
 test('la fecha se muestra en formato dd/mm/aaaa, y el buscador y las cabeceras ordenables funcionan', async ({
   page,
 }) => {

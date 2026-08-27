@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import { clienteApi } from '@/api/cliente'
 import type {
+  Categoria,
   CategoriaConSubcategorias,
   DependenciasCategoria,
   DependenciasSubcategoria,
@@ -26,9 +27,10 @@ export const useTiendaCategorias = defineStore('categorias', () => {
     }
   }
 
-  async function crearCategoria(nombre: string): Promise<void> {
-    await clienteApi.crear('/categorias', { nombre })
+  async function crearCategoria(nombre: string): Promise<Categoria> {
+    const categoria = await clienteApi.crear<Categoria>('/categorias', { nombre })
     await cargar()
+    return categoria
   }
 
   async function actualizarCategoria(id: number, nombre: string): Promise<void> {
@@ -45,9 +47,13 @@ export const useTiendaCategorias = defineStore('categorias', () => {
     return clienteApi.obtener<DependenciasCategoria>(`/categorias/${id}/dependencias`)
   }
 
-  async function crearSubcategoria(idCategoria: number, nombre: string): Promise<void> {
-    await clienteApi.crear<Subcategoria>(`/categorias/${idCategoria}/subcategorias`, { nombre })
+  async function crearSubcategoria(idCategoria: number, nombre: string): Promise<Subcategoria> {
+    const subcategoria = await clienteApi.crear<Subcategoria>(
+      `/categorias/${idCategoria}/subcategorias`,
+      { nombre },
+    )
     await cargar()
+    return subcategoria
   }
 
   async function actualizarSubcategoria(

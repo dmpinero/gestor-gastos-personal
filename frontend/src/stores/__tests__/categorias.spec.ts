@@ -44,6 +44,17 @@ describe('useTiendaCategorias', () => {
     expect(tienda.categorias).toEqual([])
   })
 
+  it('crearCategoria devuelve la categoría creada', async () => {
+    vi.mocked(clienteApi.obtener).mockResolvedValue([categoriaEjemplo])
+    vi.mocked(clienteApi.crear).mockResolvedValue({ id: 2, nombre: 'Salud' })
+
+    const tienda = useTiendaCategorias()
+    const categoria = await tienda.crearCategoria('Salud')
+
+    expect(clienteApi.crear).toHaveBeenCalledWith('/categorias', { nombre: 'Salud' })
+    expect(categoria).toEqual({ id: 2, nombre: 'Salud' })
+  })
+
   it('recarga la lista tras crear una subcategoría', async () => {
     vi.mocked(clienteApi.obtener).mockResolvedValue([categoriaEjemplo])
     vi.mocked(clienteApi.crear).mockResolvedValue({ id: 2, nombre: 'Hoteles', categoria_id: 1 })
@@ -55,6 +66,16 @@ describe('useTiendaCategorias', () => {
       nombre: 'Hoteles',
     })
     expect(tienda.categorias).toEqual([categoriaEjemplo])
+  })
+
+  it('crearSubcategoria devuelve la subcategoría creada', async () => {
+    vi.mocked(clienteApi.obtener).mockResolvedValue([categoriaEjemplo])
+    vi.mocked(clienteApi.crear).mockResolvedValue({ id: 2, nombre: 'Hoteles', categoria_id: 1 })
+
+    const tienda = useTiendaCategorias()
+    const subcategoria = await tienda.crearSubcategoria(1, 'Hoteles')
+
+    expect(subcategoria).toEqual({ id: 2, nombre: 'Hoteles', categoria_id: 1 })
   })
 
   it('actualiza una subcategoría enviando el nombre y la categoría de destino', async () => {

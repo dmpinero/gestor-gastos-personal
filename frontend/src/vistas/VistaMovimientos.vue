@@ -131,6 +131,20 @@ watch(itemsSubcategoriasFiltro, (items) => {
   subcategoriasFiltro.value = items.map((i) => i.id)
 })
 
+// Una categoría creada durante la sesión (p. ej. desde el botón "+" del
+// panel de edición de movimiento) debe quedar marcada en el filtro por
+// defecto, igual que las que ya existían al montar la vista: si no, un
+// movimiento recién guardado con esa categoría desaparecería de la tabla en
+// el momento de crearlo. Se añade solo lo nuevo, sin tocar desmarcados
+// manuales de categorías ya existentes.
+watch(itemsCategoriasFiltro, (items, itemsAnteriores) => {
+  const idsConocidos = new Set(itemsAnteriores.map((i) => i.id))
+  const idsNuevos = items.filter((i) => !idsConocidos.has(i.id)).map((i) => i.id)
+  if (idsNuevos.length > 0) {
+    categoriasFiltro.value = [...categoriasFiltro.value, ...idsNuevos]
+  }
+})
+
 function nombreCuenta(idCuenta: number): string {
   const cuenta = tiendaCuentas.cuentas.find((c) => c.id === idCuenta)
   return cuenta ? (cuenta.alias ?? cuenta.numero_cuenta) : ''

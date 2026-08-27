@@ -49,7 +49,7 @@ const clasesPorLado: Record<NonNullable<PropiedadesSheetContent['side']>, string
       v-bind="forwarded"
       :class="
         cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 overflow-y-auto shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           clasesPorLado[side],
           props.class,
         )

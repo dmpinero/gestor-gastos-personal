@@ -11,6 +11,7 @@ vi.mock('@/api/cliente', async (importarOriginal) => {
     ErrorApi: original.ErrorApi,
     clienteApi: {
       descargar: vi.fn<(...args: unknown[]) => unknown>(),
+      subirArchivo: vi.fn<(...args: unknown[]) => unknown>(),
     },
   }
 })
@@ -48,5 +49,40 @@ describe('useTiendaExportacion', () => {
 
     expect(tienda.error).toBe('fallo de red')
     expect(descargarBlob).not.toHaveBeenCalled()
+  })
+
+  it('importa un backup y devuelve el resumen de la restauración', async () => {
+    const resumen = {
+      cuentas_importadas: 1,
+      categorias_importadas: 2,
+      subcategorias_importadas: 3,
+      movimientos_importados: 4,
+      conceptos_previstos_importados: 5,
+      ajustes_importados: 6,
+    }
+    vi.mocked(clienteApi.subirArchivo).mockResolvedValue(resumen)
+    const fichero = new File(['contenido'], 'backup-gestor-gastos.xlsx')
+
+    const tienda = useTiendaExportacion()
+    const devuelto = await tienda.importarDatosCompletos(fichero)
+
+    expect(clienteApi.subirArchivo).toHaveBeenCalledWith(
+      '/exportacion/datos/importar',
+      'fichero',
+      fichero,
+    )
+    expect(devuelto).toEqual(resumen)
+    expect(tienda.error).toBeNull()
+  })
+
+  it('guarda el mensaje de error si importar el backup falla y devuelve null', async () => {
+    vi.mocked(clienteApi.subirArchivo).mockRejectedValue(new Error('formato no soportado'))
+    const fichero = new File(['contenido'], 'backup.xlsx')
+
+    const tienda = useTiendaExportacion()
+    const devuelto = await tienda.importarDatosCompletos(fichero)
+
+    expect(tienda.error).toBe('formato no soportado')
+    expect(devuelto).toBeNull()
   })
 })

@@ -9,6 +9,7 @@ import VistaHistorialGastos from '@/vistas/VistaHistorialGastos.vue'
 import VistaResumenAnual from '@/vistas/VistaResumenAnual.vue'
 import VistaAdministracion from '@/vistas/VistaAdministracion.vue'
 import VistaRealizarBackup from '@/vistas/VistaRealizarBackup.vue'
+import VistaImportarBackup from '@/vistas/VistaImportarBackup.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -74,6 +75,11 @@ const router = createRouter({
           path: 'backup',
           name: 'administracion-backup',
           component: VistaRealizarBackup,
+        },
+        {
+          path: 'importar-backup',
+          name: 'administracion-importar-backup',
+          component: VistaImportarBackup,
         },
       ],
     },

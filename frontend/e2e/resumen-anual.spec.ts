@@ -342,3 +342,153 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   await expect(celdaMes(filaConcepto, 1)).toContainText('-50,00 €')
   await expect(celdaMes(filaConcepto, 1)).not.toHaveClass(/border-dashed/)
 })
+
+test('el formulario de "Añadir concepto" filtra la Categoría según el Tipo elegido, y permite crear una nueva con el botón "+"', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 TIPO ${sufijo}`
+  const nombreCategoriaGasto = `Categoria TIPO-GASTO ${sufijo}`
+  const nombreCategoriaIngreso = `Categoria TIPO-INGRESO ${sufijo}`
+  const nombreCategoriaNueva = `Categoria TIPO-NUEVA ${sufijo}`
+  const anioActual = new Date().getFullYear()
+  const fechaMovimiento = `${anioActual}-01-15`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombre of [nombreCategoriaGasto, nombreCategoriaIngreso]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoriaGasto,
+    null,
+    `Gasto TIPO ${sufijo}`,
+    '-30.00',
+    fechaMovimiento,
+  )
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoriaIngreso,
+    null,
+    `Ingreso TIPO ${sufijo}`,
+    '500.00',
+    fechaMovimiento,
+  )
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  const selectorCategoria = panelConcepto.getByLabel('Categoría', { exact: true })
+
+  // Tipo por defecto es "Gasto": la categoría exclusivamente de ingreso no
+  // debe aparecer (se cierra sin elegir, para no forzarla a seguir
+  // apareciendo luego: una categoría ya elegida se mantiene siempre entre
+  // las opciones, aunque cambie el Tipo, para no perderla al combinar
+  // libremente cualquier categoría con cualquier tipo).
+  await selectorCategoria.click()
+  await expect(page.getByRole('option', { name: nombreCategoriaIngreso, exact: true })).toHaveCount(
+    0,
+  )
+  await page.keyboard.press('Escape')
+
+  // Elegir "Ingreso" antes de abrir el desplegable de Categoría: ahora es la
+  // de gasto la que no debe aparecer.
+  await panelConcepto.getByLabel('Tipo', { exact: true }).click()
+  await page.getByRole('option', { name: 'Ingreso' }).click()
+  await selectorCategoria.click()
+  await expect(page.getByRole('option', { name: nombreCategoriaGasto, exact: true })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await elegirOpcion(page, selectorCategoria, nombreCategoriaIngreso)
+
+  // El botón "+" crea una categoría nueva (sin histórico todavía) y la deja
+  // seleccionada, aunque no tenga aún ningún movimiento de tipo ingreso.
+  await panelConcepto.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCrearCategoria = page.getByRole('dialog').filter({ hasText: 'Crear categoría' })
+  await expect(panelCrearCategoria).toBeVisible()
+  await panelCrearCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoriaNueva)
+  await panelCrearCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(panelCrearCategoria).toBeHidden()
+  await expect(selectorCategoria).toContainText(nombreCategoriaNueva)
+
+  await panelConcepto.getByLabel('Importe previsto').fill('100.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  const seccionIngresos = page.locator('section:has(> h3:text-is("Ingresos"))')
+  await expect(
+    seccionIngresos
+      .locator('tbody tr')
+      .filter({ has: page.getByText(nombreCategoriaNueva, { exact: true }) }),
+  ).toBeVisible()
+})
+
+test('elegir una categoría y cambiar después el Tipo no la pierde: cualquier categoría vale para cualquier tipo', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 TIPO-MIX ${sufijo}`
+  const nombreCategoria = `Categoria TIPO-MIX ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  // Un movimiento real de gasto asociado a la categoría es lo que hace que
+  // el filtro por tipo entre en juego (antes de tener histórico, la
+  // categoría no está excluida de ningún tipo, y el caso no sería revelador).
+  const anioActual = new Date().getFullYear()
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoria,
+    null,
+    `Gasto TIPO-MIX ${sufijo}`,
+    '-20.00',
+    `${anioActual}-01-15`,
+  )
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  const selectorCategoria = panelConcepto.getByLabel('Categoría', { exact: true })
+
+  await elegirOpcion(page, selectorCategoria, nombreCategoria)
+  await panelConcepto.getByLabel('Tipo', { exact: true }).click()
+  await page.getByRole('option', { name: 'Ingreso' }).click()
+
+  await expect(selectorCategoria).toContainText(nombreCategoria)
+  await panelConcepto.getByLabel('Importe previsto').fill('75.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  const seccionIngresos = page.locator('section:has(> h3:text-is("Ingresos"))')
+  await expect(
+    seccionIngresos
+      .locator('tbody tr')
+      .filter({ has: page.getByText(nombreCategoria, { exact: true }) }),
+  ).toBeVisible()
+})

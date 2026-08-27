@@ -124,4 +124,43 @@ describe('GraficoEvolucion', () => {
     expect(wrapper.findAll('svg[role="img"] path')).toHaveLength(0)
     expect(wrapper.text()).toContain('100%')
   })
+
+  it('en modo líneas, con acento gasto el importe se traza en negativo y cuanto mayor es, más cuelga desde arriba (el cero)', async () => {
+    const wrapper = mount(GraficoEvolucion, {
+      props: {
+        items: [
+          { periodo: '2026-01', total: 10 },
+          { periodo: '2026-02', total: 30 },
+        ],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+
+    expect(wrapper.text()).toContain(formatearImporte(-30))
+    const circulos = wrapper.findAll('svg[role="img"] circle')
+    const yMenor = Number(circulos[0]!.attributes('cy'))
+    const yMayor = Number(circulos[1]!.attributes('cy'))
+    expect(yMayor).toBeGreaterThan(yMenor)
+  })
+
+  it('en modo líneas, con acento ingreso el importe se traza en positivo y cuanto mayor es, más sube desde abajo (el cero)', async () => {
+    const wrapper = mount(GraficoEvolucion, {
+      props: {
+        items: [
+          { periodo: '2026-01', total: 10 },
+          { periodo: '2026-02', total: 30 },
+        ],
+        acento: 'ingreso',
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+
+    expect(wrapper.text()).toContain(formatearImporte(30))
+    const circulos = wrapper.findAll('svg[role="img"] circle')
+    const yMenor = Number(circulos[0]!.attributes('cy'))
+    const yMayor = Number(circulos[1]!.attributes('cy'))
+    expect(yMayor).toBeLessThan(yMenor)
+  })
 })

@@ -156,7 +156,8 @@ describe('GraficoComparativoEvolucion', () => {
     expect(wrapper.findAll('svg[role="img"] circle')).toHaveLength(3)
     // Un texto de importe por serie y por periodo (1 periodo x 3 series = 3 textos).
     expect(wrapper.findAll('svg[role="img"] text')).toHaveLength(3)
-    expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(30))
+    // El gasto se traza en negativo, como el saldo (ver test dedicado más abajo).
+    expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(-30))
     expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(100))
     expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(70)) // saldo
   })
@@ -222,6 +223,23 @@ describe('GraficoComparativoEvolucion', () => {
     expect(wrapper.find('svg[role="img"]').exists()).toBe(true) // el SVG sigue ahí (línea de cero)
   })
 
+  it('en modo líneas, el gasto se traza por debajo de la línea de cero (como un saldo negativo)', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar ingresos"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar saldo"]').trigger('click')
+
+    const yGasto = Number(wrapper.get('svg[role="img"] circle').attributes('cy'))
+    const yLineaCero = Number(wrapper.get('svg[role="img"] line').attributes('y1'))
+    expect(yGasto).toBeGreaterThan(yLineaCero)
+  })
+
   it('en modo líneas, el saldo positivo queda por encima de la línea de cero y el negativo por debajo', async () => {
     const wrapper = mount(GraficoComparativoEvolucion, {
       props: {
@@ -265,14 +283,15 @@ describe('GraficoComparativoEvolucion', () => {
     // Con ingreso (100) visible, el eje escala al máximo de los tres (100),
     // así que el punto de gasto (30) queda cerca del centro. Al ocultar
     // ingreso y saldo, el máximo visible pasa a ser el propio gasto (30): su
-    // punto se desplaza hacia el borde superior, más lejos del centro.
+    // punto se desplaza hacia el borde inferior (el gasto se traza por
+    // debajo del cero), más lejos del centro.
     await wrapper.get('[aria-label="Ocultar ingresos"]').trigger('click')
     await wrapper.get('[aria-label="Ocultar saldo"]').trigger('click')
     const yGastoSolo = Number(wrapper.findAll('svg[role="img"] circle')[0]!.attributes('cy'))
     const yLineaCero = Number(wrapper.get('svg[role="img"] line').attributes('y1'))
 
-    expect(yGastoSolo).toBeLessThan(yGastoConIngresoVisible)
-    expect(yLineaCero - yGastoSolo).toBeGreaterThan(yLineaCero - yGastoConIngresoVisible)
+    expect(yGastoSolo).toBeGreaterThan(yGastoConIngresoVisible)
+    expect(yGastoSolo - yLineaCero).toBeGreaterThan(yGastoConIngresoVisible - yLineaCero)
   })
 
   it('el modo circular compara el total de gastos frente al de ingresos, con su porcentaje', async () => {

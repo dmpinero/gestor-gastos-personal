@@ -101,7 +101,10 @@ function puntosDe(valores: (fila: (typeof filas.value)[number]) => number) {
   }))
 }
 
-const puntosGastoLineas = computed(() => puntosDe((fila) => fila.gasto))
+// El gasto se traza en negativo (como el saldo cuando es negativo): así
+// queda por debajo del eje cero, igual que un importe de gasto real, en vez
+// de aparecer "hacia arriba" como si fuera un ingreso más.
+const puntosGastoLineas = computed(() => puntosDe((fila) => -fila.gasto))
 const puntosIngresoLineas = computed(() => puntosDe((fila) => fila.ingreso))
 const puntosSaldoLineas = computed(() => puntosDe((fila) => fila.saldo))
 
@@ -429,7 +432,7 @@ const sectoresComparativos = computed(() => {
           <template v-for="punto in puntosGastoLineas" :key="`gasto-${punto.periodo}`">
             <text
               :x="punto.x"
-              :y="Math.max(punto.y - 8, 10)"
+              :y="Math.min(punto.y + 10, ALTO_GRAFICO - 4)"
               text-anchor="middle"
               font-size="10"
               fill="var(--muted-foreground)"
@@ -443,7 +446,7 @@ const sectoresComparativos = computed(() => {
           <template v-for="punto in puntosIngresoLineas" :key="`ingreso-${punto.periodo}`">
             <text
               :x="punto.x"
-              :y="Math.max(punto.y - 18, 10)"
+              :y="Math.max(punto.y - 8, 10)"
               text-anchor="middle"
               font-size="10"
               fill="var(--muted-foreground)"

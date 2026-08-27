@@ -14,7 +14,7 @@ from gestor_gastos.dominio.prevision.valores import (
 )
 
 _HOJAS_ESPERADAS = ("Gastos", "Ingresos")
-_PRIMERA_COLUMNA_MES = 4  # D
+_PRIMERA_COLUMNA_MES = 5  # E
 _EXTENSIONES_SOPORTADAS = {".xlsx"}
 
 
@@ -48,7 +48,7 @@ class LectorExcelResumenAnualOpenpyxl:
     def _leer_hoja(self, hoja: object) -> list[CeldaResumenAnualExcel]:
         celdas: list[CeldaResumenAnualExcel] = []
         for fila in hoja.iter_rows(min_row=2):
-            id_concepto = fila[0].value
+            id_concepto = fila[1].value
             if id_concepto is None:
                 continue  # fila de totales u otra fila sin concepto
             try:
@@ -60,6 +60,7 @@ class LectorExcelResumenAnualOpenpyxl:
                     "Este panel espera el fichero exportado desde 'Resumen anual', no un "
                     "Excel de conceptos previstos u otro formato."
                 ) from error
+            anio = int(fila[0].value)
             for indice_mes in range(12):
                 valor_celda = fila[_PRIMERA_COLUMNA_MES - 1 + indice_mes].value
                 importe = (
@@ -67,7 +68,7 @@ class LectorExcelResumenAnualOpenpyxl:
                 )
                 celdas.append(
                     CeldaResumenAnualExcel(
-                        concepto_id=concepto_id, mes=indice_mes + 1, importe=importe
+                        concepto_id=concepto_id, anio=anio, mes=indice_mes + 1, importe=importe
                     )
                 )
         return celdas

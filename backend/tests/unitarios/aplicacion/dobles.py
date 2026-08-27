@@ -378,13 +378,13 @@ class LectorExcelConceptosPrevistosFalso:
 
 
 class EscritorExcelResumenAnualFalso:
-    """Doble de EscritorExcelResumenAnual que registra el resumen recibido."""
+    """Doble de EscritorExcelResumenAnual que registra los resúmenes recibidos."""
 
     def __init__(self) -> None:
-        self.resumen_recibido = None
+        self.resumenes_recibidos = None
 
-    def escribir(self, resumen) -> bytes:
-        self.resumen_recibido = resumen
+    def escribir(self, resumenes) -> bytes:
+        self.resumenes_recibidos = resumenes
         return b"contenido-falso"
 
 

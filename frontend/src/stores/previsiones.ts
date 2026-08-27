@@ -95,31 +95,37 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
-  async function exportarResumenAnual(anio: number): Promise<void> {
+  async function exportarResumenAnual(anioDesde: number, anioHasta: number): Promise<void> {
     error.value = null
     errorTraza.value = null
     try {
-      const blob = await clienteApi.descargar(`/previsiones/resumen-anual/exportar?anio=${anio}`)
-      descargarBlob(blob, `resumen-anual-${anio}.xlsx`)
+      const blob = await clienteApi.descargar(
+        `/previsiones/resumen-anual/exportar?anio_desde=${anioDesde}&anio_hasta=${anioHasta}`,
+      )
+      const nombreFichero =
+        anioDesde === anioHasta
+          ? `resumen-anual-${anioDesde}.xlsx`
+          : `resumen-anual-${anioDesde}-${anioHasta}.xlsx`
+      descargarBlob(blob, nombreFichero)
     } catch (motivo) {
       _guardarError(motivo)
     }
   }
 
+  // El fichero ya lleva el año de cada fila en su propia columna "Año", así
+  // que la importación no necesita que se le indique un año. Tras importar,
+  // quien llama decide qué año recargar en pantalla (cargarResumenAnual).
   async function importarResumenAnualExcel(
-    anio: number,
     fichero: File,
   ): Promise<ResumenImportacionResumenAnual | null> {
     error.value = null
     errorTraza.value = null
     try {
-      const resultado = await clienteApi.subirArchivo<ResumenImportacionResumenAnual>(
-        `/previsiones/resumen-anual/importar?anio=${anio}`,
+      return await clienteApi.subirArchivo<ResumenImportacionResumenAnual>(
+        '/previsiones/resumen-anual/importar',
         'fichero',
         fichero,
       )
-      await cargarResumenAnual(anio)
-      return resultado
     } catch (motivo) {
       _guardarError(motivo)
       return null

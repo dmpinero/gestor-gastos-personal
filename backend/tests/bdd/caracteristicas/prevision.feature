@@ -24,10 +24,18 @@ Característica: Resumen anual de previsión
     Dado que existe la categoría "Suscripciones" con un concepto previsto mensual de importe "-4.99"
     Cuando exporto el Excel del resumen anual de 2026
     Y edito en el Excel exportado el importe del mes 1 a "-60.00"
-    Y reimporto el Excel editado para el resumen anual de 2026
+    Y reimporto el Excel editado
     Y consulto el resumen anual de 2026
     Entonces la importación actualiza 1 celda
     Y el concepto muestra el importe ajustado "-60.00" en el mes 1
+
+  Escenario: Exportar un rango de años y reimportar cambios en ambos actualiza cada año
+    Dado que existe la categoría "Suscripciones" con un concepto previsto mensual de importe "-4.99"
+    Cuando exporto el Excel del resumen anual de 2026 a 2027
+    Y edito en el Excel exportado el importe del mes 1 de 2026 a "-60.00"
+    Y edito en el Excel exportado el importe del mes 2 de 2027 a "-70.00"
+    Y reimporto el Excel editado
+    Entonces la importación actualiza 2 celdas
 
   Escenario: Importar un Excel de conceptos previstos crea categoría, subcategoría y concepto
     Cuando importo un Excel de conceptos previstos con la fila "Suscripciones" / "Streaming" / "mensual" / "-9.99"

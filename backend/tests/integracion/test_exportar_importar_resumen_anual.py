@@ -66,14 +66,14 @@ def test_exportar_e_reimportar_sin_cambios_no_altera_nada(sesion_bd) -> None:
 
     contenido = ExportarResumenAnualExcel(
         obtener_resumen, EscritorExcelResumenAnualOpenpyxl()
-    ).ejecutar(ANIO)
+    ).ejecutar(ANIO, ANIO)
 
     resultado = ImportarResumenAnualExcel(
         LectorExcelResumenAnualOpenpyxl(),
         obtener_resumen,
         AjustarValorMensual(repo_previsiones, repo_ajustes),
         EliminarAjusteMensual(repo_previsiones, repo_ajustes),
-    ).ejecutar(contenido, "resumen-anual-2026.xlsx", ANIO)
+    ).ejecutar(contenido, "resumen-anual-2026.xlsx")
 
     assert resultado.celdas_actualizadas == 0
     assert resultado.celdas_eliminadas == 0
@@ -99,17 +99,17 @@ def test_editar_una_celda_del_excel_exportado_y_reimportarlo_crea_un_ajuste(sesi
     )
     contenido = ExportarResumenAnualExcel(
         obtener_resumen, EscritorExcelResumenAnualOpenpyxl()
-    ).ejecutar(ANIO)
+    ).ejecutar(ANIO, ANIO)
 
-    # Enero es la primera columna de meses (D) de la primera fila de datos (2).
-    contenido_editado = _modificar_celda(contenido, "Gastos", "D2", -60.00)
+    # Enero es la primera columna de meses (E) de la primera fila de datos (2).
+    contenido_editado = _modificar_celda(contenido, "Gastos", "E2", -60.00)
 
     resultado = ImportarResumenAnualExcel(
         LectorExcelResumenAnualOpenpyxl(),
         obtener_resumen,
         AjustarValorMensual(repo_previsiones, repo_ajustes),
         EliminarAjusteMensual(repo_previsiones, repo_ajustes),
-    ).ejecutar(contenido_editado, "resumen-anual-2026.xlsx", ANIO)
+    ).ejecutar(contenido_editado, "resumen-anual-2026.xlsx")
 
     assert resultado.celdas_actualizadas == 1
     ajustes = repo_ajustes.listar_por_anio(ANIO)
@@ -147,12 +147,61 @@ def test_vaciar_en_excel_una_celda_ajustada_y_reimportarlo_revierte_el_ajuste(se
 
     contenido = ExportarResumenAnualExcel(
         obtener_resumen, EscritorExcelResumenAnualOpenpyxl()
-    ).ejecutar(ANIO)
-    contenido_editado = _modificar_celda(contenido, "Gastos", "D2", None)
+    ).ejecutar(ANIO, ANIO)
+    contenido_editado = _modificar_celda(contenido, "Gastos", "E2", None)
 
     resultado = ImportarResumenAnualExcel(
         LectorExcelResumenAnualOpenpyxl(), obtener_resumen, ajustar, eliminar_ajuste
-    ).ejecutar(contenido_editado, "resumen-anual-2026.xlsx", ANIO)
+    ).ejecutar(contenido_editado, "resumen-anual-2026.xlsx")
 
     assert resultado.celdas_eliminadas == 1
     assert repo_ajustes.listar_por_anio(ANIO) == []
+
+
+def test_exportar_un_rango_de_anios_editar_celdas_de_ambos_y_reimportar_los_actualiza(
+    sesion_bd,
+) -> None:
+    repo_categorias = RepositorioCategoriasSqlAlchemy(sesion_bd)
+    repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
+    repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
+    categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
+    concepto = repo_previsiones.crear(
+        ConceptoPrevisto(
+            categoria_id=categoria.id,
+            subcategoria_id=None,
+            periodicidad="mensual",
+            importe_previsto=Decimal("-9.99"),
+        )
+    )
+    obtener_resumen = ObtenerResumenAnual(
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+    )
+    anio_siguiente = ANIO + 1
+
+    contenido = ExportarResumenAnualExcel(
+        obtener_resumen, EscritorExcelResumenAnualOpenpyxl()
+    ).ejecutar(ANIO, anio_siguiente)
+
+    # Fila 2 = concepto del primer año (ANIO), fila 3 = total de ANIO,
+    # fila 4 = concepto del segundo año, fila 5 = total del segundo año.
+    contenido_editado = _modificar_celda(contenido, "Gastos", "E2", -60.00)
+    contenido_editado = _modificar_celda(contenido_editado, "Gastos", "F4", -70.00)
+
+    resultado = ImportarResumenAnualExcel(
+        LectorExcelResumenAnualOpenpyxl(),
+        obtener_resumen,
+        AjustarValorMensual(repo_previsiones, repo_ajustes),
+        EliminarAjusteMensual(repo_previsiones, repo_ajustes),
+    ).ejecutar(contenido_editado, "resumen-anual-2026-2027.xlsx")
+
+    assert resultado.celdas_actualizadas == 2
+    ajustes_primer_anio = repo_ajustes.listar_por_anio(ANIO)
+    ajustes_segundo_anio = repo_ajustes.listar_por_anio(anio_siguiente)
+    assert len(ajustes_primer_anio) == 1
+    assert ajustes_primer_anio[0].concepto_id == concepto.id
+    assert ajustes_primer_anio[0].mes == 1
+    assert ajustes_primer_anio[0].importe == Decimal("-60.00")
+    assert len(ajustes_segundo_anio) == 1
+    assert ajustes_segundo_anio[0].mes == 2
+    assert ajustes_segundo_anio[0].importe == Decimal("-70.00")

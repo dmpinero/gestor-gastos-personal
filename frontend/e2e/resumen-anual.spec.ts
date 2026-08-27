@@ -261,10 +261,15 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   const filaConcepto = page.locator('tbody tr', { hasText: nombreSubcategoria })
   await expect(filaConcepto).toBeVisible()
 
-  // Exportar: se captura la descarga real y se lee su contenido con exceljs.
+  // Exportar: el botón abre un diálogo con el rango de años (prellenado con
+  // el año visible en pantalla); se confirma sin tocar nada para exportar
+  // solo ese año, y se captura la descarga real para leerla con exceljs.
+  await page.getByRole('button', { name: 'Exportar a Excel' }).click()
+  const panelExportar = page.getByRole('dialog')
+  await expect(panelExportar).toBeVisible()
   const [descarga] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Exportar a Excel' }).click(),
+    panelExportar.getByRole('button', { name: 'Exportar' }).click(),
   ])
   expect(descarga.suggestedFilename()).toBe(`resumen-anual-${anioActual}.xlsx`)
   const contenidoOriginal = await bufferDeDescarga(descarga)
@@ -276,10 +281,10 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   const hoja = libro.getWorksheet('Gastos')!
   let filaEncontrada: number | null = null
   hoja.eachRow((fila, numeroFila) => {
-    if (fila.getCell(2).value === nombreSubcategoria) filaEncontrada = numeroFila
+    if (fila.getCell(3).value === nombreSubcategoria) filaEncontrada = numeroFila
   })
   expect(filaEncontrada).not.toBeNull()
-  hoja.getRow(filaEncontrada!).getCell(4).value = -77 // columna D = enero
+  hoja.getRow(filaEncontrada!).getCell(5).value = -77 // columna E = enero
   const contenidoEditado = Buffer.from(await libro.xlsx.writeBuffer())
 
   // Reimportar: solo la celda de enero cambia; el resto se queda igual.
@@ -305,9 +310,11 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
 
   // Reexportar el estado actual y reimportarlo tal cual (sin tocar nada) no
   // tiene ningún efecto: es la garantía central de la importación por diff.
+  await page.getByRole('button', { name: 'Exportar a Excel' }).click()
+  await expect(panelExportar).toBeVisible()
   const [descargaSinCambios] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Exportar a Excel' }).click(),
+    panelExportar.getByRole('button', { name: 'Exportar' }).click(),
   ])
   const contenidoSinCambios = await bufferDeDescarga(descargaSinCambios)
 
@@ -327,7 +334,7 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   const libroParaRevertir = new ExcelJS.Workbook()
   await libroParaRevertir.xlsx.load(contenidoSinCambios)
   const hojaParaRevertir = libroParaRevertir.getWorksheet('Gastos')!
-  hojaParaRevertir.getRow(filaEncontrada!).getCell(4).value = null
+  hojaParaRevertir.getRow(filaEncontrada!).getCell(5).value = null
   const contenidoRevertido = Buffer.from(await libroParaRevertir.xlsx.writeBuffer())
 
   await page.getByRole('button', { name: 'Importar Excel' }).click()
@@ -341,4 +348,87 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   await panelImportar.getByRole('button', { name: 'Cerrar' }).first().click()
   await expect(celdaMes(filaConcepto, 1)).toContainText('-50,00 €')
   await expect(celdaMes(filaConcepto, 1)).not.toHaveClass(/border-dashed/)
+})
+
+test('exportar un rango de dos años, editar celdas de ambos y reimportar actualiza cada año', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 RANGO ${sufijo}`
+  const nombreCategoria = `Categoria RANGO ${sufijo}`
+  const anioActual = new Date().getFullYear()
+  const anioSiguiente = anioActual + 1
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panelConcepto.getByLabel('Importe previsto').fill('50.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })
+  await expect(filaConcepto).toBeVisible()
+
+  // Exportar el rango [añoActual, añoSiguiente] en el diálogo de exportación.
+  await page.getByRole('button', { name: 'Exportar a Excel' }).click()
+  const panelExportar = page.getByRole('dialog')
+  await expect(panelExportar).toBeVisible()
+  await panelExportar.getByLabel('Año hasta').fill(String(anioSiguiente))
+  const [descarga] = await Promise.all([
+    page.waitForEvent('download'),
+    panelExportar.getByRole('button', { name: 'Exportar' }).click(),
+  ])
+  expect(descarga.suggestedFilename()).toBe(`resumen-anual-${anioActual}-${anioSiguiente}.xlsx`)
+  const contenido = await bufferDeDescarga(descarga)
+
+  // El fichero trae una fila por año para el mismo concepto: se edita enero
+  // en la fila del primer año y febrero en la del segundo.
+  const libro = new ExcelJS.Workbook()
+  await libro.xlsx.load(contenido)
+  const hoja = libro.getWorksheet('Gastos')!
+  let filaAnioActual: number | null = null
+  let filaAnioSiguiente: number | null = null
+  hoja.eachRow((fila, numeroFila) => {
+    if (fila.getCell(3).value !== nombreCategoria) return
+    if (fila.getCell(1).value === anioActual) filaAnioActual = numeroFila
+    if (fila.getCell(1).value === anioSiguiente) filaAnioSiguiente = numeroFila
+  })
+  expect(filaAnioActual).not.toBeNull()
+  expect(filaAnioSiguiente).not.toBeNull()
+  hoja.getRow(filaAnioActual!).getCell(5).value = -65 // columna E = enero
+  hoja.getRow(filaAnioSiguiente!).getCell(6).value = -70 // columna F = febrero
+  const contenidoEditado = Buffer.from(await libro.xlsx.writeBuffer())
+
+  await page.getByRole('button', { name: 'Importar Excel' }).click()
+  const panelImportar = page.getByRole('dialog')
+  await panelImportar.locator('input[type="file"]').setInputFiles({
+    name: `resumen-anual-${anioActual}-${anioSiguiente}-editado.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: contenidoEditado,
+  })
+  await panelImportar.getByRole('button', { name: 'Importar' }).click()
+  await expect(panelImportar.getByText('2 celdas actualizadas.')).toBeVisible()
+  await panelImportar.getByRole('button', { name: 'Cerrar' }).first().click()
+
+  // El año visible en pantalla sigue siendo el actual: enero ya se ve
+  // actualizado sin recargar nada más.
+  await expect(celdaMes(filaConcepto, 1)).toContainText('-65,00 €')
+
+  // Cambiar al año siguiente y comprobar que febrero también se actualizó.
+  await page.getByLabel('Año', { exact: true }).fill(String(anioSiguiente))
+  await expect(celdaMes(filaConcepto, 2)).toContainText('-70,00 €')
 })

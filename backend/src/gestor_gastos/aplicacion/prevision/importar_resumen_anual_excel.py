@@ -35,19 +35,20 @@ class ImportarResumenAnualExcel:
         self._ajustar = ajustar_valor_mensual
         self._eliminar_ajuste = eliminar_ajuste_mensual
 
-    def ejecutar(
-        self, contenido: bytes, nombre_fichero: str, anio: int
-    ) -> ResumenImportacionResumenAnual:
+    def ejecutar(self, contenido: bytes, nombre_fichero: str) -> ResumenImportacionResumenAnual:
         datos = self._lector.leer(contenido, nombre_fichero)
-        valores_actuales = self._indexar_valores_actuales(
-            self._obtener_resumen_anual.ejecutar(anio)
-        )
+        anios_presentes = sorted({celda.anio for celda in datos.celdas})
+        valores_actuales_por_anio = {
+            anio: self._indexar_valores_actuales(self._obtener_resumen_anual.ejecutar(anio))
+            for anio in anios_presentes
+        }
 
         celdas_actualizadas = 0
         celdas_eliminadas = 0
         conceptos_no_encontrados: set[int] = set()
 
         for celda in datos.celdas:
+            valores_actuales = valores_actuales_por_anio[celda.anio]
             actual = valores_actuales.get((celda.concepto_id, celda.mes))
             if actual is None:
                 conceptos_no_encontrados.add(celda.concepto_id)
@@ -56,12 +57,12 @@ class ImportarResumenAnualExcel:
 
             if celda.importe is None:
                 if origen_actual == "ajustado":
-                    self._eliminar_ajuste.ejecutar(celda.concepto_id, anio, celda.mes)
+                    self._eliminar_ajuste.ejecutar(celda.concepto_id, celda.anio, celda.mes)
                     celdas_eliminadas += 1
                 continue
 
             if celda.importe != importe_actual:
-                self._ajustar.ejecutar(celda.concepto_id, anio, celda.mes, celda.importe)
+                self._ajustar.ejecutar(celda.concepto_id, celda.anio, celda.mes, celda.importe)
                 celdas_actualizadas += 1
 
         return ResumenImportacionResumenAnual(

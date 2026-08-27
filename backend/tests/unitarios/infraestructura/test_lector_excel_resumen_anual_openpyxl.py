@@ -13,6 +13,8 @@ from gestor_gastos.infraestructura.prevision.lector_excel_resumen_anual_openpyxl
     LectorExcelResumenAnualOpenpyxl,
 )
 
+_CABECERA = ["Año", "ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]]
+
 
 def _libro_con_hojas(*nombres: str) -> bytes:
     libro = openpyxl.Workbook()
@@ -29,14 +31,14 @@ def _libro_de_ejemplo() -> bytes:
     libro.remove(libro.active)
 
     hoja_gastos = libro.create_sheet("Gastos")
-    hoja_gastos.append(["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]])
-    hoja_gastos.append([1, "Suscripciones", "mensual", *[-9.99] * 12])
-    hoja_gastos.append([None, "Total", None, *[-9.99] * 12])
+    hoja_gastos.append(_CABECERA)
+    hoja_gastos.append([2026, 1, "Suscripciones", "mensual", *[-9.99] * 12])
+    hoja_gastos.append([2026, None, "Total", None, *[-9.99] * 12])
 
     hoja_ingresos = libro.create_sheet("Ingresos")
-    hoja_ingresos.append(["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]])
-    hoja_ingresos.append([2, "Nómina", "mensual", *[2000.00] * 12])
-    hoja_ingresos.append([None, "Total", None, *[2000.00] * 12])
+    hoja_ingresos.append(_CABECERA)
+    hoja_ingresos.append([2026, 2, "Nómina", "mensual", *[2000.00] * 12])
+    hoja_ingresos.append([2026, None, "Total", None, *[2000.00] * 12])
 
     buffer = io.BytesIO()
     libro.save(buffer)
@@ -66,21 +68,20 @@ def test_lee_las_celdas_de_gastos_e_ingresos_ignorando_la_fila_de_totales() -> N
     assert len(celdas_concepto_2) == 12
     assert all(c.importe == Decimal("-9.99") for c in celdas_concepto_1)
     assert all(c.importe == Decimal("2000.00") for c in celdas_concepto_2)
+    assert all(c.anio == 2026 for c in celdas_concepto_1 + celdas_concepto_2)
     assert {c.mes for c in celdas_concepto_1} == set(range(1, 13))
 
 
 def test_id_concepto_no_numerico_lanza_error_controlado() -> None:
     """Reproduce el caso real: subir al importador de Resumen anual un Excel
     con otro formato (p. ej. el de carga masiva de conceptos previstos, cuya
-    columna A trae el nombre de la categoría en vez de un ID numérico)."""
+    columna B trae el nombre de la categoría en vez de un ID numérico)."""
     libro = openpyxl.Workbook()
     libro.remove(libro.active)
     hoja_gastos = libro.create_sheet("Gastos")
-    hoja_gastos.append(["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]])
-    hoja_gastos.append(["Amazon Prime", "Ocio", "mensual", *[-4.99] * 12])
-    libro.create_sheet("Ingresos").append(
-        ["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]]
-    )
+    hoja_gastos.append(_CABECERA)
+    hoja_gastos.append([2026, "Amazon Prime", "Ocio", "mensual", *[-4.99] * 12])
+    libro.create_sheet("Ingresos").append(_CABECERA)
     buffer = io.BytesIO()
     libro.save(buffer)
 
@@ -92,13 +93,11 @@ def test_celda_vacia_se_lee_como_importe_none() -> None:
     libro = openpyxl.Workbook()
     libro.remove(libro.active)
     hoja_gastos = libro.create_sheet("Gastos")
-    hoja_gastos.append(["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]])
+    hoja_gastos.append(_CABECERA)
     valores = [-9.99] * 12
     valores[0] = None
-    hoja_gastos.append([1, "Suscripciones", "mensual", *valores])
-    libro.create_sheet("Ingresos").append(
-        ["ID", "Concepto", "Periodicidad", *[f"M{m}" for m in range(1, 13)]]
-    )
+    hoja_gastos.append([2026, 1, "Suscripciones", "mensual", *valores])
+    libro.create_sheet("Ingresos").append(_CABECERA)
     buffer = io.BytesIO()
     libro.save(buffer)
 
@@ -106,3 +105,28 @@ def test_celda_vacia_se_lee_como_importe_none() -> None:
 
     celda_enero = next(c for c in datos.celdas if c.mes == 1)
     assert celda_enero.importe is None
+
+
+def test_filas_de_anios_distintos_se_leen_cada_una_con_su_propio_anio() -> None:
+    libro = openpyxl.Workbook()
+    libro.remove(libro.active)
+    hoja_gastos = libro.create_sheet("Gastos")
+    hoja_gastos.append(_CABECERA)
+    hoja_gastos.append([2025, 1, "Suscripciones", "mensual", *[-9.99] * 12])
+    hoja_gastos.append([2025, None, "Total", None, *[-9.99] * 12])
+    hoja_gastos.append([2026, 1, "Suscripciones", "mensual", *[-12.00] * 12])
+    hoja_gastos.append([2026, None, "Total", None, *[-12.00] * 12])
+    libro.create_sheet("Ingresos").append(_CABECERA)
+    buffer = io.BytesIO()
+    libro.save(buffer)
+
+    datos = LectorExcelResumenAnualOpenpyxl().leer(
+        buffer.getvalue(), "resumen-anual-2025-2026.xlsx"
+    )
+
+    celdas_2025 = [c for c in datos.celdas if c.anio == 2025]
+    celdas_2026 = [c for c in datos.celdas if c.anio == 2026]
+    assert len(celdas_2025) == 12
+    assert len(celdas_2026) == 12
+    assert all(c.importe == Decimal("-9.99") for c in celdas_2025)
+    assert all(c.importe == Decimal("-12.00") for c in celdas_2026)

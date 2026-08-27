@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, Upload } from '@lucide/vue'
+import { Download, Plus, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import type {
@@ -8,6 +8,7 @@ import type {
   ResumenImportacionResumenAnual,
 } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
+import { useTiendaDashboard } from '@/stores/dashboard'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
@@ -32,6 +33,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 
 const tiendaCategorias = useTiendaCategorias()
+const tiendaDashboard = useTiendaDashboard()
 const tienda = useTiendaPrevisiones()
 
 const MESES_COMPLETOS = [
@@ -59,6 +61,7 @@ onMounted(() => {
   tiendaCategorias.cargar()
   tienda.cargar()
   cargarResumen()
+  if (!tiendaDashboard.resumen) tiendaDashboard.cargar()
 })
 
 watch(anio, cargarResumen)
@@ -84,6 +87,66 @@ const subcategoriasDeLaCategoria = computed(() => {
   )
   return categoria?.subcategorias ?? []
 })
+
+// Las categorías no tienen un tipo (ingreso/gasto) propio: se infiere de los
+// movimientos ya registrados (GET /dashboard/resumen). Por exclusión, no por
+// inclusión estricta: una categoría sin movimientos todavía, o con
+// movimientos de ambos tipos, se muestra siempre; solo se oculta la que ya
+// es evidentemente exclusiva del tipo contrario. Así no se rompe el caso de
+// planificar un concepto para una categoría recién creada, sin histórico.
+const idsSoloGasto = computed(() => {
+  const idsIngreso = new Set(
+    (tiendaDashboard.resumen?.ingresos_por_categoria ?? []).map((c) => c.categoria_id),
+  )
+  return (tiendaDashboard.resumen?.gastos_por_categoria ?? [])
+    .map((c) => c.categoria_id)
+    .filter((id) => !idsIngreso.has(id))
+})
+
+const idsSoloIngreso = computed(() => {
+  const idsGasto = new Set(
+    (tiendaDashboard.resumen?.gastos_por_categoria ?? []).map((c) => c.categoria_id),
+  )
+  return (tiendaDashboard.resumen?.ingresos_por_categoria ?? [])
+    .map((c) => c.categoria_id)
+    .filter((id) => !idsGasto.has(id))
+})
+
+// Se incluye siempre la categoría ya elegida, aunque quede excluida para el
+// tipo actual: un concepto puede combinar cualquier categoría con cualquier
+// tipo (ver el test "Regresión del bug: un concepto con Tipo=Ingreso debe
+// aparecer en 'Ingresos'"), así que cambiar el Tipo después de elegir la
+// categoría no debe hacerla desaparecer ni perderla.
+const categoriasDelTipoElegido = computed(() => {
+  const excluidos = new Set(
+    formulario.tipo === 'ingreso' ? idsSoloGasto.value : idsSoloIngreso.value,
+  )
+  return tiendaCategorias.categorias
+    .map((c) => c.categoria)
+    .filter((c) => !excluidos.has(c.id) || c.id === Number(formulario.categoriaId))
+})
+
+const panelCrearCategoriaAbierto = ref(false)
+const nombreNuevaCategoria = ref('')
+const errorCrearCategoria = ref<string | null>(null)
+
+function abrirCrearCategoria(): void {
+  nombreNuevaCategoria.value = ''
+  errorCrearCategoria.value = null
+  panelCrearCategoriaAbierto.value = true
+}
+
+async function crearCategoriaNueva(): Promise<void> {
+  errorCrearCategoria.value = null
+  try {
+    const categoria = await tiendaCategorias.crearCategoria(nombreNuevaCategoria.value)
+    formulario.categoriaId = String(categoria.id)
+    formulario.subcategoriaId = SIN_SUBCATEGORIA
+    panelCrearCategoriaAbierto.value = false
+  } catch (motivo) {
+    errorCrearCategoria.value = (motivo as Error).message
+  }
+}
 
 function limpiarFormulario(): void {
   idEnEdicion.value = null
@@ -238,23 +301,35 @@ async function importar(): Promise<void> {
             <Label id="etiqueta-categoria-previsto" for="selector-categoria-previsto"
               >Categoría</Label
             >
-            <Select v-model="formulario.categoriaId">
-              <SelectTrigger
-                id="selector-categoria-previsto"
-                aria-labelledby="etiqueta-categoria-previsto"
-              >
-                <SelectValue placeholder="Selecciona una categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="cat in tiendaCategorias.categorias"
-                  :key="cat.categoria.id"
-                  :value="String(cat.categoria.id)"
+            <div class="flex gap-2">
+              <Select v-model="formulario.categoriaId">
+                <SelectTrigger
+                  id="selector-categoria-previsto"
+                  aria-labelledby="etiqueta-categoria-previsto"
+                  class="w-full"
                 >
-                  {{ cat.categoria.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                  <SelectValue placeholder="Selecciona una categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="cat in categoriasDelTipoElegido"
+                    :key="cat.id"
+                    :value="String(cat.id)"
+                  >
+                    {{ cat.nombre }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Crear categoría"
+                @click="abrirCrearCategoria"
+              >
+                <Plus class="size-4" />
+              </Button>
+            </div>
           </div>
 
           <div class="flex flex-col gap-1.5">
@@ -373,6 +448,37 @@ async function importar(): Promise<void> {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Sheet v-model:open="panelCrearCategoriaAbierto">
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Crear categoría</SheetTitle>
+        </SheetHeader>
+
+        <form class="flex flex-col gap-3 px-4" @submit.prevent="crearCategoriaNueva">
+          <div class="flex flex-col gap-1.5">
+            <Label for="nombre-nueva-categoria-previsto">Nombre</Label>
+            <Input
+              id="nombre-nueva-categoria-previsto"
+              v-model="nombreNuevaCategoria"
+              placeholder="Nueva categoría"
+              required
+            />
+          </div>
+
+          <p v-if="errorCrearCategoria" class="text-sm text-destructive" role="alert">
+            {{ errorCrearCategoria }}
+          </p>
+
+          <div class="flex gap-2">
+            <Button type="submit" variant="success">Crear categoría</Button>
+            <Button type="button" variant="destructive" @click="panelCrearCategoriaAbierto = false"
+              >Cancelar</Button
+            >
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
 
     <Sheet v-model:open="panelImportarAbierto">
       <SheetContent>

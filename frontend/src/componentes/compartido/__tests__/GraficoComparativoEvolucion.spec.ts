@@ -151,12 +151,14 @@ describe('GraficoComparativoEvolucion', () => {
     await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
 
     expect(wrapper.find('svg[role="img"]').exists()).toBe(true)
-    // Un círculo por serie y por periodo (1 periodo x 2 series = 2 círculos).
-    expect(wrapper.findAll('svg[role="img"] circle')).toHaveLength(2)
-    // Un texto de importe por serie y por periodo (1 periodo x 2 series = 2 textos).
-    expect(wrapper.findAll('svg[role="img"] text')).toHaveLength(2)
+    // Un círculo por serie y por periodo (1 periodo x 3 series = 3 círculos:
+    // gasto, ingreso y saldo, las 3 visibles por defecto).
+    expect(wrapper.findAll('svg[role="img"] circle')).toHaveLength(3)
+    // Un texto de importe por serie y por periodo (1 periodo x 3 series = 3 textos).
+    expect(wrapper.findAll('svg[role="img"] text')).toHaveLength(3)
     expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(30))
     expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(100))
+    expect(wrapper.find('svg[role="img"]').text()).toContain(formatearImporte(70)) // saldo
   })
 
   it('el modo área añade un polígono de relleno por cada serie', async () => {
@@ -169,8 +171,108 @@ describe('GraficoComparativoEvolucion', () => {
 
     await wrapper.get('[aria-label="Ver como área"]').trigger('click')
 
-    expect(wrapper.findAll('polygon')).toHaveLength(2)
-    expect(wrapper.findAll('polyline')).toHaveLength(2)
+    expect(wrapper.findAll('polygon')).toHaveLength(3)
+    expect(wrapper.findAll('polyline')).toHaveLength(3)
+  })
+
+  it('en líneas/área, una leyenda con 3 chips permite ocultar/mostrar cada serie', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+    expect(wrapper.findAll('svg[role="img"] polyline')).toHaveLength(3)
+
+    await wrapper.get('[aria-label="Ocultar gastos"]').trigger('click')
+    expect(wrapper.findAll('svg[role="img"] polyline')).toHaveLength(2)
+    expect(wrapper.findAll('svg[role="img"] circle')).toHaveLength(2)
+
+    await wrapper.get('[aria-label="Mostrar gastos"]').trigger('click')
+    expect(wrapper.findAll('svg[role="img"] polyline')).toHaveLength(3)
+  })
+
+  it('en barras/circular no aparece la leyenda con chips de ocultar', () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    expect(wrapper.find('[aria-label="Ocultar gastos"]').exists()).toBe(false)
+  })
+
+  it('ocultando las 3 series en modo líneas no queda ninguna línea (sin dividir por cero)', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar gastos"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar ingresos"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar saldo"]').trigger('click')
+
+    expect(wrapper.findAll('svg[role="img"] polyline')).toHaveLength(0)
+    expect(wrapper.find('svg[role="img"]').exists()).toBe(true) // el SVG sigue ahí (línea de cero)
+  })
+
+  it('en modo líneas, el saldo positivo queda por encima de la línea de cero y el negativo por debajo', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [
+          { periodo: '2026-01', total: 30 }, // saldo positivo: 100-30=70
+          { periodo: '2026-02', total: 130 }, // saldo negativo: 100-130=-30
+        ],
+        itemsIngresos: [
+          { periodo: '2026-01', total: 100 },
+          { periodo: '2026-02', total: 100 },
+        ],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar gastos"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar ingresos"]').trigger('click')
+
+    const circulosSaldo = wrapper.findAll('svg[role="img"] circle')
+    expect(circulosSaldo).toHaveLength(2)
+    const yPositivo = Number(circulosSaldo[0]!.attributes('cy'))
+    const yNegativo = Number(circulosSaldo[1]!.attributes('cy'))
+    const yLineaCero = Number(wrapper.get('svg[role="img"] line').attributes('y1'))
+    expect(yPositivo).toBeLessThan(yLineaCero)
+    expect(yNegativo).toBeGreaterThan(yLineaCero)
+  })
+
+  it('al ocultar una serie, el eje se reajusta a las series que queden visibles', async () => {
+    const wrapper = mount(GraficoComparativoEvolucion, {
+      props: {
+        itemsGastos: [{ periodo: '2026-01', total: 30 }],
+        itemsIngresos: [{ periodo: '2026-01', total: 100 }],
+      },
+    })
+
+    await wrapper.get('[aria-label="Ver como líneas"]').trigger('click')
+    const yGastoConIngresoVisible = Number(
+      wrapper.findAll('svg[role="img"] circle')[0]!.attributes('cy'),
+    )
+
+    // Con ingreso (100) visible, el eje escala al máximo de los tres (100),
+    // así que el punto de gasto (30) queda cerca del centro. Al ocultar
+    // ingreso y saldo, el máximo visible pasa a ser el propio gasto (30): su
+    // punto se desplaza hacia el borde superior, más lejos del centro.
+    await wrapper.get('[aria-label="Ocultar ingresos"]').trigger('click')
+    await wrapper.get('[aria-label="Ocultar saldo"]').trigger('click')
+    const yGastoSolo = Number(wrapper.findAll('svg[role="img"] circle')[0]!.attributes('cy'))
+    const yLineaCero = Number(wrapper.get('svg[role="img"] line').attributes('y1'))
+
+    expect(yGastoSolo).toBeLessThan(yGastoConIngresoVisible)
+    expect(yLineaCero - yGastoSolo).toBeGreaterThan(yLineaCero - yGastoConIngresoVisible)
   })
 
   it('el modo circular compara el total de gastos frente al de ingresos, con su porcentaje', async () => {

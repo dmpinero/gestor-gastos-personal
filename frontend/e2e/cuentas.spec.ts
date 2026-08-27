@@ -76,6 +76,47 @@ test('seleccionar varias cuentas y eliminarlas en bloque', async ({ page }) => {
   await expect(page.locator('tr', { hasText: numeroCuentaB })).toHaveCount(0)
 })
 
+test('si falla el borrado de una cuenta seleccionada, el error la identifica y las demás sí se eliminan', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuentaA = `ES00 PARCIAL-A ${sufijo}`
+  const numeroCuentaB = `ES00 PARCIAL-B ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+
+  for (const numero of [numeroCuentaA, numeroCuentaB]) {
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.getByPlaceholder('Número de cuenta').fill(numero)
+    await panel.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.locator('tr', { hasText: numero })).toBeVisible()
+  }
+
+  const cuentas = await page.request.get('/api/v1/cuentas').then((r) => r.json())
+  const idCuentaB = cuentas.find(
+    (c: { numero_cuenta: string }) => c.numero_cuenta === numeroCuentaB,
+  ).id
+
+  // Solo la cuenta B falla al borrarse (simula un fallo de red/servidor);
+  // la A debe eliminarse con normalidad en el mismo lote.
+  await page.route(`**/api/v1/cuentas/${idCuentaB}*`, (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: '{"detalle":"boom"}' }),
+  )
+
+  await page.getByLabel('Buscar').fill(sufijo.toString())
+  await page.locator('tr', { hasText: numeroCuentaA }).getByRole('checkbox').click()
+  await page.locator('tr', { hasText: numeroCuentaB }).getByRole('checkbox').click()
+
+  await page.getByRole('button', { name: 'Eliminar seleccionados' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
+
+  await expect(page.locator('tr', { hasText: numeroCuentaA })).toHaveCount(0)
+  await expect(page.locator('tr', { hasText: numeroCuentaB })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText(numeroCuentaB)
+  await expect(page.getByRole('alert')).toContainText('boom')
+})
+
 test('el buscador filtra las cuentas y las cabeceras permiten ordenar', async ({ page }) => {
   const sufijo = Date.now()
   const numeroCuentaA = `ES00 ORDEN-A ${sufijo}`

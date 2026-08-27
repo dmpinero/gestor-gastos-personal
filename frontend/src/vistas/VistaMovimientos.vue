@@ -33,6 +33,7 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
+import BotonCopiarImporte from '@/componentes/compartido/BotonCopiarImporte.vue'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
@@ -897,7 +898,12 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                   :title="nombreSubcategoria(movimiento.subcategoria_id)"
                   >{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell
                 >
-                <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
+                <TableCell>
+                  <div class="flex items-center gap-1.5">
+                    <span>{{ formatearImporte(movimiento.importe) }}</span>
+                    <BotonCopiarImporte :valor="movimiento.importe" />
+                  </div>
+                </TableCell>
                 <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
                 <TableCell class="text-right">
                   <Button

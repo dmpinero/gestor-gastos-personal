@@ -11,6 +11,7 @@ import {
 import { agruparMovimientosParaTabla } from '@/lib/movimientosPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
+import BotonCopiarImporte from '@/componentes/compartido/BotonCopiarImporte.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Table,
@@ -180,8 +181,12 @@ function alternarSubcategoria(clave: string): void {
                 <TableCell
                   class="text-right tabular-nums"
                   :class="claseColorImporte(movimiento.importe)"
-                  >{{ formatearImporte(movimiento.importe) }}</TableCell
                 >
+                  <div class="flex items-center justify-end gap-1.5">
+                    <BotonCopiarImporte :valor="movimiento.importe" />
+                    <span>{{ formatearImporte(movimiento.importe) }}</span>
+                  </div>
+                </TableCell>
                 <TableCell class="text-right tabular-nums">{{
                   formatearImporte(movimiento.saldo)
                 }}</TableCell>

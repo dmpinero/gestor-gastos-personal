@@ -582,3 +582,171 @@ test('exportar un rango de dos años, editar celdas de ambos y reimportar actual
   await page.getByLabel('Año', { exact: true }).fill(String(anioSiguiente))
   await expect(celdaMes(filaConcepto, 2)).toContainText('-70,00 €')
 })
+
+test('el formulario de "Añadir concepto" permite crear una subcategoría nueva con el botón "+"', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 SUBC ${sufijo}`
+  const nombreCategoria = `Categoria SUBC ${sufijo}`
+  const nombreSubcategoriaNueva = `Subcategoria SUBC-NUEVA ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  const selectorSubcategoria = panelConcepto.getByLabel('Subcategoría', { exact: true })
+  const botonCrearSubcategoria = panelConcepto.getByRole('button', { name: 'Crear subcategoría' })
+
+  // Sin categoría elegida todavía, no tiene sentido crear una subcategoría.
+  await expect(botonCrearSubcategoria).toBeDisabled()
+
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await expect(botonCrearSubcategoria).toBeEnabled()
+  await botonCrearSubcategoria.click()
+
+  const panelCrearSubcategoria = page.getByRole('dialog').filter({ hasText: 'Nueva subcategoría' })
+  await expect(panelCrearSubcategoria).toBeVisible()
+  await expect(panelCrearSubcategoria).toContainText(nombreCategoria)
+  await panelCrearSubcategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoriaNueva)
+  await panelCrearSubcategoria.getByRole('button', { name: 'Crear subcategoría' }).click()
+  await expect(panelCrearSubcategoria).toBeHidden()
+  await expect(selectorSubcategoria).toContainText(nombreSubcategoriaNueva)
+
+  await panelConcepto.getByLabel('Importe previsto').fill('25.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaNueva })).toBeVisible()
+})
+
+test('agrupar el resumen anual por categoría permite expandir un grupo y editar una celda dentro', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 GRUPO ${sufijo}`
+  const nombreCategoria = `Categoria GRUPO ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panelConcepto.getByLabel('Importe previsto').fill('40.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+  await expect(page.locator('tbody tr', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  await expect(page.getByRole('button', { name: 'Ver todos los conceptos' })).toBeVisible()
+
+  // Colapsado por defecto: el concepto no se ve hasta expandir su categoría.
+  await expect(page.locator('tbody tr', { hasText: nombreCategoria })).toHaveCount(0)
+
+  const botonGrupo = page.getByRole('button', { name: new RegExp(nombreCategoria) })
+  await expect(botonGrupo).toHaveAttribute('aria-expanded', 'false')
+  await botonGrupo.click()
+  await expect(botonGrupo).toHaveAttribute('aria-expanded', 'true')
+
+  const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })
+  await expect(filaConcepto).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-05-agrupado.png' })
+
+  // Editar una celda dentro del grupo expandido funciona igual que sin agrupar.
+  await celdaMes(filaConcepto, 1).getByRole('button').click()
+  const entradaCelda = celdaMes(filaConcepto, 1).locator('input')
+  await entradaCelda.fill('-99.00')
+  await entradaCelda.press('Enter')
+  await expect(celdaMes(filaConcepto, 1)).toContainText('-99,00 €')
+
+  // Volver a la vista sin agrupar respeta el mismo cambio.
+  await page.getByRole('button', { name: 'Ver todos los conceptos' }).click()
+  await expect(celdaMes(filaConcepto, 1)).toContainText('-99,00 €')
+})
+
+test('el buscador filtra los conceptos por nombre, tanto agrupados como sin agrupar', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 BUSC ${sufijo}`
+  const nombreCategoria = `Categoria BUSC ${sufijo}`
+  const nombreSubcategoriaA = `Subcategoria BUSC-A ${sufijo}`
+  const nombreSubcategoriaB = `Subcategoria BUSC-B ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  const tarjetaCategoria = page.locator('[data-slot="card"]', { hasText: nombreCategoria })
+  await expect(tarjetaCategoria).toBeVisible()
+  for (const nombreSub of [nombreSubcategoriaA, nombreSubcategoriaB]) {
+    await tarjetaCategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSub)
+    await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
+    await expect(tarjetaCategoria.locator('li', { hasText: nombreSub })).toBeVisible()
+  }
+
+  await page.goto('/resumen-anual')
+  for (const nombreSub of [nombreSubcategoriaA, nombreSubcategoriaB]) {
+    await page.getByRole('button', { name: 'Añadir concepto' }).click()
+    const panelConcepto = page.getByRole('dialog')
+    await elegirOpcion(
+      page,
+      panelConcepto.getByLabel('Categoría', { exact: true }),
+      nombreCategoria,
+    )
+    await elegirOpcion(page, panelConcepto.getByLabel('Subcategoría', { exact: true }), nombreSub)
+    await panelConcepto.getByLabel('Importe previsto').fill('10.00')
+    await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+    await expect(page.locator('tbody tr', { hasText: nombreSub })).toBeVisible()
+  }
+
+  // Buscar por el nombre de una subcategoría concreta oculta la otra.
+  const buscador = page.getByLabel('Buscar', { exact: true })
+  await buscador.fill(nombreSubcategoriaA)
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaA })).toBeVisible()
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaB })).toHaveCount(0)
+
+  // Con "Agrupar por categoría" activo, la búsqueda se sigue aplicando: solo
+  // aparece el concepto que coincide al expandir el grupo.
+  await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  const botonGrupo = page.getByRole('button', { name: new RegExp(nombreCategoria) })
+  await botonGrupo.click()
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaA })).toBeVisible()
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaB })).toHaveCount(0)
+
+  // Limpiar la búsqueda vuelve a mostrar ambos conceptos dentro del grupo.
+  await buscador.fill('')
+  await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaB })).toBeVisible()
+})

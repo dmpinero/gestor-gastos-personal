@@ -1,18 +1,21 @@
 <script setup lang="ts">
-import { Download, Plus, Upload } from '@lucide/vue'
+import { Download, Plus, Search, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import type {
   DatosConceptoPrevisto,
+  FilaResumenAnual,
   Periodicidad,
   ResumenImportacionResumenAnual,
 } from '@/api/tipos'
+import { sumarTotalesPorMes } from '@/lib/resumenAnualPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaDashboard } from '@/stores/dashboard'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import TablaResumenAnual from '@/componentes/prevision/TablaResumenAnual.vue'
+import TablaResumenAnualAgrupada from '@/componentes/prevision/TablaResumenAnualAgrupada.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -148,6 +151,36 @@ async function crearCategoriaNueva(): Promise<void> {
   }
 }
 
+const nombreCategoriaActual = computed(
+  () =>
+    tiendaCategorias.categorias.find((c) => c.categoria.id === Number(formulario.categoriaId))
+      ?.categoria.nombre ?? '',
+)
+
+const panelCrearSubcategoriaAbierto = ref(false)
+const nombreNuevaSubcategoria = ref('')
+const errorCrearSubcategoria = ref<string | null>(null)
+
+function abrirCrearSubcategoria(): void {
+  nombreNuevaSubcategoria.value = ''
+  errorCrearSubcategoria.value = null
+  panelCrearSubcategoriaAbierto.value = true
+}
+
+async function crearSubcategoriaNueva(): Promise<void> {
+  errorCrearSubcategoria.value = null
+  try {
+    const subcategoria = await tiendaCategorias.crearSubcategoria(
+      Number(formulario.categoriaId),
+      nombreNuevaSubcategoria.value,
+    )
+    formulario.subcategoriaId = String(subcategoria.id)
+    panelCrearSubcategoriaAbierto.value = false
+  } catch (motivo) {
+    errorCrearSubcategoria.value = (motivo as Error).message
+  }
+}
+
 function limpiarFormulario(): void {
   idEnEdicion.value = null
   formulario.categoriaId = ''
@@ -264,6 +297,53 @@ async function importar(): Promise<void> {
   importando.value = false
   await cargarResumen()
 }
+
+function nombreCategoria(idCategoria: number): string {
+  return (
+    tiendaCategorias.categorias.find((c) => c.categoria.id === idCategoria)?.categoria.nombre ?? ''
+  )
+}
+
+function nombreSubcategoria(idSubcategoria: number | null): string {
+  if (idSubcategoria === null) return ''
+  for (const c of tiendaCategorias.categorias) {
+    const sub = c.subcategorias.find((s) => s.id === idSubcategoria)
+    if (sub) return sub.nombre
+  }
+  return ''
+}
+
+const busqueda = ref('')
+
+function coincideConBusqueda(fila: FilaResumenAnual): boolean {
+  const termino = busqueda.value.trim().toLowerCase()
+  if (!termino) return true
+  return [
+    fila.nombre,
+    nombreCategoria(fila.categoria_id),
+    nombreSubcategoria(fila.subcategoria_id),
+  ].some((v) => v.toLowerCase().includes(termino))
+}
+
+const filasGastosFiltradas = computed(() =>
+  (tienda.resumenAnual?.filas_gastos ?? []).filter(coincideConBusqueda),
+)
+const filasIngresosFiltradas = computed(() =>
+  (tienda.resumenAnual?.filas_ingresos ?? []).filter(coincideConBusqueda),
+)
+
+const totalesGastosMostrados = computed(() =>
+  busqueda.value.trim() === ''
+    ? (tienda.resumenAnual?.totales_gastos ?? [])
+    : sumarTotalesPorMes(filasGastosFiltradas.value),
+)
+const totalesIngresosMostrados = computed(() =>
+  busqueda.value.trim() === ''
+    ? (tienda.resumenAnual?.totales_ingresos ?? [])
+    : sumarTotalesPorMes(filasIngresosFiltradas.value),
+)
+
+const agrupadoPorCategoria = ref(false)
 </script>
 
 <template>
@@ -283,9 +363,30 @@ async function importar(): Promise<void> {
       </div>
     </div>
 
-    <div class="mt-4 flex max-w-32 flex-col gap-1.5">
-      <Label for="anio-resumen">Año</Label>
-      <Input id="anio-resumen" v-model.number="anio" type="number" />
+    <div class="mt-4 flex flex-wrap items-end gap-3">
+      <div class="flex max-w-32 flex-col gap-1.5">
+        <Label for="anio-resumen">Año</Label>
+        <Input id="anio-resumen" v-model.number="anio" type="number" />
+      </div>
+
+      <div class="flex max-w-xs flex-1 flex-col gap-1.5">
+        <Label for="buscar-conceptos">Buscar</Label>
+        <div class="relative">
+          <Search
+            class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+          />
+          <Input
+            id="buscar-conceptos"
+            v-model="busqueda"
+            placeholder="Buscar conceptos…"
+            class="pl-8"
+          />
+        </div>
+      </div>
+
+      <Button type="button" variant="outline" @click="agrupadoPorCategoria = !agrupadoPorCategoria">
+        {{ agrupadoPorCategoria ? 'Ver todos los conceptos' : 'Agrupar por categoría' }}
+      </Button>
     </div>
 
     <Sheet v-model:open="panelAbierto">
@@ -336,24 +437,37 @@ async function importar(): Promise<void> {
             <Label id="etiqueta-subcategoria-previsto" for="selector-subcategoria-previsto"
               >Subcategoría</Label
             >
-            <Select v-model="formulario.subcategoriaId">
-              <SelectTrigger
-                id="selector-subcategoria-previsto"
-                aria-labelledby="etiqueta-subcategoria-previsto"
-              >
-                <SelectValue placeholder="(sin subcategoría)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-                <SelectItem
-                  v-for="s in subcategoriasDeLaCategoria"
-                  :key="s.id"
-                  :value="String(s.id)"
+            <div class="flex gap-2">
+              <Select v-model="formulario.subcategoriaId">
+                <SelectTrigger
+                  id="selector-subcategoria-previsto"
+                  aria-labelledby="etiqueta-subcategoria-previsto"
+                  class="flex-1"
                 >
-                  {{ s.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                  <SelectValue placeholder="(sin subcategoría)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
+                  <SelectItem
+                    v-for="s in subcategoriasDeLaCategoria"
+                    :key="s.id"
+                    :value="String(s.id)"
+                  >
+                    {{ s.nombre }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Crear subcategoría"
+                :disabled="formulario.categoriaId === ''"
+                @click="abrirCrearSubcategoria"
+              >
+                <Plus class="size-4" />
+              </Button>
+            </div>
           </div>
 
           <div class="flex flex-col gap-1.5">
@@ -480,6 +594,40 @@ async function importar(): Promise<void> {
       </SheetContent>
     </Sheet>
 
+    <Sheet v-model:open="panelCrearSubcategoriaAbierto">
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Nueva subcategoría en "{{ nombreCategoriaActual }}"</SheetTitle>
+        </SheetHeader>
+
+        <form class="flex flex-col gap-3 px-4" @submit.prevent="crearSubcategoriaNueva">
+          <div class="flex flex-col gap-1.5">
+            <Label for="nombre-nueva-subcategoria-previsto">Nombre</Label>
+            <Input
+              id="nombre-nueva-subcategoria-previsto"
+              v-model="nombreNuevaSubcategoria"
+              placeholder="Nueva subcategoría"
+              required
+            />
+          </div>
+
+          <p v-if="errorCrearSubcategoria" class="text-sm text-destructive" role="alert">
+            {{ errorCrearSubcategoria }}
+          </p>
+
+          <div class="flex gap-2">
+            <Button type="submit" variant="success">Crear subcategoría</Button>
+            <Button
+              type="button"
+              variant="destructive"
+              @click="panelCrearSubcategoriaAbierto = false"
+              >Cancelar</Button
+            >
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
+
     <Sheet v-model:open="panelImportarAbierto">
       <SheetContent>
         <SheetHeader>
@@ -536,24 +684,44 @@ async function importar(): Promise<void> {
     </p>
 
     <div v-if="tienda.resumenAnual" class="mt-6 space-y-8">
-      <TablaResumenAnual
-        titulo="Gastos"
-        :filas="tienda.resumenAnual.filas_gastos"
-        :totales="tienda.resumenAnual.totales_gastos"
-        mensaje-vacio="No hay conceptos de gasto configurados."
-        @editar="abrirParaEditar"
-        @eliminar="eliminar"
-        @editar-celda="editarCelda"
-      />
-      <TablaResumenAnual
-        titulo="Ingresos"
-        :filas="tienda.resumenAnual.filas_ingresos"
-        :totales="tienda.resumenAnual.totales_ingresos"
-        mensaje-vacio="No hay conceptos de ingreso configurados."
-        @editar="abrirParaEditar"
-        @eliminar="eliminar"
-        @editar-celda="editarCelda"
-      />
+      <template v-if="agrupadoPorCategoria">
+        <TablaResumenAnualAgrupada
+          titulo="Gastos"
+          :filas="filasGastosFiltradas"
+          mensaje-vacio="No hay conceptos de gasto configurados."
+          @editar="abrirParaEditar"
+          @eliminar="eliminar"
+          @editar-celda="editarCelda"
+        />
+        <TablaResumenAnualAgrupada
+          titulo="Ingresos"
+          :filas="filasIngresosFiltradas"
+          mensaje-vacio="No hay conceptos de ingreso configurados."
+          @editar="abrirParaEditar"
+          @eliminar="eliminar"
+          @editar-celda="editarCelda"
+        />
+      </template>
+      <template v-else>
+        <TablaResumenAnual
+          titulo="Gastos"
+          :filas="filasGastosFiltradas"
+          :totales="totalesGastosMostrados"
+          mensaje-vacio="No hay conceptos de gasto configurados."
+          @editar="abrirParaEditar"
+          @eliminar="eliminar"
+          @editar-celda="editarCelda"
+        />
+        <TablaResumenAnual
+          titulo="Ingresos"
+          :filas="filasIngresosFiltradas"
+          :totales="totalesIngresosMostrados"
+          mensaje-vacio="No hay conceptos de ingreso configurados."
+          @editar="abrirParaEditar"
+          @eliminar="eliminar"
+          @editar-celda="editarCelda"
+        />
+      </template>
     </div>
   </section>
 </template>

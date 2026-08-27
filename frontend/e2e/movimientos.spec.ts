@@ -1266,3 +1266,49 @@ test('"Agrupar por categoría" muestra totales por categoría/subcategoría, y p
   await expect(checkboxSeleccionarTodos).toBeVisible()
   await expect(page.getByPlaceholder('Buscar movimientos…')).toBeVisible()
 })
+
+test('el botón de copiar importe deja el importe crudo en el portapapeles, para pegarlo en el Resumen anual', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 COPIAR ${sufijo}`
+  const nombreCategoria = `Categoria COPIAR ${sufijo}`
+  const descripcion = `Movimiento COPIAR ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panel = page.getByRole('dialog')
+  await panel.locator('input[type="date"]').fill('2026-01-15')
+  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panel.getByPlaceholder('Descripción').fill(descripcion)
+  await panel.getByPlaceholder('Importe').fill('-42.50')
+  await panel.getByPlaceholder('Saldo').fill('957.50')
+  await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+
+  const fila = page.locator('tr', { hasText: descripcion })
+  await expect(fila).toBeVisible()
+
+  // Se copia el importe crudo ("-42.50"), no el texto formateado ("-42,50 €"):
+  // es justo lo que espera la celda editable del Resumen anual al pegarlo.
+  await fila.getByRole('button', { name: 'Copiar importe -42.50' }).click()
+  const textoCopiado = await page.evaluate(() => navigator.clipboard.readText())
+  expect(textoCopiado).toBe('-42.50')
+})

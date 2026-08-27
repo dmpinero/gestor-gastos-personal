@@ -46,12 +46,16 @@ const COLOR_PERIODICIDAD: Record<Periodicidad, string> = {
   anual: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
 }
 
-const props = defineProps<{
-  titulo: string
-  filas: FilaResumenAnual[]
-  totales: string[]
-  mensajeVacio: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    titulo: string
+    filas: FilaResumenAnual[]
+    totales: string[]
+    mensajeVacio: string
+    ocultarTitulo?: boolean
+  }>(),
+  { ocultarTitulo: false },
+)
 
 const emit = defineEmits<{
   editar: [conceptoId: number]
@@ -107,10 +111,10 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
 
 <template>
   <section>
-    <h3 class="text-lg font-semibold">{{ titulo }}</h3>
+    <h3 v-if="!ocultarTitulo" class="text-lg font-semibold">{{ titulo }}</h3>
     <p v-if="filas.length === 0" class="text-muted-foreground mt-2 text-sm">{{ mensajeVacio }}</p>
     <template v-else>
-      <p class="text-muted-foreground mt-1 text-sm">
+      <p v-if="!ocultarTitulo" class="text-muted-foreground mt-1 text-sm">
         {{ filas.length }} concepto{{ filas.length === 1 ? '' : 's' }}
       </p>
       <div class="mt-2 overflow-x-auto">

@@ -35,25 +35,38 @@ const ALTO_GRAFICO = 128
 // que si no quedarían recortados contra el borde superior del SVG.
 const MARGEN_SUPERIOR = 24
 
+// El gasto se traza en negativo (como en el gráfico comparativo): el cero
+// queda arriba del todo y el importe "cuelga" hacia abajo, en vez de crecer
+// desde abajo como si fuera un ingreso más. El ingreso mantiene el cero
+// abajo, creciendo hacia arriba (ya coincide con "positivo por encima del
+// eje 0").
+const esGasto = computed(() => props.acento === 'gasto')
+
 // Ancho fijo por punto (igual que cada barra) para que la fila de etiquetas
 // de periodo, debajo del SVG, quede exactamente alineada bajo cada punto.
 const puntos = computed(() =>
-  props.items.map((item, indice) => ({
-    ...item,
-    x: indice * ANCHO_PUNTO + ANCHO_PUNTO / 2,
-    y: ALTO_GRAFICO - (alturaPorcentaje(item.total) / 100) * (ALTO_GRAFICO - MARGEN_SUPERIOR),
-  })),
+  props.items.map((item, indice) => {
+    const distanciaAlCero = (alturaPorcentaje(item.total) / 100) * (ALTO_GRAFICO - MARGEN_SUPERIOR)
+    return {
+      ...item,
+      total: esGasto.value ? -item.total : item.total,
+      x: indice * ANCHO_PUNTO + ANCHO_PUNTO / 2,
+      y: esGasto.value ? distanciaAlCero : ALTO_GRAFICO - distanciaAlCero,
+    }
+  }),
 )
 
 const puntosLinea = computed(() => puntos.value.map((p) => `${p.x},${p.y}`).join(' '))
 const anchoTotal = computed(() => props.items.length * ANCHO_PUNTO)
 
-// El área se cierra contra los bordes izquierdo y derecho del gráfico (no
-// contra el primer/último punto): con un único periodo, el primer y último
-// punto coinciden y un polígono "punto a punto" tendría ancho cero.
+// El área se cierra contra la línea de cero (arriba para gastos, abajo para
+// ingresos) y contra los bordes izquierdo/derecho del gráfico, no contra el
+// primer/último punto: con un único periodo, el primer y último punto
+// coinciden y un polígono "punto a punto" tendría ancho cero.
 const puntosArea = computed(() => {
   if (puntos.value.length === 0) return ''
-  return `0,${ALTO_GRAFICO} ${puntosLinea.value} ${anchoTotal.value},${ALTO_GRAFICO}`
+  const y = esGasto.value ? 0 : ALTO_GRAFICO
+  return `0,${y} ${puntosLinea.value} ${anchoTotal.value},${y}`
 })
 
 const descripcionAccesible = computed(() =>
@@ -241,7 +254,7 @@ const sectores = computed(() => {
         <template v-for="punto in puntos" :key="punto.periodo">
           <text
             :x="punto.x"
-            :y="Math.max(punto.y - 8, 10)"
+            :y="esGasto ? Math.min(punto.y + 18, ALTO_GRAFICO - 4) : Math.max(punto.y - 8, 10)"
             text-anchor="middle"
             font-size="10"
             fill="var(--muted-foreground)"

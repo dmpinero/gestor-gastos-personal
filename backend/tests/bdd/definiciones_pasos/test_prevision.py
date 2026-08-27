@@ -97,7 +97,23 @@ def el_concepto_muestra_importe_ajustado(resumen: dict, importe: str, mes: int) 
     target_fixture="excel_resumen_anual",
 )
 def exporto_excel_resumen_anual(cliente: TestClient, anio: int) -> bytes:
-    respuesta = cliente.get(f"/api/v1/previsiones/resumen-anual/exportar?anio={anio}")
+    respuesta = cliente.get(
+        f"/api/v1/previsiones/resumen-anual/exportar?anio_desde={anio}&anio_hasta={anio}"
+    )
+    assert respuesta.status_code == 200
+    return respuesta.content
+
+
+@when(
+    parsers.parse("exporto el Excel del resumen anual de {anio_desde:d} a {anio_hasta:d}"),
+    target_fixture="excel_resumen_anual",
+)
+def exporto_excel_resumen_anual_de_varios_anios(
+    cliente: TestClient, anio_desde: int, anio_hasta: int
+) -> bytes:
+    respuesta = cliente.get(
+        f"/api/v1/previsiones/resumen-anual/exportar?anio_desde={anio_desde}&anio_hasta={anio_hasta}"
+    )
     assert respuesta.status_code == 200
     return respuesta.content
 
@@ -108,19 +124,41 @@ def exporto_excel_resumen_anual(cliente: TestClient, anio: int) -> bytes:
 )
 def edito_el_excel_exportado(excel_resumen_anual: bytes, mes: int, importe: str) -> bytes:
     libro = openpyxl.load_workbook(io.BytesIO(excel_resumen_anual))
-    libro["Gastos"].cell(row=2, column=3 + mes, value=float(importe))
+    libro["Gastos"].cell(row=2, column=4 + mes, value=float(importe))
     buffer = io.BytesIO()
     libro.save(buffer)
     return buffer.getvalue()
 
 
 @when(
-    parsers.parse("reimporto el Excel editado para el resumen anual de {anio:d}"),
+    parsers.parse(
+        'edito en el Excel exportado el importe del mes {mes:d} de {anio:d} a "{importe}"'
+    ),
+    target_fixture="excel_resumen_anual",
+)
+def edito_el_excel_exportado_de_un_anio(
+    excel_resumen_anual: bytes, mes: int, anio: int, importe: str
+) -> bytes:
+    libro = openpyxl.load_workbook(io.BytesIO(excel_resumen_anual))
+    hoja = libro["Gastos"]
+    fila_concepto = next(
+        fila[0].row
+        for fila in hoja.iter_rows(min_row=2)
+        if fila[0].value == anio and fila[1].value is not None
+    )
+    hoja.cell(row=fila_concepto, column=4 + mes, value=float(importe))
+    buffer = io.BytesIO()
+    libro.save(buffer)
+    return buffer.getvalue()
+
+
+@when(
+    "reimporto el Excel editado",
     target_fixture="resultado_importacion",
 )
-def reimporto_excel_editado(cliente: TestClient, excel_resumen_anual: bytes, anio: int) -> dict:
+def reimporto_excel_editado(cliente: TestClient, excel_resumen_anual: bytes) -> dict:
     respuesta = cliente.post(
-        f"/api/v1/previsiones/resumen-anual/importar?anio={anio}",
+        "/api/v1/previsiones/resumen-anual/importar",
         files={
             "fichero": (
                 "resumen-anual.xlsx",
@@ -135,6 +173,11 @@ def reimporto_excel_editado(cliente: TestClient, excel_resumen_anual: bytes, ani
 
 @then(parsers.parse("la importación actualiza {cantidad:d} celda"))
 def la_importacion_actualiza_n_celdas(resultado_importacion: dict, cantidad: int) -> None:
+    assert resultado_importacion["celdas_actualizadas"] == cantidad
+
+
+@then(parsers.parse("la importación actualiza {cantidad:d} celdas"))
+def la_importacion_actualiza_n_celdas_plural(resultado_importacion: dict, cantidad: int) -> None:
     assert resultado_importacion["celdas_actualizadas"] == cantidad
 
 

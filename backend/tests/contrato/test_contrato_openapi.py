@@ -31,6 +31,9 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     "/api/v1/previsiones/resumen-anual/importar",
     "/api/v1/previsiones/importar",
     "/api/v1/exportacion/datos/importar",
+    # anio_hasta < anio_desde es válido por esquema (cada uno cumple su rango
+    # individualmente) pero se rechaza por regla de negocio (FiltroDeListadoInvalidoError).
+    "/api/v1/previsiones/resumen-anual/exportar",
 }
 
 # FastAPI/Starlette no rechazan un parámetro de query escalar (p.ej.

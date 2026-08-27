@@ -35,12 +35,13 @@ class ResumenAnual:
 
 @dataclass(frozen=True)
 class CeldaResumenAnualExcel:
-    """Una celda (concepto, mes) leída del Excel de Resumen anual.
+    """Una celda (concepto, año, mes) leída del Excel de Resumen anual.
 
     `importe` es None si la celda está vacía en el fichero.
     """
 
     concepto_id: int
+    anio: int
     mes: int
     importe: Decimal | None
 

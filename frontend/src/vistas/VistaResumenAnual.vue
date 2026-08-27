@@ -14,6 +14,13 @@ import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vu
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import TablaResumenAnual from '@/componentes/prevision/TablaResumenAnual.vue'
 import { Button } from '@/componentes/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/componentes/ui/dialog'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import {
@@ -218,8 +225,19 @@ async function editarCelda(conceptoId: number, mes: number, importe: string | nu
   }
 }
 
+const panelExportarAbierto = ref(false)
+const anioExportarDesde = ref(0)
+const anioExportarHasta = ref(0)
+
+function abrirExportar(): void {
+  anioExportarDesde.value = anio.value
+  anioExportarHasta.value = anio.value
+  panelExportarAbierto.value = true
+}
+
 async function exportar(): Promise<void> {
-  await tienda.exportarResumenAnual(anio.value)
+  await tienda.exportarResumenAnual(anioExportarDesde.value, anioExportarHasta.value)
+  panelExportarAbierto.value = false
 }
 
 const panelImportarAbierto = ref(false)
@@ -242,8 +260,9 @@ async function importar(): Promise<void> {
   const fichero = ficherosParaImportar.value[0]
   if (!fichero) return
   importando.value = true
-  resultadoImportacion.value = await tienda.importarResumenAnualExcel(anio.value, fichero)
+  resultadoImportacion.value = await tienda.importarResumenAnualExcel(fichero)
   importando.value = false
+  await cargarResumen()
 }
 </script>
 
@@ -256,7 +275,7 @@ async function importar(): Promise<void> {
           <Upload class="size-4" />
           Importar Excel
         </Button>
-        <Button variant="outline" @click="exportar">
+        <Button variant="outline" @click="abrirExportar">
           <Download class="size-4" />
           Exportar a Excel
         </Button>
@@ -407,6 +426,29 @@ async function importar(): Promise<void> {
       </SheetContent>
     </Sheet>
 
+    <Dialog v-model:open="panelExportarAbierto">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Exportar a Excel</DialogTitle>
+        </DialogHeader>
+
+        <div class="flex gap-3">
+          <div class="flex flex-col gap-1.5">
+            <Label for="anio-exportar-desde">Año desde</Label>
+            <Input id="anio-exportar-desde" v-model.number="anioExportarDesde" type="number" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="anio-exportar-hasta">Año hasta</Label>
+            <Input id="anio-exportar-hasta" v-model.number="anioExportarHasta" type="number" />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="success" @click="exportar">Exportar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <Sheet v-model:open="panelCrearCategoriaAbierto">
       <SheetContent>
         <SheetHeader>
@@ -446,8 +488,9 @@ async function importar(): Promise<void> {
 
         <div class="flex flex-col gap-4 px-4">
           <p class="text-muted-foreground text-sm">
-            Sube el Excel exportado del resumen anual (editado con los importes que quieras cambiar)
-            para el año {{ anio }}. Solo se actualizan las celdas que hayan cambiado.
+            Sube el Excel exportado del resumen anual (editado con los importes que quieras
+            cambiar). Cada fila aplica al año de su propia columna "Año", así que puede incluir
+            varios años a la vez. Solo se actualizan las celdas que hayan cambiado.
           </p>
 
           <ZonaSoltarFichero

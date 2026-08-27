@@ -50,6 +50,7 @@ from gestor_gastos.infraestructura.prevision.lector_excel_resumen_anual_openpyxl
 from gestor_gastos.interfaces.api.dependencias import obtener_sesion
 from gestor_gastos.interfaces.api.respuestas_error import (
     RESPUESTA_CUERPO_MALFORMADO,
+    RESPUESTA_FILTRO_INVALIDO,
     RESPUESTA_NO_ENCONTRADO,
 )
 from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
@@ -147,19 +148,27 @@ def resumen_anual(
         200: {
             "content": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}},
             "description": "Excel del resumen anual",
-        }
+        },
+        **RESPUESTA_FILTRO_INVALIDO,
     },
 )
 def exportar_resumen_anual(
-    anio: int = Query(ge=1, le=9999), sesion: Session = Depends(obtener_sesion)
+    anio_desde: int = Query(ge=1, le=9999),
+    anio_hasta: int = Query(ge=1, le=9999),
+    sesion: Session = Depends(obtener_sesion),
 ) -> Response:
     contenido = ExportarResumenAnualExcel(
         _construir_obtener_resumen_anual(sesion), EscritorExcelResumenAnualOpenpyxl()
-    ).ejecutar(anio)
+    ).ejecutar(anio_desde, anio_hasta)
+    nombre_fichero = (
+        f"resumen-anual-{anio_desde}.xlsx"
+        if anio_desde == anio_hasta
+        else f"resumen-anual-{anio_desde}-{anio_hasta}.xlsx"
+    )
     return Response(
         content=contenido,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="resumen-anual-{anio}.xlsx"'},
+        headers={"Content-Disposition": f'attachment; filename="{nombre_fichero}"'},
     )
 
 
@@ -170,7 +179,6 @@ def exportar_resumen_anual(
 )
 async def importar_resumen_anual(
     fichero: UploadFile,
-    anio: int = Query(ge=1, le=9999),
     sesion: Session = Depends(obtener_sesion),
 ) -> ResumenImportacionResumenAnualEsquema:
     contenido = await fichero.read()
@@ -183,7 +191,7 @@ async def importar_resumen_anual(
         EliminarAjusteMensual(
             RepositorioPrevisionesSqlAlchemy(sesion), RepositorioAjustesPrevisionSqlAlchemy(sesion)
         ),
-    ).ejecutar(contenido, fichero.filename or "", anio)
+    ).ejecutar(contenido, fichero.filename or "")
     return ResumenImportacionResumenAnualEsquema(**asdict(resumen))
 
 

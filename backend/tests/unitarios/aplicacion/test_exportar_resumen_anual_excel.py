@@ -1,11 +1,14 @@
 from decimal import Decimal
 
+import pytest
+
 from gestor_gastos.aplicacion.categoria.crear_categoria import CrearCategoria
 from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConceptoPrevisto
 from gestor_gastos.aplicacion.prevision.exportar_resumen_anual_excel import (
     ExportarResumenAnualExcel,
 )
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
+from gestor_gastos.dominio.excepciones import FiltroDeListadoInvalidoError
 from tests.unitarios.aplicacion.dobles import (
     EscritorExcelResumenAnualFalso,
     RepositorioAjustesPrevisionFalso,
@@ -15,7 +18,7 @@ from tests.unitarios.aplicacion.dobles import (
 )
 
 
-def test_exportar_delega_el_resumen_calculado_en_el_escritor() -> None:
+def _construir_exportar(escritor: EscritorExcelResumenAnualFalso) -> ExportarResumenAnualExcel:
     repo_previsiones = RepositorioPrevisionesFalso()
     repo_categorias = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
@@ -30,11 +33,31 @@ def test_exportar_delega_el_resumen_calculado_en_el_escritor() -> None:
     obtener_resumen = ObtenerResumenAnual(
         repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
     )
+    return ExportarResumenAnualExcel(obtener_resumen, escritor)
+
+
+def test_exportar_un_solo_anio_delega_un_resumen_en_el_escritor() -> None:
     escritor = EscritorExcelResumenAnualFalso()
 
-    contenido = ExportarResumenAnualExcel(obtener_resumen, escritor).ejecutar(2026)
+    contenido = _construir_exportar(escritor).ejecutar(2026, 2026)
 
     assert contenido == b"contenido-falso"
-    assert escritor.resumen_recibido is not None
-    assert escritor.resumen_recibido.anio == 2026
-    assert len(escritor.resumen_recibido.filas_gastos) == 1
+    assert escritor.resumenes_recibidos is not None
+    assert [r.anio for r in escritor.resumenes_recibidos] == [2026]
+    assert len(escritor.resumenes_recibidos[0].filas_gastos) == 1
+
+
+def test_exportar_un_rango_delega_un_resumen_por_anio_en_el_escritor() -> None:
+    escritor = EscritorExcelResumenAnualFalso()
+
+    _construir_exportar(escritor).ejecutar(2025, 2027)
+
+    assert escritor.resumenes_recibidos is not None
+    assert [r.anio for r in escritor.resumenes_recibidos] == [2025, 2026, 2027]
+
+
+def test_anio_hasta_anterior_a_anio_desde_lanza_error() -> None:
+    escritor = EscritorExcelResumenAnualFalso()
+
+    with pytest.raises(FiltroDeListadoInvalidoError):
+        _construir_exportar(escritor).ejecutar(2026, 2025)

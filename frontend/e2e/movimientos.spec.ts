@@ -291,6 +291,86 @@ test('seleccionar varios movimientos y eliminarlos en bloque', async ({ page }) 
   await expect(page.locator('tr', { hasText: descripcionB })).toHaveCount(0)
 })
 
+test('cambiar la categoría y subcategoría de varios movimientos seleccionados a la vez', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 MOV-CAT-MASIVO ${sufijo}`
+  const nombreCategoriaOrigen = `Categoria origen MASIVO ${sufijo}`
+  const nombreCategoriaDestino = `Categoria destino MASIVO ${sufijo}`
+  const nombreSubcategoriaDestino = `Subcategoria destino MASIVO ${sufijo}`
+  const descripcionA = `Movimiento masivo A ${sufijo}`
+  const descripcionB = `Movimiento masivo B ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoriaOrigen)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaOrigen })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoriaDestino)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  const tarjetaDestino = page.locator('[data-slot="card"]', { hasText: nombreCategoriaDestino })
+  await expect(tarjetaDestino).toBeVisible()
+  await tarjetaDestino.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoriaDestino)
+  await tarjetaDestino.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaDestino.locator('li', { hasText: nombreSubcategoriaDestino })).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+
+  for (const [descripcion, fecha, importe, saldo] of [
+    [descripcionA, '2026-01-01', '-10.00', '990.00'],
+    [descripcionB, '2026-01-02', '-20.00', '970.00'],
+  ]) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.locator('input[type="date"]').fill(fecha)
+    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoriaOrigen)
+    await panel.getByPlaceholder('Descripción').fill(descripcion)
+    await panel.getByPlaceholder('Importe').fill(importe)
+    await panel.getByPlaceholder('Saldo').fill(saldo)
+    await panel.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
+
+  await page.locator('tr', { hasText: descripcionA }).getByRole('checkbox').click()
+  await page.locator('tr', { hasText: descripcionB }).getByRole('checkbox').click()
+  await expect(page.getByText('2 seleccionados')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cambiar categoría' }).click()
+  const dialogoCambio = page.getByRole('dialog').filter({ hasText: 'Cambiar categoría de 2' })
+  await expect(dialogoCambio).toBeVisible()
+  await elegirOpcion(
+    page,
+    dialogoCambio.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaDestino,
+  )
+  await elegirOpcion(
+    page,
+    dialogoCambio.getByLabel('Subcategoría', { exact: true }),
+    nombreSubcategoriaDestino,
+  )
+  await dialogoCambio.getByRole('button', { name: 'Aplicar' }).click()
+  await expect(dialogoCambio).toBeHidden()
+
+  const filaA = page.locator('tr', { hasText: descripcionA })
+  const filaB = page.locator('tr', { hasText: descripcionB })
+  await expect(filaA).toContainText(nombreCategoriaDestino)
+  await expect(filaA).toContainText(nombreSubcategoriaDestino)
+  await expect(filaB).toContainText(nombreCategoriaDestino)
+  await expect(filaB).toContainText(nombreSubcategoriaDestino)
+})
+
 test('el selector de cuenta funciona dentro de la barra de filtros y recarga movimientos al cambiar de cuenta', async ({
   page,
 }) => {

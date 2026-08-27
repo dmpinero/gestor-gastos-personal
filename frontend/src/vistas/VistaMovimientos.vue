@@ -16,7 +16,7 @@ import {
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import type { Movimiento, TotalCategoria } from '@/api/tipos'
+import type { DatosMovimiento, Movimiento, TotalCategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
@@ -39,6 +39,7 @@ import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import DialogoCambiarCategoriaMasivo from '@/componentes/compartido/DialogoCambiarCategoriaMasivo.vue'
 import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
@@ -70,6 +71,7 @@ const cuentasSeleccionadas = ref<number[]>([])
 const error = ref<string | null>(null)
 const seleccionados = ref<Set<number>>(new Set())
 const progresoEliminacion = useProgresoTareas()
+const progresoCambioCategoria = useProgresoTareas()
 const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
 
 // Filtros avanzados de la barra de búsqueda (independientes del formulario
@@ -418,6 +420,34 @@ async function eliminarSeleccionados(): Promise<void> {
   }
 }
 
+async function cambiarCategoriaSeleccionados(
+  categoriaId: number,
+  subcategoriaId: number | null,
+): Promise<void> {
+  error.value = null
+  const idsSeleccionados = [...seleccionados.value]
+  const tareas = progresoCambioCategoria.envolver(
+    idsSeleccionados.map((id) => async () => {
+      const movimiento = tiendaMovimientos.movimientos.find((m) => m.id === id)
+      if (!movimiento) return
+      const datos: DatosMovimiento = {
+        ...movimiento,
+        categoria_id: categoriaId,
+        subcategoria_id: subcategoriaId,
+      }
+      await tiendaMovimientos.actualizar(id, datos)
+    }),
+  )
+  const resultados = await Promise.allSettled(tareas.map((tarea) => tarea()))
+  progresoCambioCategoria.terminar()
+  await tiendaMovimientos.cargarVarias(cuentasSeleccionadas.value)
+  seleccionados.value = new Set()
+  const fallidos = resultados.filter((r) => r.status === 'rejected')
+  if (fallidos.length > 0) {
+    error.value = `No se pudo cambiar la categoría de ${fallidos.length} de ${idsSeleccionados.length} movimientos seleccionados.`
+  }
+}
+
 function alternarSeleccionTodos(marcado: boolean): void {
   seleccionados.value = marcado ? new Set(filasOrdenadas.value.map((m) => m.id)) : new Set()
 }
@@ -449,6 +479,16 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       }"
     />
 
+    <ModalProgresoBloqueante
+      v-if="progresoCambioCategoria.enCurso.value"
+      titulo="Cambiando categoría"
+      etiqueta-unidad="movimientos"
+      :progreso="{
+        procesadas: progresoCambioCategoria.procesadas.value,
+        total: progresoCambioCategoria.total.value,
+      }"
+    />
+
     <PanelEdicionMovimiento ref="panelEdicion" />
 
     <p v-if="error" class="text-destructive mt-4 text-sm" role="alert">{{ error }}</p>
@@ -458,6 +498,10 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       class="mt-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
     >
       <span>{{ seleccionados.size }} seleccionados</span>
+      <DialogoCambiarCategoriaMasivo
+        :cantidad="seleccionados.size"
+        @confirmar="cambiarCategoriaSeleccionados"
+      />
       <DialogoConfirmarEliminacion
         :descripcion="`${seleccionados.size} movimientos seleccionados`"
         texto-boton="Eliminar seleccionados"

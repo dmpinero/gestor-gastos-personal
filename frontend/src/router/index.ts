@@ -7,6 +7,8 @@ import VistaMovimientos from '@/vistas/VistaMovimientos.vue'
 import VistaImportarExcel from '@/vistas/VistaImportarExcel.vue'
 import VistaHistorialGastos from '@/vistas/VistaHistorialGastos.vue'
 import VistaResumenAnual from '@/vistas/VistaResumenAnual.vue'
+import VistaAdministracion from '@/vistas/VistaAdministracion.vue'
+import VistaRealizarBackup from '@/vistas/VistaRealizarBackup.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -62,6 +64,18 @@ const router = createRouter({
       path: '/resumen-anual',
       name: 'resumen-anual',
       component: VistaResumenAnual,
+    },
+    {
+      path: '/administracion',
+      component: VistaAdministracion,
+      redirect: '/administracion/backup',
+      children: [
+        {
+          path: 'backup',
+          name: 'administracion-backup',
+          component: VistaRealizarBackup,
+        },
+      ],
     },
   ],
 })

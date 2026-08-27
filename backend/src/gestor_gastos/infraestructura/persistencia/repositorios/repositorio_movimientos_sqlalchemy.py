@@ -45,6 +45,12 @@ class RepositorioMovimientosSqlAlchemy:
         modelo = self._sesion.get(MovimientoModelo, id_movimiento)
         return _a_entidad(modelo) if modelo else None
 
+    def listar_todos(self) -> list[Movimiento]:
+        modelos = self._sesion.scalars(
+            select(MovimientoModelo).order_by(MovimientoModelo.fecha_valor.desc())
+        ).all()
+        return [_a_entidad(m) for m in modelos]
+
     def listar_por_cuenta(self, id_cuenta: int) -> list[Movimiento]:
         modelos = self._sesion.scalars(
             select(MovimientoModelo)

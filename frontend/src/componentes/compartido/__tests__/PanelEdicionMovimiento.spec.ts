@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import type { Movimiento } from '@/api/tipos'
 import { useTiendaCategorias } from '@/stores/categorias'
@@ -60,7 +60,24 @@ async function enviarFormulario(): Promise<void> {
   await nextTick()
 }
 
+// Con el panel principal y un mini-panel de creación abiertos a la vez puede
+// haber varios <form> en document.body: se envía el que contiene el campo
+// indicado, en vez de asumir que es el primero del documento.
+async function enviarFormularioDe(idCampo: string): Promise<void> {
+  const campo = document.body.querySelector(`#${idCampo}`) as HTMLElement
+  const formulario = campo.closest('form') as HTMLFormElement
+  formulario.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  await nextTick()
+  await nextTick()
+}
+
 describe('PanelEdicionMovimiento', () => {
+  // Los Sheet se montan con attachTo: document.body; si un test falla antes de
+  // llegar a wrapper.unmount(), sus nodos quedan y contaminan el resto.
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
   it('abrir para editar precarga el formulario y guardar envía los datos actualizados a la tienda', async () => {
     const { wrapper, tiendaMovimientos } = montar()
     const espia = vi.spyOn(tiendaMovimientos, 'actualizar').mockResolvedValue(movimiento)
@@ -133,6 +150,100 @@ describe('PanelEdicionMovimiento', () => {
 
     expect(document.body.querySelector('[role="alert"]')?.textContent).toBe('fallo de red')
     expect(document.body.querySelector('[data-slot="sheet-content"]')).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it('el botón "+" de Subcategoría está deshabilitado sin categoría seleccionada', async () => {
+    const { wrapper } = montar()
+    wrapper.vm.abrirParaCrear(10)
+    await nextTick()
+
+    const boton = document.body.querySelector(
+      '[aria-label="Crear subcategoría"]',
+    ) as HTMLButtonElement
+    expect(boton.disabled).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('crear una categoría desde el botón "+" la deja seleccionada y limpia la subcategoría previa', async () => {
+    const { wrapper } = montar()
+    const tiendaCategorias = useTiendaCategorias()
+    const espia = vi.spyOn(tiendaCategorias, 'crearCategoria').mockImplementation(async () => {
+      const categoria = { id: 200, nombre: 'Salud' }
+      tiendaCategorias.categorias.push({ categoria, subcategorias: [] })
+      return categoria
+    })
+
+    wrapper.vm.abrirParaEditar(movimiento)
+    await nextTick()
+    ;(document.body.querySelector('[aria-label="Crear categoría"]') as HTMLButtonElement).click()
+    await nextTick()
+
+    const titulos = document.body.querySelectorAll('[data-slot="sheet-title"]')
+    expect(titulos[titulos.length - 1]?.textContent).toBe('Crear categoría')
+    const campoNombre = document.body.querySelector('#nombre-nueva-categoria') as HTMLInputElement
+    campoNombre.value = 'Salud'
+    campoNombre.dispatchEvent(new Event('input'))
+    await nextTick()
+    await enviarFormularioDe('nombre-nueva-categoria')
+
+    expect(espia).toHaveBeenCalledWith('Salud')
+    expect(document.body.querySelector('#selector-categoria')?.textContent).toContain('Salud')
+    expect(document.body.querySelector('#selector-subcategoria')?.textContent).not.toContain('Cine')
+    expect(
+      document.body.querySelectorAll('[data-slot="sheet-content"][data-state="open"]'),
+    ).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  it('crear una subcategoría desde el botón "+" la deja seleccionada', async () => {
+    const { wrapper } = montar()
+    const tiendaCategorias = useTiendaCategorias()
+    const espia = vi.spyOn(tiendaCategorias, 'crearSubcategoria').mockImplementation(async () => {
+      const subcategoria = { id: 2000, nombre: 'Teatro', categoria_id: 100 }
+      tiendaCategorias.categorias[0]!.subcategorias.push(subcategoria)
+      return subcategoria
+    })
+
+    wrapper.vm.abrirParaEditar(movimiento)
+    await nextTick()
+    ;(document.body.querySelector('[aria-label="Crear subcategoría"]') as HTMLButtonElement).click()
+    await nextTick()
+
+    const campoNombre = document.body.querySelector(
+      '#nombre-nueva-subcategoria',
+    ) as HTMLInputElement
+    campoNombre.value = 'Teatro'
+    campoNombre.dispatchEvent(new Event('input'))
+    await nextTick()
+    await enviarFormularioDe('nombre-nueva-subcategoria')
+
+    expect(espia).toHaveBeenCalledWith(100, 'Teatro')
+    expect(document.body.querySelector('#selector-subcategoria')?.textContent).toContain('Teatro')
+    expect(
+      document.body.querySelectorAll('[data-slot="sheet-content"][data-state="open"]'),
+    ).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  it('un error al crear una categoría se muestra con role="alert" dentro del mini-panel sin cerrarlo', async () => {
+    const { wrapper } = montar()
+    const tiendaCategorias = useTiendaCategorias()
+    vi.spyOn(tiendaCategorias, 'crearCategoria').mockRejectedValue(new Error('nombre repetido'))
+
+    wrapper.vm.abrirParaEditar(movimiento)
+    await nextTick()
+    ;(document.body.querySelector('[aria-label="Crear categoría"]') as HTMLButtonElement).click()
+    await nextTick()
+
+    const campoNombre = document.body.querySelector('#nombre-nueva-categoria') as HTMLInputElement
+    campoNombre.value = 'Ocio'
+    campoNombre.dispatchEvent(new Event('input'))
+    await nextTick()
+    await enviarFormularioDe('nombre-nueva-categoria')
+
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toBe('nombre repetido')
+    expect(document.body.querySelector('#nombre-nueva-categoria')).not.toBeNull()
     wrapper.unmount()
   })
 })

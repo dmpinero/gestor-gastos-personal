@@ -38,6 +38,7 @@ import DialogoConfirmarEliminacion, {
 const tienda = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const errorFormulario = ref<string | null>(null)
+const errorEliminacion = ref<string | null>(null)
 const idEnEdicion = ref<number | null>(null)
 const panelAbierto = ref(false)
 const seleccionadas = ref<Set<number>>(new Set())
@@ -241,25 +242,40 @@ async function filasDetalleDeSeleccionadas(): Promise<(string | number)[][]> {
 }
 
 async function eliminar(id: number, cascada = false): Promise<void> {
-  errorFormulario.value = null
+  errorEliminacion.value = null
   try {
     await tienda.eliminar(id, cascada)
     seleccionadas.value.delete(id)
   } catch (motivo) {
-    errorFormulario.value = (motivo as Error).message
+    errorEliminacion.value = (motivo as Error).message
   }
 }
 
 async function eliminarSeleccionadas(cascada = false): Promise<void> {
-  errorFormulario.value = null
+  errorEliminacion.value = null
+  const ids = [...seleccionadas.value]
+  // Los nombres se capturan antes de borrar: las cuentas eliminadas con
+  // éxito desaparecen de la tienda, y el mensaje de error debe poder seguir
+  // identificando cuáles fallaron aunque eso ya haya pasado.
+  const nombrePorId = new Map(ids.map((id) => [id, nombreCuentaPorId(id) || `#${id}`]))
   try {
-    const tareas = progresoEliminacion.envolver(
-      [...seleccionadas.value].map((id) => () => tienda.eliminar(id, cascada)),
-    )
-    await Promise.all(tareas.map((tarea) => tarea()))
-    seleccionadas.value.clear()
-  } catch (motivo) {
-    errorFormulario.value = (motivo as Error).message
+    const tareas = progresoEliminacion.envolver(ids.map((id) => () => tienda.eliminar(id, cascada)))
+    const resultados = await Promise.allSettled(tareas.map((tarea) => tarea()))
+
+    const fallidas: string[] = []
+    resultados.forEach((resultado, indice) => {
+      const id = ids[indice]
+      if (id === undefined) return
+      if (resultado.status === 'fulfilled') {
+        seleccionadas.value.delete(id)
+      } else {
+        fallidas.push(`${nombrePorId.get(id)} (${(resultado.reason as Error).message})`)
+      }
+    })
+
+    if (fallidas.length > 0) {
+      errorEliminacion.value = `No se pudieron eliminar ${fallidas.length} de ${ids.length} cuentas: ${fallidas.join(', ')}`
+    }
   } finally {
     progresoEliminacion.terminar()
   }
@@ -349,6 +365,9 @@ function alternarSeleccion(id: number, marcado: boolean): void {
     </Sheet>
 
     <p v-if="tienda.error" class="mt-2 text-sm text-destructive" role="alert">{{ tienda.error }}</p>
+    <p v-if="errorEliminacion" class="mt-2 text-sm text-destructive" role="alert">
+      {{ errorEliminacion }}
+    </p>
 
     <div
       v-if="seleccionadas.size > 0"

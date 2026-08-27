@@ -219,6 +219,52 @@ test('seleccionar varias categorías y eliminarlas en bloque', async ({ page }) 
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toHaveCount(0)
 })
 
+test('si falla el borrado de una categoría seleccionada, el error la identifica y las demás sí se eliminan', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const nombreCategoriaA = `Categoria PARCIAL-A ${sufijo}`
+  const nombreCategoriaB = `Categoria PARCIAL-B ${sufijo}`
+
+  await page.goto('/gestion/categorias')
+
+  for (const nombre of [nombreCategoriaA, nombreCategoriaB]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panel = page.getByRole('dialog')
+    await panel.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panel.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  const categorias = await page.request.get('/api/v1/categorias').then((r) => r.json())
+  const idCategoriaB = categorias.find(
+    (c: { categoria: { nombre: string; id: number } }) => c.categoria.nombre === nombreCategoriaB,
+  ).categoria.id
+
+  // Solo la categoría B falla al borrarse (simula un fallo de red/servidor);
+  // la A debe eliminarse con normalidad en el mismo lote.
+  await page.route(`**/api/v1/categorias/${idCategoriaB}*`, (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: '{"detalle":"boom"}' }),
+  )
+
+  await page
+    .locator('[data-slot="card"]', { hasText: nombreCategoriaA })
+    .getByRole('checkbox')
+    .click()
+  await page
+    .locator('[data-slot="card"]', { hasText: nombreCategoriaB })
+    .getByRole('checkbox')
+    .click()
+
+  await page.getByRole('button', { name: 'Eliminar seleccionados' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Eliminar' }).click()
+
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaA })).toHaveCount(0)
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaB })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText(nombreCategoriaB)
+  await expect(page.getByRole('alert')).toContainText('boom')
+})
+
 test('eliminar una subcategoría con movimientos asociados la borra en cascada al confirmarlo', async ({
   page,
 }) => {

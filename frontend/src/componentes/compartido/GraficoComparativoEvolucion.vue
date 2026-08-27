@@ -21,6 +21,17 @@ const props = defineProps<{
 const modo = ref<'barras' | 'lineas' | 'area' | 'circular'>('barras')
 const tablaSaldoAbierta = ref(true)
 
+// Solo aplica a los modos líneas/área: en barras y circular siempre se ven
+// gasto e ingreso (no hay línea de saldo que ocultar).
+type Serie = 'gasto' | 'ingreso' | 'saldo'
+const seriesVisibles = ref<Set<Serie>>(new Set(['gasto', 'ingreso', 'saldo']))
+function alternarSerie(serie: Serie): void {
+  const nuevo = new Set(seriesVisibles.value)
+  if (nuevo.has(serie)) nuevo.delete(serie)
+  else nuevo.add(serie)
+  seriesVisibles.value = nuevo
+}
+
 function totalPara(items: TotalPeriodo[], periodo: string): number {
   return items.find((item) => item.periodo === periodo)?.total ?? 0
 }
@@ -53,44 +64,66 @@ function alturaPorcentaje(total: number): number {
 
 const ANCHO_PUNTO = 64
 const ALTO_GRAFICO = 128
-// Deja hueco arriba para el punto en el valor máximo, que si no quedaría
-// recortado contra el borde superior del SVG.
+// Deja hueco arriba (y, en líneas/área, también abajo) para que el punto en
+// el valor máximo no quede recortado contra el borde del SVG.
 const MARGEN_SUPERIOR = 24
 
-function coordenadaY(total: number): number {
-  return ALTO_GRAFICO - (alturaPorcentaje(total) / 100) * (ALTO_GRAFICO - MARGEN_SUPERIOR)
-}
-
-const puntosGasto = computed(() =>
-  filas.value.map((fila, indice) => ({
-    periodo: fila.periodo,
-    total: fila.gasto,
-    x: indice * ANCHO_PUNTO + ANCHO_PUNTO / 2,
-    y: coordenadaY(fila.gasto),
-  })),
-)
-const puntosIngreso = computed(() =>
-  filas.value.map((fila, indice) => ({
-    periodo: fila.periodo,
-    total: fila.ingreso,
-    x: indice * ANCHO_PUNTO + ANCHO_PUNTO / 2,
-    y: coordenadaY(fila.ingreso),
-  })),
-)
-
-const lineaGasto = computed(() => puntosGasto.value.map((p) => `${p.x},${p.y}`).join(' '))
-const lineaIngreso = computed(() => puntosIngreso.value.map((p) => `${p.x},${p.y}`).join(' '))
 const anchoTotal = computed(() => filas.value.length * ANCHO_PUNTO)
 
-// El área se cierra contra los bordes izquierdo y derecho del gráfico (no
-// contra el primer/último punto): con un único periodo, el primer y último
-// punto coinciden y un polígono "punto a punto" tendría ancho cero.
+// Eje exclusivo de los modos líneas/área: a diferencia de las barras (que
+// solo manejan magnitudes ≥ 0), aquí conviven gasto/ingreso (≥ 0) con el
+// saldo (puede ser negativo), así que el dominio es simétrico [-máx, +máx]
+// con el cero en el centro vertical. Solo cuenta el máximo de las series
+// actualmente visibles, para que el eje se reajuste al ocultar alguna.
+const CENTRO_GRAFICO = ALTO_GRAFICO / 2
+
+const maximoLineas = computed(() => {
+  const valores = filas.value.flatMap((fila) => [
+    seriesVisibles.value.has('gasto') ? fila.gasto : 0,
+    seriesVisibles.value.has('ingreso') ? fila.ingreso : 0,
+    seriesVisibles.value.has('saldo') ? Math.abs(fila.saldo) : 0,
+  ])
+  return Math.max(1, ...valores)
+})
+
+// |saldo| = |ingreso - gasto| ≤ max(ingreso, gasto) siempre que ambos sean
+// ≥ 0, así que el saldo nunca se sale del rango ya acotado por gasto/ingreso.
+function coordenadaYLineas(total: number): number {
+  return CENTRO_GRAFICO - (total / maximoLineas.value) * (CENTRO_GRAFICO - MARGEN_SUPERIOR)
+}
+
+function puntosDe(valores: (fila: (typeof filas.value)[number]) => number) {
+  return filas.value.map((fila, indice) => ({
+    periodo: fila.periodo,
+    total: valores(fila),
+    x: indice * ANCHO_PUNTO + ANCHO_PUNTO / 2,
+    y: coordenadaYLineas(valores(fila)),
+  }))
+}
+
+const puntosGastoLineas = computed(() => puntosDe((fila) => fila.gasto))
+const puntosIngresoLineas = computed(() => puntosDe((fila) => fila.ingreso))
+const puntosSaldoLineas = computed(() => puntosDe((fila) => fila.saldo))
+
+function lineaDe(puntos: { x: number; y: number }[]): string {
+  return puntos.map((p) => `${p.x},${p.y}`).join(' ')
+}
+const lineaGasto = computed(() => lineaDe(puntosGastoLineas.value))
+const lineaIngreso = computed(() => lineaDe(puntosIngresoLineas.value))
+const lineaSaldo = computed(() => lineaDe(puntosSaldoLineas.value))
+
+// El área se cierra contra la línea de cero (no contra el borde inferior):
+// así una serie que baja de cero (el saldo) se rellena correctamente por
+// debajo del cero en vez de "colgar" hacia el borde del gráfico. Se cierra
+// contra los bordes izquierdo/derecho, no contra el primer/último punto,
+// porque con un único periodo ambos coinciden y el polígono tendría ancho 0.
 function areaDe(linea: string): string {
   if (filas.value.length === 0) return ''
-  return `0,${ALTO_GRAFICO} ${linea} ${anchoTotal.value},${ALTO_GRAFICO}`
+  return `0,${CENTRO_GRAFICO} ${linea} ${anchoTotal.value},${CENTRO_GRAFICO}`
 }
 const areaGasto = computed(() => areaDe(lineaGasto.value))
 const areaIngreso = computed(() => areaDe(lineaIngreso.value))
+const areaSaldo = computed(() => areaDe(lineaSaldo.value))
 
 const descripcionAccesible = computed(() =>
   filas.value
@@ -157,7 +190,42 @@ const sectoresComparativos = computed(() => {
 <template>
   <div v-if="filas.length > 0">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-4 text-xs">
+      <div v-if="modo === 'lineas' || modo === 'area'" class="flex items-center gap-4 text-xs">
+        <button
+          type="button"
+          class="flex items-center gap-1.5"
+          :class="!seriesVisibles.has('gasto') && 'opacity-40'"
+          :aria-pressed="seriesVisibles.has('gasto')"
+          :aria-label="seriesVisibles.has('gasto') ? 'Ocultar gastos' : 'Mostrar gastos'"
+          @click="alternarSerie('gasto')"
+        >
+          <span class="bg-destructive inline-block size-2.5 rounded-full" />
+          Gastos
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-1.5"
+          :class="!seriesVisibles.has('ingreso') && 'opacity-40'"
+          :aria-pressed="seriesVisibles.has('ingreso')"
+          :aria-label="seriesVisibles.has('ingreso') ? 'Ocultar ingresos' : 'Mostrar ingresos'"
+          @click="alternarSerie('ingreso')"
+        >
+          <span class="bg-success inline-block size-2.5 rounded-full" />
+          Ingresos
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-1.5"
+          :class="!seriesVisibles.has('saldo') && 'opacity-40'"
+          :aria-pressed="seriesVisibles.has('saldo')"
+          :aria-label="seriesVisibles.has('saldo') ? 'Ocultar saldo' : 'Mostrar saldo'"
+          @click="alternarSerie('saldo')"
+        >
+          <span class="bg-teal-500 inline-block size-2.5 rounded-full" />
+          Saldo
+        </button>
+      </div>
+      <div v-else class="flex items-center gap-4 text-xs">
         <span class="flex items-center gap-1.5">
           <span class="bg-destructive inline-block size-2.5 rounded-full" />
           Gastos
@@ -309,43 +377,95 @@ const sectoresComparativos = computed(() => {
         role="img"
         :aria-label="`Evolución comparada: ${descripcionAccesible}`"
       >
+        <line
+          x1="0"
+          :x2="anchoTotal"
+          :y1="CENTRO_GRAFICO"
+          :y2="CENTRO_GRAFICO"
+          stroke="var(--muted-foreground)"
+          stroke-opacity="0.3"
+          stroke-dasharray="4 4"
+        />
         <polygon
-          v-if="modo === 'area'"
+          v-if="modo === 'area' && seriesVisibles.has('gasto')"
           :points="areaGasto"
           fill="var(--destructive)"
           fill-opacity="0.15"
         />
         <polygon
-          v-if="modo === 'area'"
+          v-if="modo === 'area' && seriesVisibles.has('ingreso')"
           :points="areaIngreso"
           fill="var(--success)"
           fill-opacity="0.15"
         />
-        <polyline :points="lineaGasto" fill="none" stroke="var(--destructive)" stroke-width="2" />
-        <polyline :points="lineaIngreso" fill="none" stroke="var(--success)" stroke-width="2" />
-        <template v-for="punto in puntosGasto" :key="`gasto-${punto.periodo}`">
-          <text
-            :x="punto.x"
-            :y="Math.max(punto.y - 8, 10)"
-            text-anchor="middle"
-            font-size="10"
-            fill="var(--muted-foreground)"
-          >
-            {{ formatearImporte(punto.total) }}
-          </text>
-          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--destructive)" />
+        <polygon
+          v-if="modo === 'area' && seriesVisibles.has('saldo')"
+          :points="areaSaldo"
+          class="fill-teal-500"
+          fill-opacity="0.15"
+        />
+        <polyline
+          v-if="seriesVisibles.has('gasto')"
+          :points="lineaGasto"
+          fill="none"
+          stroke="var(--destructive)"
+          stroke-width="2"
+        />
+        <polyline
+          v-if="seriesVisibles.has('ingreso')"
+          :points="lineaIngreso"
+          fill="none"
+          stroke="var(--success)"
+          stroke-width="2"
+        />
+        <polyline
+          v-if="seriesVisibles.has('saldo')"
+          :points="lineaSaldo"
+          fill="none"
+          class="stroke-teal-500"
+          stroke-width="2"
+        />
+        <template v-if="seriesVisibles.has('gasto')">
+          <template v-for="punto in puntosGastoLineas" :key="`gasto-${punto.periodo}`">
+            <text
+              :x="punto.x"
+              :y="Math.max(punto.y - 8, 10)"
+              text-anchor="middle"
+              font-size="10"
+              fill="var(--muted-foreground)"
+            >
+              {{ formatearImporte(punto.total) }}
+            </text>
+            <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--destructive)" />
+          </template>
         </template>
-        <template v-for="punto in puntosIngreso" :key="`ingreso-${punto.periodo}`">
-          <text
-            :x="punto.x"
-            :y="Math.max(punto.y - 18, 10)"
-            text-anchor="middle"
-            font-size="10"
-            fill="var(--muted-foreground)"
-          >
-            {{ formatearImporte(punto.total) }}
-          </text>
-          <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--success)" />
+        <template v-if="seriesVisibles.has('ingreso')">
+          <template v-for="punto in puntosIngresoLineas" :key="`ingreso-${punto.periodo}`">
+            <text
+              :x="punto.x"
+              :y="Math.max(punto.y - 18, 10)"
+              text-anchor="middle"
+              font-size="10"
+              fill="var(--muted-foreground)"
+            >
+              {{ formatearImporte(punto.total) }}
+            </text>
+            <circle :cx="punto.x" :cy="punto.y" r="4" fill="var(--success)" />
+          </template>
+        </template>
+        <template v-if="seriesVisibles.has('saldo')">
+          <template v-for="punto in puntosSaldoLineas" :key="`saldo-${punto.periodo}`">
+            <text
+              :x="punto.x"
+              :y="Math.min(punto.y + 20, ALTO_GRAFICO - 4)"
+              text-anchor="middle"
+              font-size="10"
+              fill="var(--muted-foreground)"
+            >
+              {{ formatearImporte(punto.total) }}
+            </text>
+            <circle :cx="punto.x" :cy="punto.y" r="4" class="fill-teal-500" />
+          </template>
         </template>
       </svg>
       <div class="flex" :style="{ width: `${anchoTotal}px` }">

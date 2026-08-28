@@ -180,7 +180,10 @@ describe('useTiendaPrevisiones', () => {
     expect(clienteApi.descargar).toHaveBeenCalledWith(
       '/previsiones/resumen-anual/exportar?anio_desde=2026&anio_hasta=2026',
     )
-    expect(descargarBlob).toHaveBeenCalledWith(blob, 'resumen-anual-2026.xlsx')
+    expect(descargarBlob).toHaveBeenCalledWith(
+      blob,
+      expect.stringMatching(/^resumen-anual-2026_\d{8}_\d{6}\.xlsx$/),
+    )
   })
 
   it('exporta un rango de años y dispara la descarga con un nombre de fichero que indica el rango', async () => {
@@ -193,7 +196,10 @@ describe('useTiendaPrevisiones', () => {
     expect(clienteApi.descargar).toHaveBeenCalledWith(
       '/previsiones/resumen-anual/exportar?anio_desde=2025&anio_hasta=2027',
     )
-    expect(descargarBlob).toHaveBeenCalledWith(blob, 'resumen-anual-2025-2027.xlsx')
+    expect(descargarBlob).toHaveBeenCalledWith(
+      blob,
+      expect.stringMatching(/^resumen-anual-2025-2027_\d{8}_\d{6}\.xlsx$/),
+    )
   })
 
   it('guarda el mensaje de error si exportar el resumen falla', async () => {

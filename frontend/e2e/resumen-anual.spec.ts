@@ -271,7 +271,9 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
     page.waitForEvent('download'),
     panelExportar.getByRole('button', { name: 'Exportar' }).click(),
   ])
-  expect(descarga.suggestedFilename()).toBe(`resumen-anual-${anioActual}.xlsx`)
+  expect(descarga.suggestedFilename()).toMatch(
+    new RegExp(`^resumen-anual-${anioActual}_\\d{8}_\\d{6}\\.xlsx$`),
+  )
   const contenidoOriginal = await bufferDeDescarga(descarga)
 
   // Se edita el Excel descargado como haría el usuario: se cambia el importe
@@ -542,7 +544,9 @@ test('exportar un rango de dos años, editar celdas de ambos y reimportar actual
     page.waitForEvent('download'),
     panelExportar.getByRole('button', { name: 'Exportar' }).click(),
   ])
-  expect(descarga.suggestedFilename()).toBe(`resumen-anual-${anioActual}-${anioSiguiente}.xlsx`)
+  expect(descarga.suggestedFilename()).toMatch(
+    new RegExp(`^resumen-anual-${anioActual}-${anioSiguiente}_\\d{8}_\\d{6}\\.xlsx$`),
+  )
   const contenido = await bufferDeDescarga(descarga)
 
   // El fichero trae una fila por año para el mismo concepto: se edita enero

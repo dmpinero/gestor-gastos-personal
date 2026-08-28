@@ -10,6 +10,7 @@ import type {
   ResumenImportacionResumenAnual,
 } from '@/api/tipos'
 import { descargarBlob } from '@/lib/descargas'
+import { formatearMarcaTemporalFichero } from '@/lib/formato'
 
 export const useTiendaPrevisiones = defineStore('previsiones', () => {
   const conceptos = ref<ConceptoPrevisto[]>([])
@@ -102,10 +103,8 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
       const blob = await clienteApi.descargar(
         `/previsiones/resumen-anual/exportar?anio_desde=${anioDesde}&anio_hasta=${anioHasta}`,
       )
-      const nombreFichero =
-        anioDesde === anioHasta
-          ? `resumen-anual-${anioDesde}.xlsx`
-          : `resumen-anual-${anioDesde}-${anioHasta}.xlsx`
+      const rangoAnios = anioDesde === anioHasta ? `${anioDesde}` : `${anioDesde}-${anioHasta}`
+      const nombreFichero = `resumen-anual-${rangoAnios}_${formatearMarcaTemporalFichero()}.xlsx`
       descargarBlob(blob, nombreFichero)
     } catch (motivo) {
       _guardarError(motivo)

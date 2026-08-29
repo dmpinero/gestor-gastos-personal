@@ -9,7 +9,7 @@ jobs:
   playwright:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Preparar variables de entorno del backend
         run: cp backend/.env.example backend/.env

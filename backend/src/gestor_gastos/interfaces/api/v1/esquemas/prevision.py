@@ -70,3 +70,18 @@ class ResumenImportacionConceptosPrevistosEsquema(BaseModel):
     conceptos_omitidos_por_duplicado: int
     categorias_creadas: list[str]
     subcategorias_creadas: list[str]
+
+
+class AsociacionConceptoCrearEsquema(BaseModel):
+    categoria_resumen_id: int
+    subcategoria_resumen_id: int | None = None
+    categoria_movimiento_id: int
+    subcategoria_movimiento_id: int | None = None
+
+
+class AsociacionConceptoSalidaEsquema(BaseModel):
+    id: int
+    categoria_resumen_id: int
+    subcategoria_resumen_id: int | None
+    categoria_movimiento_id: int
+    subcategoria_movimiento_id: int | None

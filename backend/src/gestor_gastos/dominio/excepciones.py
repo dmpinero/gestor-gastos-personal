@@ -12,3 +12,8 @@ class EntidadConDependenciasError(Exception):
 
 class FiltroDeListadoInvalidoError(Exception):
     """Se lanza cuando un listado recibe una combinación inválida de filtros."""
+
+
+class AsociacionDuplicadaError(Exception):
+    """Se lanza al crear una asociación para una categoría/subcategoría del
+    resumen anual que ya tiene otra asociación."""

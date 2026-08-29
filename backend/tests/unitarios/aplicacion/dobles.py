@@ -6,7 +6,11 @@ from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import (
+    AjusteMensual,
+    AsociacionConcepto,
+    ConceptoPrevisto,
+)
 from gestor_gastos.dominio.prevision.valores import (
     DatosConceptosPrevistosExcelLeidos,
     DatosResumenAnualExcelLeidos,
@@ -323,6 +327,70 @@ class RepositorioAjustesPrevisionFalso:
 
     def listar_todos(self) -> list[AjusteMensual]:
         return list(self._ajustes.values())
+
+
+class RepositorioAsociacionesFalso:
+    """Doble de RepositorioAsociaciones en memoria."""
+
+    def __init__(self) -> None:
+        self._asociaciones: dict[int, AsociacionConcepto] = {}
+        self._siguiente_id = 1
+
+    def crear(self, asociacion: AsociacionConcepto) -> AsociacionConcepto:
+        asociacion.id = self._siguiente_id
+        self._asociaciones[asociacion.id] = asociacion
+        self._siguiente_id += 1
+        return asociacion
+
+    def obtener_por_id(self, id_asociacion: int) -> AsociacionConcepto | None:
+        return self._asociaciones.get(id_asociacion)
+
+    def listar(self) -> list[AsociacionConcepto]:
+        return list(self._asociaciones.values())
+
+    def obtener_por_categoria_resumen(
+        self, categoria_resumen_id: int, subcategoria_resumen_id: int | None
+    ) -> AsociacionConcepto | None:
+        for a in self._asociaciones.values():
+            if (
+                a.categoria_resumen_id == categoria_resumen_id
+                and a.subcategoria_resumen_id == subcategoria_resumen_id
+            ):
+                return a
+        return None
+
+    def eliminar(self, id_asociacion: int) -> None:
+        self._asociaciones.pop(id_asociacion, None)
+
+    def contar_por_categoria(self, id_categoria: int) -> int:
+        return sum(
+            1
+            for a in self._asociaciones.values()
+            if id_categoria in (a.categoria_resumen_id, a.categoria_movimiento_id)
+        )
+
+    def contar_por_subcategoria(self, id_subcategoria: int) -> int:
+        return sum(
+            1
+            for a in self._asociaciones.values()
+            if id_subcategoria in (a.subcategoria_resumen_id, a.subcategoria_movimiento_id)
+        )
+
+    def eliminar_por_categoria(self, id_categoria: int) -> None:
+        for id_asociacion in [
+            a.id
+            for a in self._asociaciones.values()
+            if id_categoria in (a.categoria_resumen_id, a.categoria_movimiento_id)
+        ]:
+            self._asociaciones.pop(id_asociacion, None)
+
+    def eliminar_por_subcategoria(self, id_subcategoria: int) -> None:
+        for id_asociacion in [
+            a.id
+            for a in self._asociaciones.values()
+            if id_subcategoria in (a.subcategoria_resumen_id, a.subcategoria_movimiento_id)
+        ]:
+            self._asociaciones.pop(id_asociacion, None)
 
 
 class LectorExcelFalso:

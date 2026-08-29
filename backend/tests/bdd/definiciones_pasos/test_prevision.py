@@ -52,6 +52,50 @@ def existe_cuenta_con_movimiento(
     )
 
 
+@given(
+    parsers.parse(
+        'existe la categoría "{nombre_categoria}" con un movimiento de "{importe}" '
+        'en la fecha "{fecha}"'
+    )
+)
+def existe_categoria_con_movimiento(
+    cliente: TestClient, contexto: dict, nombre_categoria: str, importe: str, fecha: str
+) -> None:
+    categoria = cliente.post("/api/v1/categorias", json={"nombre": nombre_categoria}).json()
+    cuenta = cliente.post(
+        "/api/v1/cuentas", json={"numero_cuenta": f"ES00 {nombre_categoria}"}
+    ).json()
+    cliente.post(
+        "/api/v1/movimientos",
+        json={
+            "cuenta_id": cuenta["id"],
+            "categoria_id": categoria["id"],
+            "fecha_valor": fecha,
+            "descripcion": "Movimiento de prueba",
+            "importe": importe,
+            "saldo": "100.00",
+        },
+    )
+    contexto["categoria_movimiento_id"] = categoria["id"]
+
+
+@when(
+    parsers.parse(
+        'asocio la categoría "{nombre_resumen}" del resumen anual con la categoría '
+        '"{nombre_movimiento}" de movimientos'
+    )
+)
+def asocio_categoria_resumen_con_categoria_movimiento(cliente: TestClient, contexto: dict) -> None:
+    respuesta = cliente.post(
+        "/api/v1/previsiones/asociaciones",
+        json={
+            "categoria_resumen_id": contexto["categoria_id"],
+            "categoria_movimiento_id": contexto["categoria_movimiento_id"],
+        },
+    )
+    assert respuesta.status_code == 201
+
+
 @given(parsers.parse('se ajusta manualmente el importe del mes {mes:d} de {anio:d} a "{importe}"'))
 def se_ajusta_manualmente_el_importe(
     cliente: TestClient, contexto: dict, mes: int, anio: int, importe: str

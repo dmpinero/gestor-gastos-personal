@@ -4,6 +4,7 @@ from gestor_gastos.dominio.categoria.repositorio import RepositorioCategorias
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
 from gestor_gastos.dominio.prevision.repositorio import (
     RepositorioAjustesMensuales,
+    RepositorioAsociaciones,
     RepositorioPrevisiones,
 )
 from gestor_gastos.dominio.prevision.valores import FilaResumenAnual, ResumenAnual, ValorMensual
@@ -16,11 +17,13 @@ class ObtenerResumenAnual:
         repositorio_categorias: RepositorioCategorias,
         repositorio_movimientos: RepositorioMovimientos,
         repositorio_ajustes: RepositorioAjustesMensuales,
+        repositorio_asociaciones: RepositorioAsociaciones,
     ) -> None:
         self._repositorio = repositorio
         self._repositorio_categorias = repositorio_categorias
         self._repositorio_movimientos = repositorio_movimientos
         self._repositorio_ajustes = repositorio_ajustes
+        self._repositorio_asociaciones = repositorio_asociaciones
 
     def ejecutar(self, anio: int) -> ResumenAnual:
         conceptos = self._repositorio.listar()
@@ -28,6 +31,16 @@ class ObtenerResumenAnual:
         ajustes = {
             (a.concepto_id, a.mes): a.importe
             for a in self._repositorio_ajustes.listar_por_anio(anio)
+        }
+        # Una asociación hace corresponder la categoría/subcategoría con la
+        # que se nombra un concepto en el resumen anual con la categoría/
+        # subcategoría real que usan los movimientos (ver AsociacionConcepto).
+        asociaciones = {
+            (a.categoria_resumen_id, a.subcategoria_resumen_id): (
+                a.categoria_movimiento_id,
+                a.subcategoria_movimiento_id,
+            )
+            for a in self._repositorio_asociaciones.listar()
         }
 
         filas_gastos: list[FilaResumenAnual] = []
@@ -37,10 +50,14 @@ class ObtenerResumenAnual:
 
         for concepto in conceptos:
             meses_aplicables = concepto.meses_aplicables()
+            categoria_real, subcategoria_real = asociaciones.get(
+                (concepto.categoria_id, concepto.subcategoria_id),
+                (concepto.categoria_id, concepto.subcategoria_id),
+            )
             valores: list[ValorMensual] = []
             for mes in range(1, 13):
                 ajuste = ajustes.get((concepto.id, mes))
-                clave = (concepto.categoria_id, concepto.subcategoria_id, mes)
+                clave = (categoria_real, subcategoria_real, mes)
                 real = sumas_reales.get(clave)
                 if ajuste is not None:
                     valores.append(ValorMensual(mes=mes, importe=ajuste, origen="ajustado"))

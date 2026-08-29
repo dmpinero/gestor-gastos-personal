@@ -47,3 +47,12 @@ Característica: Resumen anual de previsión
     Dado que ya se importó un Excel de conceptos previstos con la fila "Suscripciones" / "Streaming" / "mensual" / "-9.99"
     Cuando reimporto el mismo Excel de conceptos previstos
     Entonces la importación de conceptos previstos omite 1 concepto por duplicado
+
+  Escenario: Una asociación hace que el resumen anual encuentre el importe real en otra categoría
+    Dado que existe la categoría "Comida" con un concepto previsto mensual de importe "-200.00"
+    Y existe la categoría "Alimentación" con un movimiento de "-150.00" en la fecha "2026-03-15"
+    Cuando consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe previsto "-200.00" en el mes 3
+    Cuando asocio la categoría "Comida" del resumen anual con la categoría "Alimentación" de movimientos
+    Y consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe real "-150.00" en el mes 3

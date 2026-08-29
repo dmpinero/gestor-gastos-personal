@@ -54,7 +54,8 @@ function irAlDashboard(): void {
     <p class="text-muted-foreground mt-2 max-w-prose">
       Sube un backup exportado previamente desde "Realizar backup".
       <strong>Se borrará toda la información actual</strong> (cuentas, categorías, subcategorías,
-      movimientos, conceptos previstos y ajustes mensuales) y se sustituirá por la del fichero.
+      movimientos, conceptos previstos, ajustes mensuales y asociaciones de conceptos) y se
+      sustituirá por la del fichero.
     </p>
 
     <form class="mt-4 flex flex-col items-start gap-3" @submit.prevent="confirmacionAbierta = true">
@@ -105,6 +106,7 @@ function irAlDashboard(): void {
         <li>Movimientos: {{ resumen.movimientos_importados }}</li>
         <li>Conceptos previstos: {{ resumen.conceptos_previstos_importados }}</li>
         <li>Ajustes mensuales: {{ resumen.ajustes_importados }}</li>
+        <li>Asociaciones de conceptos: {{ resumen.asociaciones_importadas }}</li>
       </ul>
 
       <Button class="mt-4" variant="outline" @click="irAlDashboard"> Ir al Dashboard </Button>

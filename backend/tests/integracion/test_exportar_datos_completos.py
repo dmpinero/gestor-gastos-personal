@@ -10,6 +10,7 @@ from gestor_gastos.aplicacion.exportacion.exportar_datos_completos import Export
 from gestor_gastos.aplicacion.movimiento.listar_todos_los_movimientos import (
     ListarTodosLosMovimientos,
 )
+from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
@@ -17,12 +18,19 @@ from gestor_gastos.aplicacion.prevision.listar_todos_los_ajustes import ListarTo
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import (
+    AjusteMensual,
+    AsociacionConcepto,
+    ConceptoPrevisto,
+)
 from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_openpyxl import (
     EscritorExportacionCompletaOpenpyxl,
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesSqlAlchemy,
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
@@ -44,11 +52,21 @@ def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) ->
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
+    repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
 
     cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     subcategoria = repo_categorias.crear_subcategoria(
         Subcategoria(categoria_id=categoria.id, nombre="Streaming")
+    )
+    categoria_resumen = repo_categorias.crear_categoria(Categoria(nombre="Ocio"))
+    repo_asociaciones.crear(
+        AsociacionConcepto(
+            categoria_resumen_id=categoria_resumen.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=categoria.id,
+            subcategoria_movimiento_id=subcategoria.id,
+        )
     )
     repo_movimientos.crear(
         Movimiento(
@@ -79,6 +97,7 @@ def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) ->
         ListarTodosLosMovimientos(repo_movimientos),
         ListarConceptosPrevistos(repo_previsiones),
         ListarTodosLosAjustes(repo_ajustes),
+        ListarAsociaciones(repo_asociaciones),
         EscritorExportacionCompletaOpenpyxl(),
     ).ejecutar()
 
@@ -90,6 +109,9 @@ def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) ->
         "Movimientos",
         "Conceptos previstos",
         "Ajustes mensuales",
+        "Asociaciones",
     ]
     assert libro["Cuentas"]["B2"].value == "ES00 1234"
     assert libro["Movimientos"]["F2"].value == "Netflix"
+    assert libro["Asociaciones"]["B2"].value == categoria_resumen.id
+    assert libro["Asociaciones"]["D2"].value == categoria.id

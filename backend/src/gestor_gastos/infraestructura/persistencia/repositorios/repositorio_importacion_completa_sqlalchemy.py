@@ -6,6 +6,7 @@ from gestor_gastos.dominio.exportacion.excepciones import RestauracionDeDatosFal
 from gestor_gastos.dominio.exportacion.valores import DatosCompletos
 from gestor_gastos.infraestructura.persistencia.modelos import (
     AjustePrevisionMensualModelo,
+    AsociacionConceptoModelo,
     CategoriaModelo,
     ConceptoPrevistoModelo,
     CuentaBancariaModelo,
@@ -39,6 +40,7 @@ class RepositorioImportacionCompletaSqlAlchemy:
             raise
 
     def _borrar_todo(self) -> None:
+        self._sesion.execute(delete(AsociacionConceptoModelo))
         self._sesion.execute(delete(MovimientoModelo))
         self._sesion.execute(delete(AjustePrevisionMensualModelo))
         self._sesion.execute(delete(ConceptoPrevistoModelo))
@@ -73,6 +75,17 @@ class RepositorioImportacionCompletaSqlAlchemy:
             for subcategoria in datos.subcategorias
         )
         self._sesion.flush()
+
+        self._sesion.add_all(
+            AsociacionConceptoModelo(
+                id=asociacion.id,
+                categoria_resumen_id=asociacion.categoria_resumen_id,
+                subcategoria_resumen_id=asociacion.subcategoria_resumen_id,
+                categoria_movimiento_id=asociacion.categoria_movimiento_id,
+                subcategoria_movimiento_id=asociacion.subcategoria_movimiento_id,
+            )
+            for asociacion in datos.asociaciones
+        )
 
         self._sesion.add_all(
             MovimientoModelo(

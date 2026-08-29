@@ -15,7 +15,11 @@ from gestor_gastos.dominio.exportacion.excepciones import (
 from gestor_gastos.dominio.exportacion.valores import DatosCompletos
 from gestor_gastos.dominio.importacion.excepciones import ExtensionNoSoportadaError
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import (
+    AjusteMensual,
+    AsociacionConcepto,
+    ConceptoPrevisto,
+)
 from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_openpyxl import (
     EscritorExportacionCompletaOpenpyxl,
 )
@@ -51,6 +55,15 @@ def _datos_completos() -> DatosCompletos:
             )
         ],
         ajustes=[AjusteMensual(id=1, concepto_id=1, anio=2026, mes=3, importe=Decimal("-12.00"))],
+        asociaciones=[
+            AsociacionConcepto(
+                id=1,
+                categoria_resumen_id=10,
+                subcategoria_resumen_id=100,
+                categoria_movimiento_id=10,
+                subcategoria_movimiento_id=100,
+            )
+        ],
     )
 
 

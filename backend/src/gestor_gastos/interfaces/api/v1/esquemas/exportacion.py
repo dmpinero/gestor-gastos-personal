@@ -8,3 +8,4 @@ class ResumenImportacionDatosCompletosEsquema(BaseModel):
     movimientos_importados: int
     conceptos_previstos_importados: int
     ajustes_importados: int
+    asociaciones_importadas: int

@@ -21,7 +21,8 @@ async function exportar(): Promise<void> {
   <section>
     <p class="text-muted-foreground max-w-prose text-sm">
       Descarga un Excel con toda la información almacenada actualmente en la aplicación: cuentas,
-      categorías, subcategorías, movimientos, conceptos previstos y ajustes mensuales.
+      categorías, subcategorías, movimientos, conceptos previstos, ajustes mensuales y asociaciones
+      de conceptos.
     </p>
 
     <Button class="mt-4" variant="outline" :disabled="exportando" @click="exportar">

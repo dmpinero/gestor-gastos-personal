@@ -8,7 +8,11 @@ from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.exportacion.valores import DatosCompletos
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import (
+    AjusteMensual,
+    AsociacionConcepto,
+    ConceptoPrevisto,
+)
 from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_openpyxl import (
     EscritorExportacionCompletaOpenpyxl,
 )
@@ -41,6 +45,15 @@ def _datos_completos() -> DatosCompletos:
             )
         ],
         ajustes=[AjusteMensual(id=1, concepto_id=1, anio=2026, mes=3, importe=Decimal("-12.00"))],
+        asociaciones=[
+            AsociacionConcepto(
+                id=1,
+                categoria_resumen_id=10,
+                subcategoria_resumen_id=100,
+                categoria_movimiento_id=10,
+                subcategoria_movimiento_id=100,
+            )
+        ],
     )
 
 
@@ -55,6 +68,7 @@ def test_escribe_las_seis_hojas() -> None:
         "Movimientos",
         "Conceptos previstos",
         "Ajustes mensuales",
+        "Asociaciones",
     ]
 
 
@@ -70,6 +84,8 @@ def test_cada_hoja_tiene_cabecera_y_una_fila_por_registro() -> None:
     assert libro["Movimientos"]["H2"].value == -9.99
     assert libro["Conceptos previstos"]["D2"].value == "mensual"
     assert libro["Ajustes mensuales"]["E2"].value == -12.0
+    assert libro["Asociaciones"]["B2"].value == 10
+    assert libro["Asociaciones"]["D2"].value == 10
 
 
 def test_un_texto_con_caracteres_de_control_no_rompe_la_escritura() -> None:

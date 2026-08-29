@@ -40,3 +40,20 @@ class AjusteMensual:
     mes: int
     importe: Decimal
     id: int | None = None
+
+
+@dataclass
+class AsociacionConcepto:
+    """Hace corresponder la categoría/subcategoría con la que se nombra un
+    concepto previsto del resumen anual con la categoría/subcategoría real
+    que usan los movimientos, cuando ambas representan el mismo gasto pero
+    con nombres distintos (p. ej. "Comida" en el resumen anual y
+    "Alimentación" en movimientos). ObtenerResumenAnual la usa para buscar
+    el importe real de un concepto por la categoría/subcategoría de
+    movimientos, en vez de por la suya propia."""
+
+    categoria_resumen_id: int
+    subcategoria_resumen_id: int | None
+    categoria_movimiento_id: int
+    subcategoria_movimiento_id: int | None
+    id: int | None = None

@@ -21,8 +21,10 @@ from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.excepciones import EntidadNoEncontradaError
+from gestor_gastos.dominio.prevision.entidades import AsociacionConcepto
 from tests.unitarios.aplicacion.dobles import (
     RepositorioAjustesPrevisionFalso,
+    RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
     RepositorioCuentasFalso,
     RepositorioMovimientosFalso,
@@ -179,7 +181,11 @@ def test_resumen_anual_usa_el_real_cuando_existe_y_el_previsto_en_el_resto_de_me
     )
 
     resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
     ).ejecutar(2026)
 
     assert len(resumen.filas_gastos) == 1
@@ -194,6 +200,86 @@ def test_resumen_anual_usa_el_real_cuando_existe_y_el_previsto_en_el_resto_de_me
     assert resumen.totales_gastos[3] == Decimal("-9.99")  # índice 3 = abril
 
 
+def test_resumen_anual_con_asociacion_busca_el_real_en_la_categoria_de_movimientos_mapeada() -> (
+    None
+):
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, comida = (
+        _preparar()
+    )
+    alimentacion = CrearCategoria(repo_categorias).ejecutar("Alimentación")
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    # El concepto se nombra "Comida" en el resumen anual, pero el movimiento
+    # real está categorizado como "Alimentación": sin la asociación, nunca se
+    # encontrarían (ver test siguiente).
+    CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=comida.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-200.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=alimentacion.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Supermercado",
+        importe=Decimal("-150.00"),
+        saldo=Decimal("100.00"),
+    )
+    repo_asociaciones = RepositorioAsociacionesFalso()
+    repo_asociaciones.crear(
+        AsociacionConcepto(
+            categoria_resumen_id=comida.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=alimentacion.id,
+            subcategoria_movimiento_id=None,
+        )
+    )
+
+    resumen = ObtenerResumenAnual(
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
+    ).ejecutar(2026)
+
+    fila = resumen.filas_gastos[0]
+    valor_marzo = next(v for v in fila.valores if v.mes == 3)
+    assert valor_marzo.importe == Decimal("-150.00")
+    assert valor_marzo.origen == "real"
+
+
+def test_resumen_anual_sin_asociacion_no_encuentra_el_real_de_otra_categoria() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, comida = (
+        _preparar()
+    )
+    alimentacion = CrearCategoria(repo_categorias).ejecutar("Alimentación")
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=comida.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-200.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=alimentacion.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Supermercado",
+        importe=Decimal("-150.00"),
+        saldo=Decimal("100.00"),
+    )
+
+    resumen = ObtenerResumenAnual(
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+    ).ejecutar(2026)
+
+    fila = resumen.filas_gastos[0]
+    valor_marzo = next(v for v in fila.valores if v.mes == 3)
+    assert valor_marzo.importe == Decimal("-200.00")
+    assert valor_marzo.origen == "previsto"
+
+
 def test_resumen_anual_concepto_anual_solo_aparece_en_su_mes() -> None:
     repo_previsiones, repo_categorias, repo_movimientos, _, repo_ajustes, categoria = _preparar()
     CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
@@ -205,7 +291,11 @@ def test_resumen_anual_concepto_anual_solo_aparece_en_su_mes() -> None:
     )
 
     resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -230,7 +320,11 @@ def test_resumen_anual_separa_gastos_e_ingresos_por_el_signo() -> None:
     )
 
     resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
     ).ejecutar(2026)
 
     assert len(resumen.filas_gastos) == 1
@@ -348,7 +442,11 @@ def test_resumen_anual_un_ajuste_tiene_prioridad_sobre_el_real_y_el_previsto() -
     )
 
     resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -374,7 +472,11 @@ def test_resumen_anual_un_ajuste_en_un_mes_no_aplicable_lo_muestra_igualmente() 
     )
 
     resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]

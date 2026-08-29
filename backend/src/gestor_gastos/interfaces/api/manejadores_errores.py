@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from gestor_gastos.dominio.excepciones import (
+    AsociacionDuplicadaError,
     EntidadConDependenciasError,
     EntidadNoEncontradaError,
     FiltroDeListadoInvalidoError,
@@ -46,6 +47,10 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
 
     @aplicacion.exception_handler(EntidadConDependenciasError)
     async def _con_dependencias(_: Request, error: EntidadConDependenciasError) -> JSONResponse:
+        return _respuesta(status.HTTP_409_CONFLICT, error)
+
+    @aplicacion.exception_handler(AsociacionDuplicadaError)
+    async def _asociacion_duplicada(_: Request, error: AsociacionDuplicadaError) -> JSONResponse:
         return _respuesta(status.HTTP_409_CONFLICT, error)
 
     @aplicacion.exception_handler(FiltroDeListadoInvalidoError)

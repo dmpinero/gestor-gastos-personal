@@ -17,6 +17,9 @@ from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
 )
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
@@ -51,6 +54,7 @@ def test_exportar_e_reimportar_sin_cambios_no_altera_nada(sesion_bd) -> None:
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
+    repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     repo_previsiones.crear(
         ConceptoPrevisto(
@@ -61,7 +65,7 @@ def test_exportar_e_reimportar_sin_cambios_no_altera_nada(sesion_bd) -> None:
         )
     )
     obtener_resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
     )
 
     contenido = ExportarResumenAnualExcel(
@@ -85,6 +89,7 @@ def test_editar_una_celda_del_excel_exportado_y_reimportarlo_crea_un_ajuste(sesi
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
+    repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     concepto = repo_previsiones.crear(
         ConceptoPrevisto(
@@ -95,7 +100,7 @@ def test_editar_una_celda_del_excel_exportado_y_reimportarlo_crea_un_ajuste(sesi
         )
     )
     obtener_resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
     )
     contenido = ExportarResumenAnualExcel(
         obtener_resumen, EscritorExcelResumenAnualOpenpyxl()
@@ -129,6 +134,7 @@ def test_vaciar_en_excel_una_celda_ajustada_y_reimportarlo_revierte_el_ajuste(se
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
+    repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     concepto = repo_previsiones.crear(
         ConceptoPrevisto(
@@ -139,7 +145,7 @@ def test_vaciar_en_excel_una_celda_ajustada_y_reimportarlo_revierte_el_ajuste(se
         )
     )
     obtener_resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
     )
     ajustar = AjustarValorMensual(repo_previsiones, repo_ajustes)
     eliminar_ajuste = EliminarAjusteMensual(repo_previsiones, repo_ajustes)
@@ -165,6 +171,7 @@ def test_exportar_un_rango_de_anios_editar_celdas_de_ambos_y_reimportar_los_actu
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
+    repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     concepto = repo_previsiones.crear(
         ConceptoPrevisto(
@@ -175,7 +182,7 @@ def test_exportar_un_rango_de_anios_editar_celdas_de_ambos_y_reimportar_los_actu
         )
     )
     obtener_resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
     )
     anio_siguiente = ANIO + 1
 

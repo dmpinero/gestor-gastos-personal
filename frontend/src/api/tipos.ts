@@ -157,6 +157,21 @@ export interface ResumenAnual {
   totales_ingresos: string[]
 }
 
+export interface AsociacionConcepto {
+  id: number
+  categoria_resumen_id: number
+  subcategoria_resumen_id: number | null
+  categoria_movimiento_id: number
+  subcategoria_movimiento_id: number | null
+}
+
+export interface DatosAsociacion {
+  categoria_resumen_id: number
+  subcategoria_resumen_id?: number | null
+  categoria_movimiento_id: number
+  subcategoria_movimiento_id?: number | null
+}
+
 export interface ResumenImportacionResumenAnual {
   celdas_actualizadas: number
   celdas_eliminadas: number

@@ -12,6 +12,7 @@ from gestor_gastos.dominio.excepciones import FiltroDeListadoInvalidoError
 from tests.unitarios.aplicacion.dobles import (
     EscritorExcelResumenAnualFalso,
     RepositorioAjustesPrevisionFalso,
+    RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
     RepositorioMovimientosFalso,
     RepositorioPrevisionesFalso,
@@ -23,6 +24,7 @@ def _construir_exportar(escritor: EscritorExcelResumenAnualFalso) -> ExportarRes
     repo_categorias = RepositorioCategoriasFalso()
     repo_movimientos = RepositorioMovimientosFalso()
     repo_ajustes = RepositorioAjustesPrevisionFalso()
+    repo_asociaciones = RepositorioAsociacionesFalso()
     categoria = CrearCategoria(repo_categorias).ejecutar("Suscripciones")
     CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
         categoria_id=categoria.id,
@@ -31,7 +33,7 @@ def _construir_exportar(escritor: EscritorExcelResumenAnualFalso) -> ExportarRes
         importe_previsto=Decimal("-9.99"),
     )
     obtener_resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
     )
     return ExportarResumenAnualExcel(obtener_resumen, escritor)
 

@@ -94,13 +94,16 @@ onMounted(() => {
   tiendaCategorias.cargar()
 })
 
-// Rango de periodo "AAAA-MM" (formato nativo de <input type="month">); vacío = sin límite.
+// Rango de fecha completa "AAAA-MM-DD" (igual que en VistaMovimientos.vue); vacío = sin límite.
 const desde = ref('')
 const hasta = ref('')
 
 const filtrosAbiertos = ref(true)
 const resultadosAbiertos = ref(true)
-const agrupadoPorCategoria = ref(false)
+// Agrupado por defecto: el Historial de una categoría/subcategoría se ve
+// naturalmente organizado por categoría → subcategoría, sin tener que
+// pulsar el botón cada vez.
+const agrupadoPorCategoria = ref(true)
 
 watch(
   () => ruta.fullPath,
@@ -120,10 +123,9 @@ watch(
 
 const movimientosDelPeriodo = computed(() =>
   tiendaMovimientos.movimientos.filter((m) => {
-    const periodo = m.fecha_valor.slice(0, 7)
-    const cumpleDesde = !desde.value || periodo >= desde.value
-    const cumpleHasta = !hasta.value || periodo <= hasta.value
-    return cumpleDesde && cumpleHasta
+    if (desde.value && m.fecha_valor < desde.value) return false
+    if (hasta.value && m.fecha_valor > hasta.value) return false
+    return true
   }),
 )
 
@@ -306,12 +308,12 @@ const filasTablaParaExportar = computed(() =>
           </CollapsibleTrigger>
           <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
             <div class="flex max-w-48 flex-1 flex-col gap-1.5">
-              <Label for="periodo-desde">Desde</Label>
-              <Input id="periodo-desde" v-model="desde" type="month" :max="hasta || undefined" />
+              <Label for="historial-fecha-desde">Fecha desde</Label>
+              <Input id="historial-fecha-desde" v-model="desde" type="date" />
             </div>
             <div class="flex max-w-48 flex-1 flex-col gap-1.5">
-              <Label for="periodo-hasta">Hasta</Label>
-              <Input id="periodo-hasta" v-model="hasta" type="month" :min="desde || undefined" />
+              <Label for="historial-fecha-hasta">Fecha hasta</Label>
+              <Input id="historial-fecha-hasta" v-model="hasta" type="date" />
             </div>
             <div v-if="!agrupadoPorCategoria" class="flex max-w-xs flex-col gap-1.5">
               <Label for="buscar-historial">Buscar</Label>

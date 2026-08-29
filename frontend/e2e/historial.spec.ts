@@ -93,6 +93,10 @@ test('navegar por categoría y subcategoría en el historial muestra gastos e in
   await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
   await expect(page.getByRole('heading', { name: nombreCategoria })).toBeVisible()
 
+  // El Historial se ve agrupado por categoría/subcategoría por defecto: se
+  // cambia a la vista plana para las comprobaciones fila a fila de este test.
+  await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+
   const filas = page.locator('tbody tr')
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
   await expect(filas.filter({ hasText: descripcionGastoB })).toBeVisible()
@@ -129,16 +133,17 @@ test('navegar por categoría y subcategoría en el historial muestra gastos e in
   await page.getByRole('button', { name: 'Ver como barras' }).first().click()
   await expect(page.locator('svg[role="img"]')).toHaveCount(0)
 
-  // Rango que incluye el periodo de los movimientos (enero 2026): los mantiene.
-  await page.getByLabel('Desde').fill('2026-01')
-  await page.getByLabel('Hasta').fill('2026-01')
+  // Rango de fecha completa que incluye el día de los movimientos (todos
+  // creados el 2026-01-01): los mantiene.
+  await page.getByLabel('Fecha desde').fill('2026-01-01')
+  await page.getByLabel('Fecha hasta').fill('2026-01-01')
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
   await expect(tarjetaTotalGastado).toContainText('-48,00 €')
 
   // Rango que no incluye ningún movimiento: la tabla, el resumen y los
   // gráficos desaparecen (igual que en Movimientos cuando no hay datos).
-  await page.getByLabel('Desde').fill('2026-02')
-  await page.getByLabel('Hasta').fill('2026-03')
+  await page.getByLabel('Fecha desde').fill('2026-02-01')
+  await page.getByLabel('Fecha hasta').fill('2026-03-01')
   await expect(filas.filter({ hasText: descripcionGastoA })).toHaveCount(0)
   await expect(page.getByText('Total gastado', { exact: true })).toBeHidden()
   await expect(page.getByText('Total ingresado', { exact: true })).toBeHidden()
@@ -149,8 +154,8 @@ test('navegar por categoría y subcategoría en el historial muestra gastos e in
   await expect(page.getByText('Evolución de ingresos', { exact: true })).toBeHidden()
 
   // Vaciar el rango restaura los datos.
-  await page.getByLabel('Desde').fill('')
-  await page.getByLabel('Hasta').fill('')
+  await page.getByLabel('Fecha desde').fill('')
+  await page.getByLabel('Fecha hasta').fill('')
   await expect(filas.filter({ hasText: descripcionGastoA })).toBeVisible()
 
   const resultadoAxe = await new AxeBuilder({ page })
@@ -195,6 +200,10 @@ test('un movimiento se puede editar directamente desde el historial', async ({ p
   await page.getByRole('link', { name: nombreCategoria, exact: true }).click()
   await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
 
+  // El Historial se ve agrupado por categoría/subcategoría por defecto: se
+  // cambia a la vista plana para editar desde la fila directamente.
+  await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+
   const fila = page.locator('tbody tr', { hasText: descripcionOriginal })
   await expect(fila).toBeVisible()
   await fila.getByRole('button', { name: 'Editar' }).click()
@@ -208,7 +217,7 @@ test('un movimiento se puede editar directamente desde el historial', async ({ p
   await expect(page.locator('tbody tr', { hasText: descripcionOriginal })).toHaveCount(0)
 })
 
-test('"Agrupar por categoría" en el Historial muestra el total por subcategoría', async ({
+test('el Historial se ve agrupado por categoría/subcategoría por defecto, y se puede alternar a la vista plana', async ({
   page,
 }) => {
   const sufijo = Date.now()
@@ -258,7 +267,8 @@ test('"Agrupar por categoría" en el Historial muestra el total por subcategorí
   await page.getByRole('link', { name: nombreCategoria, exact: true }).click()
   await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
 
-  await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  // Agrupado por defecto, sin tener que pulsar ningún botón.
+  await expect(page.getByRole('button', { name: 'Ver todos los movimientos' })).toBeVisible()
   await expect(page.locator('table')).toHaveCount(0)
 
   const filaCategoria = page.locator('button[aria-expanded]', { hasText: nombreCategoria })
@@ -274,4 +284,9 @@ test('"Agrupar por categoría" en el Historial muestra el total por subcategorí
 
   await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
   await expect(page.locator('table')).toBeVisible()
+  await expect(page.locator('tbody tr', { hasText: descripcionGasto })).toBeVisible()
+
+  // Y se puede volver a la vista agrupada.
+  await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
+  await expect(page.locator('button[aria-expanded]', { hasText: nombreCategoria })).toBeVisible()
 })

@@ -200,6 +200,10 @@ test('un movimiento se puede editar directamente desde el historial', async ({ p
   await page.getByRole('link', { name: nombreCategoria, exact: true }).click()
   await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
 
+  // El Historial se ve agrupado por categoría/subcategoría por defecto: se
+  // cambia a la vista plana para editar desde la fila directamente.
+  await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+
   const fila = page.locator('tbody tr', { hasText: descripcionOriginal })
   await expect(fila).toBeVisible()
   await fila.getByRole('button', { name: 'Editar' }).click()

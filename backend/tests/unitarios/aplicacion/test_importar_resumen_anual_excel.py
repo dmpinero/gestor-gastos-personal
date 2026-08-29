@@ -18,6 +18,7 @@ from gestor_gastos.dominio.prevision.valores import (
 from tests.unitarios.aplicacion.dobles import (
     LectorExcelResumenAnualFalso,
     RepositorioAjustesPrevisionFalso,
+    RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
     RepositorioCuentasFalso,
     RepositorioMovimientosFalso,
@@ -33,8 +34,9 @@ def _preparar():
     repo_movimientos = RepositorioMovimientosFalso()
     repo_ajustes = RepositorioAjustesPrevisionFalso()
     repo_cuentas = RepositorioCuentasFalso()
+    repo_asociaciones = RepositorioAsociacionesFalso()
     obtener_resumen = ObtenerResumenAnual(
-        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes
+        repo_previsiones, repo_categorias, repo_movimientos, repo_ajustes, repo_asociaciones
     )
     ajustar = AjustarValorMensual(repo_previsiones, repo_ajustes)
     eliminar_ajuste = EliminarAjusteMensual(repo_previsiones, repo_ajustes)

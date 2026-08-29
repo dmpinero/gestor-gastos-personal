@@ -1,6 +1,10 @@
 from typing import Protocol
 
-from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import (
+    AjusteMensual,
+    AsociacionConcepto,
+    ConceptoPrevisto,
+)
 
 
 class RepositorioPrevisiones(Protocol):
@@ -37,3 +41,32 @@ class RepositorioAjustesMensuales(Protocol):
     def listar_por_anio(self, anio: int) -> list[AjusteMensual]: ...
 
     def listar_todos(self) -> list[AjusteMensual]: ...
+
+
+class RepositorioAsociaciones(Protocol):
+    """Puerto de persistencia para AsociacionConcepto."""
+
+    def crear(self, asociacion: AsociacionConcepto) -> AsociacionConcepto: ...
+
+    def obtener_por_id(self, id_asociacion: int) -> AsociacionConcepto | None: ...
+
+    def listar(self) -> list[AsociacionConcepto]: ...
+
+    def obtener_por_categoria_resumen(
+        self, categoria_resumen_id: int, subcategoria_resumen_id: int | None
+    ) -> AsociacionConcepto | None: ...
+
+    def eliminar(self, id_asociacion: int) -> None: ...
+
+    def contar_por_categoria(self, id_categoria: int) -> int:
+        """Cuenta las asociaciones que referencian esta categoría, ya sea
+        como lado "resumen" o como lado "movimiento"."""
+        ...
+
+    def contar_por_subcategoria(self, id_subcategoria: int) -> int:
+        """Igual que contar_por_categoria, pero para una subcategoría."""
+        ...
+
+    def eliminar_por_categoria(self, id_categoria: int) -> None: ...
+
+    def eliminar_por_subcategoria(self, id_subcategoria: int) -> None: ...

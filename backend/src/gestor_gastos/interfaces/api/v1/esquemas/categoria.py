@@ -38,8 +38,10 @@ class DependenciasCategoriaEsquema(BaseModel):
     subcategorias: int
     movimientos: int
     conceptos_previstos: int
+    asociaciones: int
 
 
 class DependenciasSubcategoriaEsquema(BaseModel):
     movimientos: int
     conceptos_previstos: int
+    asociaciones: int

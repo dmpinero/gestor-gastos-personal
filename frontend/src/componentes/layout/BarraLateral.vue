@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   History,
   LayoutDashboard,
+  Link2,
   Settings2,
   Tag,
   Tags,
@@ -96,6 +97,12 @@ const subseccionesAdministracion = [
     etiqueta: 'Importar backup',
     icono: ArchiveRestore,
     color: 'text-amber-500',
+  },
+  {
+    a: '/administracion/gestion-conceptos',
+    etiqueta: 'Gestión de conceptos',
+    icono: Link2,
+    color: 'text-teal-500',
   },
 ]
 

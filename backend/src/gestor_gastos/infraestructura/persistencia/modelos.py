@@ -97,3 +97,25 @@ class AjustePrevisionMensualModelo(Base):
     importe: Mapped[Decimal] = mapped_column(Numeric(12, 2))
 
     concepto: Mapped[ConceptoPrevistoModelo] = relationship()
+
+
+class AsociacionConceptoModelo(Base):
+    __tablename__ = "asociaciones_conceptos"
+    __table_args__ = (UniqueConstraint("categoria_resumen_id", "subcategoria_resumen_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    categoria_resumen_id: Mapped[int] = mapped_column(ForeignKey("categorias.id"))
+    subcategoria_resumen_id: Mapped[int | None] = mapped_column(ForeignKey("subcategorias.id"))
+    categoria_movimiento_id: Mapped[int] = mapped_column(ForeignKey("categorias.id"))
+    subcategoria_movimiento_id: Mapped[int | None] = mapped_column(ForeignKey("subcategorias.id"))
+
+    categoria_resumen: Mapped[CategoriaModelo] = relationship(foreign_keys=[categoria_resumen_id])
+    subcategoria_resumen: Mapped[SubcategoriaModelo | None] = relationship(
+        foreign_keys=[subcategoria_resumen_id]
+    )
+    categoria_movimiento: Mapped[CategoriaModelo] = relationship(
+        foreign_keys=[categoria_movimiento_id]
+    )
+    subcategoria_movimiento: Mapped[SubcategoriaModelo | None] = relationship(
+        foreign_keys=[subcategoria_movimiento_id]
+    )

@@ -96,6 +96,56 @@ def asocio_categoria_resumen_con_categoria_movimiento(cliente: TestClient, conte
     assert respuesta.status_code == 201
 
 
+@given(
+    parsers.parse(
+        'existe la categoría "{nombre_categoria}" con un movimiento de descripción '
+        '"{descripcion}" e importe "{importe}" en la fecha "{fecha}"'
+    )
+)
+def existe_categoria_con_movimiento_con_descripcion(
+    cliente: TestClient,
+    contexto: dict,
+    nombre_categoria: str,
+    descripcion: str,
+    importe: str,
+    fecha: str,
+) -> None:
+    categoria = cliente.post("/api/v1/categorias", json={"nombre": nombre_categoria}).json()
+    cuenta = cliente.post(
+        "/api/v1/cuentas", json={"numero_cuenta": f"ES00 {nombre_categoria}"}
+    ).json()
+    cliente.post(
+        "/api/v1/movimientos",
+        json={
+            "cuenta_id": cuenta["id"],
+            "categoria_id": categoria["id"],
+            "fecha_valor": fecha,
+            "descripcion": descripcion,
+            "importe": importe,
+            "saldo": "100.00",
+        },
+    )
+
+
+@when(
+    parsers.parse(
+        'asocio la categoría "{nombre_resumen}" del resumen anual con la descripción '
+        '"{descripcion}" de movimientos'
+    )
+)
+def asocio_categoria_resumen_con_descripcion_movimiento(
+    cliente: TestClient, contexto: dict, descripcion: str
+) -> None:
+    respuesta = cliente.post(
+        "/api/v1/previsiones/asociaciones-descripcion",
+        json={
+            "categoria_resumen_id": contexto["categoria_id"],
+            "descripcion": descripcion,
+        },
+    )
+    assert respuesta.status_code == 201
+
+
 @given(parsers.parse('se ajusta manualmente el importe del mes {mes:d} de {anio:d} a "{importe}"'))
 def se_ajusta_manualmente_el_importe(
     cliente: TestClient, contexto: dict, mes: int, anio: int, importe: str

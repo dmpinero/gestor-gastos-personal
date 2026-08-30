@@ -9,9 +9,15 @@ from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
 )
 from gestor_gastos.aplicacion.prevision.ajustar_valor_mensual import AjustarValorMensual
 from gestor_gastos.aplicacion.prevision.crear_asociacion import CrearAsociacion
+from gestor_gastos.aplicacion.prevision.crear_asociacion_descripcion import (
+    CrearAsociacionDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConceptoPrevisto
 from gestor_gastos.aplicacion.prevision.eliminar_ajuste_mensual import EliminarAjusteMensual
 from gestor_gastos.aplicacion.prevision.eliminar_asociacion import EliminarAsociacion
+from gestor_gastos.aplicacion.prevision.eliminar_asociacion_descripcion import (
+    EliminarAsociacionDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.eliminar_concepto_previsto import (
     EliminarConceptoPrevisto,
 )
@@ -25,12 +31,18 @@ from gestor_gastos.aplicacion.prevision.importar_resumen_anual_excel import (
     ImportarResumenAnualExcel,
 )
 from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
+from gestor_gastos.aplicacion.prevision.listar_asociaciones_descripcion import (
+    ListarAsociacionesDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesDescripcionSqlAlchemy,
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesSqlAlchemy,
@@ -64,6 +76,8 @@ from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     AjusteMensualEsquema,
     AsociacionConceptoCrearEsquema,
     AsociacionConceptoSalidaEsquema,
+    AsociacionDescripcionCrearEsquema,
+    AsociacionDescripcionSalidaEsquema,
     ConceptoPrevistoActualizarEsquema,
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
@@ -82,6 +96,7 @@ def _construir_obtener_resumen_anual(sesion: Session) -> ObtenerResumenAnual:
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioAjustesPrevisionSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     )
 
 
@@ -290,3 +305,46 @@ def crear_asociacion(
 )
 def eliminar_asociacion(id_asociacion: int, sesion: Session = Depends(obtener_sesion)) -> None:
     EliminarAsociacion(RepositorioAsociacionesSqlAlchemy(sesion)).ejecutar(id_asociacion)
+
+
+@enrutador.get("/asociaciones-descripcion", response_model=list[AsociacionDescripcionSalidaEsquema])
+def listar_asociaciones_descripcion(
+    sesion: Session = Depends(obtener_sesion),
+) -> list[AsociacionDescripcionSalidaEsquema]:
+    asociaciones = ListarAsociacionesDescripcion(
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion)
+    ).ejecutar()
+    return [AsociacionDescripcionSalidaEsquema(**asdict(a)) for a in asociaciones]
+
+
+@enrutador.post(
+    "/asociaciones-descripcion",
+    response_model=AsociacionDescripcionSalidaEsquema,
+    status_code=status.HTTP_201_CREATED,
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO, **RESPUESTA_CUERPO_MALFORMADO},
+)
+def crear_asociacion_descripcion(
+    datos: AsociacionDescripcionCrearEsquema, sesion: Session = Depends(obtener_sesion)
+) -> AsociacionDescripcionSalidaEsquema:
+    asociacion = CrearAsociacionDescripcion(
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+        RepositorioCategoriasSqlAlchemy(sesion),
+    ).ejecutar(
+        categoria_resumen_id=datos.categoria_resumen_id,
+        subcategoria_resumen_id=datos.subcategoria_resumen_id,
+        descripcion=datos.descripcion,
+    )
+    return AsociacionDescripcionSalidaEsquema(**asdict(asociacion))
+
+
+@enrutador.delete(
+    "/asociaciones-descripcion/{id_asociacion:int}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def eliminar_asociacion_descripcion(
+    id_asociacion: int, sesion: Session = Depends(obtener_sesion)
+) -> None:
+    EliminarAsociacionDescripcion(RepositorioAsociacionesDescripcionSqlAlchemy(sesion)).ejecutar(
+        id_asociacion
+    )

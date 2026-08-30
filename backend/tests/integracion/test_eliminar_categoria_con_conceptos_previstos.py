@@ -4,6 +4,9 @@ from gestor_gastos.aplicacion.categoria.eliminar_categoria import EliminarCatego
 from gestor_gastos.aplicacion.categoria.eliminar_subcategoria import EliminarSubcategoria
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesDescripcionSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesSqlAlchemy,
 )
@@ -28,6 +31,7 @@ def test_eliminar_categoria_en_cascada_con_concepto_previsto_directo(sesion_bd) 
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     repo_previsiones.crear(
         ConceptoPrevisto(
@@ -39,7 +43,11 @@ def test_eliminar_categoria_en_cascada_con_concepto_previsto_directo(sesion_bd) 
     )
 
     EliminarCategoria(
-        repo_categorias, repo_movimientos, repo_previsiones, repo_asociaciones
+        repo_categorias,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
     ).ejecutar(categoria.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(categoria.id) is None
@@ -50,6 +58,7 @@ def test_eliminar_categoria_en_cascada_con_concepto_previsto_sobre_subcategoria(
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     subcategoria = repo_categorias.crear_subcategoria(
         Subcategoria(nombre="Streaming", categoria_id=categoria.id)
@@ -64,7 +73,11 @@ def test_eliminar_categoria_en_cascada_con_concepto_previsto_sobre_subcategoria(
     )
 
     EliminarCategoria(
-        repo_categorias, repo_movimientos, repo_previsiones, repo_asociaciones
+        repo_categorias,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
     ).ejecutar(categoria.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(categoria.id) is None
@@ -77,6 +90,7 @@ def test_eliminar_subcategoria_en_cascada_con_concepto_previsto(sesion_bd) -> No
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionSqlAlchemy(sesion_bd)
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
     subcategoria = repo_categorias.crear_subcategoria(
         Subcategoria(nombre="Streaming", categoria_id=categoria.id)
@@ -91,7 +105,11 @@ def test_eliminar_subcategoria_en_cascada_con_concepto_previsto(sesion_bd) -> No
     )
 
     EliminarSubcategoria(
-        repo_categorias, repo_movimientos, repo_previsiones, repo_asociaciones
+        repo_categorias,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
     ).ejecutar(subcategoria.id, cascada=True)
 
     assert repo_categorias.obtener_subcategoria_por_id(subcategoria.id) is None

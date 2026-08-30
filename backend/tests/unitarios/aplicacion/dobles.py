@@ -9,6 +9,7 @@ from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 from gestor_gastos.dominio.prevision.valores import (
@@ -255,6 +256,19 @@ class RepositorioMovimientosFalso:
             totales[clave] = totales.get(clave, Decimal("0")) + movimiento.importe
         return totales
 
+    def sumar_movimientos_por_descripcion_y_mes(
+        self, anio: int, fragmento_descripcion: str
+    ) -> dict[int, Decimal]:
+        totales: dict[int, Decimal] = {}
+        for movimiento in self._movimientos.values():
+            if movimiento.fecha_valor.year != anio:
+                continue
+            if fragmento_descripcion.lower() not in movimiento.descripcion.lower():
+                continue
+            mes = movimiento.fecha_valor.month
+            totales[mes] = totales.get(mes, Decimal("0")) + movimiento.importe
+        return totales
+
 
 class RepositorioPrevisionesFalso:
     """Doble de RepositorioPrevisiones en memoria."""
@@ -389,6 +403,54 @@ class RepositorioAsociacionesFalso:
             a.id
             for a in self._asociaciones.values()
             if id_subcategoria in (a.subcategoria_resumen_id, a.subcategoria_movimiento_id)
+        ]:
+            self._asociaciones.pop(id_asociacion, None)
+
+
+class RepositorioAsociacionesDescripcionFalso:
+    """Doble de RepositorioAsociacionesDescripcion en memoria."""
+
+    def __init__(self) -> None:
+        self._asociaciones: dict[int, AsociacionDescripcion] = {}
+        self._siguiente_id = 1
+
+    def crear(self, asociacion: AsociacionDescripcion) -> AsociacionDescripcion:
+        asociacion.id = self._siguiente_id
+        self._asociaciones[asociacion.id] = asociacion
+        self._siguiente_id += 1
+        return asociacion
+
+    def obtener_por_id(self, id_asociacion: int) -> AsociacionDescripcion | None:
+        return self._asociaciones.get(id_asociacion)
+
+    def listar(self) -> list[AsociacionDescripcion]:
+        return list(self._asociaciones.values())
+
+    def obtener_por_descripcion(self, descripcion: str) -> AsociacionDescripcion | None:
+        return next((a for a in self._asociaciones.values() if a.descripcion == descripcion), None)
+
+    def eliminar(self, id_asociacion: int) -> None:
+        self._asociaciones.pop(id_asociacion, None)
+
+    def contar_por_categoria(self, id_categoria: int) -> int:
+        return sum(1 for a in self._asociaciones.values() if a.categoria_resumen_id == id_categoria)
+
+    def contar_por_subcategoria(self, id_subcategoria: int) -> int:
+        return sum(
+            1 for a in self._asociaciones.values() if a.subcategoria_resumen_id == id_subcategoria
+        )
+
+    def eliminar_por_categoria(self, id_categoria: int) -> None:
+        for id_asociacion in [
+            a.id for a in self._asociaciones.values() if a.categoria_resumen_id == id_categoria
+        ]:
+            self._asociaciones.pop(id_asociacion, None)
+
+    def eliminar_por_subcategoria(self, id_subcategoria: int) -> None:
+        for id_asociacion in [
+            a.id
+            for a in self._asociaciones.values()
+            if a.subcategoria_resumen_id == id_subcategoria
         ]:
             self._asociaciones.pop(id_asociacion, None)
 

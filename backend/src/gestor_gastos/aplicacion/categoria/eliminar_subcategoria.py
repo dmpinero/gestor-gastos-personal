@@ -3,6 +3,7 @@ from gestor_gastos.dominio.excepciones import EntidadConDependenciasError, Entid
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
 from gestor_gastos.dominio.prevision.repositorio import (
     RepositorioAsociaciones,
+    RepositorioAsociacionesDescripcion,
     RepositorioPrevisiones,
 )
 
@@ -14,11 +15,13 @@ class EliminarSubcategoria:
         repositorio_movimientos: RepositorioMovimientos,
         repositorio_previsiones: RepositorioPrevisiones,
         repositorio_asociaciones: RepositorioAsociaciones,
+        repositorio_asociaciones_descripcion: RepositorioAsociacionesDescripcion,
     ) -> None:
         self._repositorio = repositorio
         self._repositorio_movimientos = repositorio_movimientos
         self._repositorio_previsiones = repositorio_previsiones
         self._repositorio_asociaciones = repositorio_asociaciones
+        self._repositorio_asociaciones_descripcion = repositorio_asociaciones_descripcion
 
     def ejecutar(self, id_subcategoria: int, cascada: bool = False) -> None:
         if self._repositorio.obtener_subcategoria_por_id(id_subcategoria) is None:
@@ -31,7 +34,15 @@ class EliminarSubcategoria:
             id_subcategoria
         )
         num_asociaciones = self._repositorio_asociaciones.contar_por_subcategoria(id_subcategoria)
-        if num_movimientos > 0 or num_conceptos_previstos > 0 or num_asociaciones > 0:
+        num_asociaciones_descripcion = (
+            self._repositorio_asociaciones_descripcion.contar_por_subcategoria(id_subcategoria)
+        )
+        if (
+            num_movimientos > 0
+            or num_conceptos_previstos > 0
+            or num_asociaciones > 0
+            or num_asociaciones_descripcion > 0
+        ):
             if not cascada:
                 raise EntidadConDependenciasError(
                     "No se puede eliminar la subcategoría: tiene movimientos, conceptos "
@@ -43,5 +54,9 @@ class EliminarSubcategoria:
                 self._repositorio_previsiones.eliminar_por_subcategoria(id_subcategoria)
             if num_asociaciones > 0:
                 self._repositorio_asociaciones.eliminar_por_subcategoria(id_subcategoria)
+            if num_asociaciones_descripcion > 0:
+                self._repositorio_asociaciones_descripcion.eliminar_por_subcategoria(
+                    id_subcategoria
+                )
 
         self._repositorio.eliminar_subcategoria(id_subcategoria)

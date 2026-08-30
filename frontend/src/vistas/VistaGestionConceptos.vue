@@ -15,6 +15,7 @@ import {
   ComboboxItem,
   ComboboxTrigger,
 } from '@/componentes/ui/combobox'
+import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import {
   Table,
@@ -65,6 +66,12 @@ const formulario = reactive({
   subcategoriaMovimientoId: SIN_SUBCATEGORIA,
 })
 
+const formularioDescripcion = reactive({
+  categoriaResumenId: '',
+  subcategoriaResumenId: SIN_SUBCATEGORIA,
+  descripcion: '',
+})
+
 function subcategoriasDe(idCategoriaTexto: string) {
   const categoria = tiendaCategorias.categorias.find(
     (c) => c.categoria.id === Number(idCategoriaTexto),
@@ -74,6 +81,9 @@ function subcategoriasDe(idCategoriaTexto: string) {
 
 const subcategoriasDelResumen = computed(() => subcategoriasDe(formulario.categoriaResumenId))
 const subcategoriasDelMovimiento = computed(() => subcategoriasDe(formulario.categoriaMovimientoId))
+const subcategoriasDelResumenDescripcion = computed(() =>
+  subcategoriasDe(formularioDescripcion.categoriaResumenId),
+)
 
 // display-value de los Combobox: qué texto se muestra en el input para el
 // valor actualmente seleccionado (los propios <ComboboxItem> solo aportan el
@@ -95,28 +105,55 @@ function limpiarFormulario(): void {
   formulario.subcategoriaMovimientoId = SIN_SUBCATEGORIA
 }
 
+function limpiarFormularioDescripcion(): void {
+  formularioDescripcion.categoriaResumenId = ''
+  formularioDescripcion.subcategoriaResumenId = SIN_SUBCATEGORIA
+  formularioDescripcion.descripcion = ''
+}
+
 function usarConceptoSinAsociar(idCategoria: number, idSubcategoria: number | null): void {
   formulario.categoriaResumenId = String(idCategoria)
   formulario.subcategoriaResumenId =
     idSubcategoria === null ? SIN_SUBCATEGORIA : String(idSubcategoria)
 }
 
+// El formulario tiene dos formas alternativas de crear una asociación (por
+// categoría de movimientos o por descripción); un único botón crea la que
+// esté rellena, priorizando la descripción si ambas lo están.
+const formularioListo = computed(
+  () =>
+    (formulario.categoriaResumenId && formulario.categoriaMovimientoId) ||
+    (formularioDescripcion.categoriaResumenId && formularioDescripcion.descripcion.trim()),
+)
+
 async function crearAsociacion(): Promise<void> {
   tiendaAsociaciones.error = null
   try {
-    await tiendaAsociaciones.crear({
-      categoria_resumen_id: Number(formulario.categoriaResumenId),
-      subcategoria_resumen_id:
-        formulario.subcategoriaResumenId === SIN_SUBCATEGORIA
-          ? null
-          : Number(formulario.subcategoriaResumenId),
-      categoria_movimiento_id: Number(formulario.categoriaMovimientoId),
-      subcategoria_movimiento_id:
-        formulario.subcategoriaMovimientoId === SIN_SUBCATEGORIA
-          ? null
-          : Number(formulario.subcategoriaMovimientoId),
-    })
+    if (formularioDescripcion.descripcion.trim()) {
+      await tiendaAsociaciones.crearDescripcion({
+        categoria_resumen_id: Number(formularioDescripcion.categoriaResumenId),
+        subcategoria_resumen_id:
+          formularioDescripcion.subcategoriaResumenId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formularioDescripcion.subcategoriaResumenId),
+        descripcion: formularioDescripcion.descripcion.trim(),
+      })
+    } else {
+      await tiendaAsociaciones.crear({
+        categoria_resumen_id: Number(formulario.categoriaResumenId),
+        subcategoria_resumen_id:
+          formulario.subcategoriaResumenId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formulario.subcategoriaResumenId),
+        categoria_movimiento_id: Number(formulario.categoriaMovimientoId),
+        subcategoria_movimiento_id:
+          formulario.subcategoriaMovimientoId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formulario.subcategoriaMovimientoId),
+      })
+    }
     limpiarFormulario()
+    limpiarFormularioDescripcion()
   } catch {
     // El error ya queda reflejado en tiendaAsociaciones.error.
   }
@@ -126,14 +163,21 @@ async function eliminarAsociacion(id: number): Promise<void> {
   await tiendaAsociaciones.eliminar(id)
 }
 
+async function eliminarAsociacionDescripcion(id: number): Promise<void> {
+  await tiendaAsociaciones.eliminarDescripcion(id)
+}
+
 // Conceptos previstos del resumen anual cuya categoría/subcategoría todavía
 // no tiene una asociación creada: ayuda a encontrar qué falta mapear.
 const conceptosSinAsociar = computed(() => {
-  const clavesAsociadas = new Set(
-    tiendaAsociaciones.asociaciones.map(
+  const clavesAsociadas = new Set([
+    ...tiendaAsociaciones.asociaciones.map(
       (a) => `${a.categoria_resumen_id}:${a.subcategoria_resumen_id}`,
     ),
-  )
+    ...tiendaAsociaciones.asociacionesDescripcion.map(
+      (a) => `${a.categoria_resumen_id}:${a.subcategoria_resumen_id}`,
+    ),
+  ])
   const vistos = new Set<string>()
   return tiendaPrevisiones.conceptos.filter((c) => {
     const clave = `${c.categoria_id}:${c.subcategoria_id}`
@@ -184,129 +228,217 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
       Algunos conceptos del Resumen anual se nombran de forma distinta a la categoría real que usan
       los movimientos (por ejemplo, "Comida" en el resumen anual y "Alimentación" en movimientos).
       Crea aquí la correspondencia entre ambos para que el Resumen anual encuentre el importe real
-      de esos conceptos.
+      de esos conceptos. Para movimientos sueltos que no comparten categoría con ningún otro (p. ej.
+      un recibo con descripción propia), asócialos directamente por su descripción en vez de por
+      categoría.
     </p>
 
     <form
-      class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-end"
+      class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
       @submit.prevent="crearAsociacion"
     >
-      <div class="flex flex-1 flex-wrap gap-4">
-        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-categoria-movimiento" for="selector-categoria-movimiento"
-            >Categoría real de Movimientos</Label
-          >
-          <Combobox v-model="formulario.categoriaMovimientoId" open-on-click open-on-focus>
-            <ComboboxTrigger class="w-full">
-              <ComboboxInput
-                id="selector-categoria-movimiento"
-                aria-labelledby="etiqueta-categoria-movimiento"
-                placeholder="Selecciona o escribe para buscar"
-                :display-value="mostrarCategoria"
-              />
-            </ComboboxTrigger>
-            <ComboboxContent>
-              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
-              <ComboboxItem
-                v-for="item in tiendaCategorias.categorias"
-                :key="item.categoria.id"
-                :value="String(item.categoria.id)"
-              >
-                {{ item.categoria.nombre }}
-              </ComboboxItem>
-            </ComboboxContent>
-          </Combobox>
+      <div class="flex flex-col gap-4 md:flex-row md:items-end">
+        <div class="flex flex-1 flex-wrap gap-4">
+          <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+            <Label id="etiqueta-categoria-movimiento" for="selector-categoria-movimiento"
+              >Categoría real de Movimientos</Label
+            >
+            <Combobox v-model="formulario.categoriaMovimientoId" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-categoria-movimiento"
+                  aria-labelledby="etiqueta-categoria-movimiento"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarCategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
+                  v-for="item in tiendaCategorias.categorias"
+                  :key="item.categoria.id"
+                  :value="String(item.categoria.id)"
+                >
+                  {{ item.categoria.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+
+          <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+            <Label id="etiqueta-subcategoria-movimiento" for="selector-subcategoria-movimiento"
+              >Subcategoría real de Movimientos</Label
+            >
+            <Combobox v-model="formulario.subcategoriaMovimientoId" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-subcategoria-movimiento"
+                  aria-labelledby="etiqueta-subcategoria-movimiento"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarSubcategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                <ComboboxItem
+                  v-for="s in subcategoriasDelMovimiento"
+                  :key="s.id"
+                  :value="String(s.id)"
+                >
+                  {{ s.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
         </div>
 
-        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-subcategoria-movimiento" for="selector-subcategoria-movimiento"
-            >Subcategoría real de Movimientos</Label
-          >
-          <Combobox v-model="formulario.subcategoriaMovimientoId" open-on-click open-on-focus>
-            <ComboboxTrigger class="w-full">
-              <ComboboxInput
-                id="selector-subcategoria-movimiento"
-                aria-labelledby="etiqueta-subcategoria-movimiento"
-                placeholder="Selecciona o escribe para buscar"
-                :display-value="mostrarSubcategoria"
-              />
-            </ComboboxTrigger>
-            <ComboboxContent>
-              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
-              <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
-              <ComboboxItem
-                v-for="s in subcategoriasDelMovimiento"
-                :key="s.id"
-                :value="String(s.id)"
-              >
-                {{ s.nombre }}
-              </ComboboxItem>
-            </ComboboxContent>
-          </Combobox>
+        <ArrowRight class="text-muted-foreground mb-2.5 size-5 shrink-0 self-center md:self-auto" />
+
+        <div class="flex flex-1 flex-wrap gap-4">
+          <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+            <Label id="etiqueta-categoria-resumen" for="selector-categoria-resumen"
+              >Categoría del Resumen anual</Label
+            >
+            <Combobox v-model="formulario.categoriaResumenId" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-categoria-resumen"
+                  aria-labelledby="etiqueta-categoria-resumen"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarCategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
+                  v-for="item in tiendaCategorias.categorias"
+                  :key="item.categoria.id"
+                  :value="String(item.categoria.id)"
+                >
+                  {{ item.categoria.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+
+          <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+            <Label id="etiqueta-subcategoria-resumen" for="selector-subcategoria-resumen"
+              >Subcategoría del Resumen anual</Label
+            >
+            <Combobox v-model="formulario.subcategoriaResumenId" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-subcategoria-resumen"
+                  aria-labelledby="etiqueta-subcategoria-resumen"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarSubcategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
+                  v-for="s in subcategoriasDelResumen"
+                  :key="s.id"
+                  :value="String(s.id)"
+                >
+                  {{ s.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
         </div>
       </div>
 
-      <ArrowRight class="text-muted-foreground mb-2.5 size-5 shrink-0 self-center md:self-auto" />
-
-      <div class="flex flex-1 flex-wrap gap-4">
-        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-categoria-resumen" for="selector-categoria-resumen"
-            >Categoría del Resumen anual</Label
+      <div class="flex flex-col gap-4 border-t pt-4 md:flex-row md:items-end">
+        <div class="flex flex-1 flex-col gap-1.5">
+          <Label id="etiqueta-descripcion-movimiento" for="input-descripcion-movimiento"
+            >Descripción de Movimientos (contiene)</Label
           >
-          <Combobox v-model="formulario.categoriaResumenId" open-on-click open-on-focus>
-            <ComboboxTrigger class="w-full">
-              <ComboboxInput
-                id="selector-categoria-resumen"
-                aria-labelledby="etiqueta-categoria-resumen"
-                placeholder="Selecciona o escribe para buscar"
-                :display-value="mostrarCategoria"
-              />
-            </ComboboxTrigger>
-            <ComboboxContent>
-              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
-              <ComboboxItem
-                v-for="item in tiendaCategorias.categorias"
-                :key="item.categoria.id"
-                :value="String(item.categoria.id)"
-              >
-                {{ item.categoria.nombre }}
-              </ComboboxItem>
-            </ComboboxContent>
-          </Combobox>
+          <Input
+            id="input-descripcion-movimiento"
+            v-model="formularioDescripcion.descripcion"
+            aria-labelledby="etiqueta-descripcion-movimiento"
+            placeholder="p. ej. Ayuntamiento Las Rozas"
+          />
         </div>
 
-        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-subcategoria-resumen" for="selector-subcategoria-resumen"
-            >Subcategoría del Resumen anual</Label
-          >
-          <Combobox v-model="formulario.subcategoriaResumenId" open-on-click open-on-focus>
-            <ComboboxTrigger class="w-full">
-              <ComboboxInput
-                id="selector-subcategoria-resumen"
-                aria-labelledby="etiqueta-subcategoria-resumen"
-                placeholder="Selecciona o escribe para buscar"
-                :display-value="mostrarSubcategoria"
-              />
-            </ComboboxTrigger>
-            <ComboboxContent>
-              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
-              <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
-              <ComboboxItem v-for="s in subcategoriasDelResumen" :key="s.id" :value="String(s.id)">
-                {{ s.nombre }}
-              </ComboboxItem>
-            </ComboboxContent>
-          </Combobox>
+        <ArrowRight class="text-muted-foreground mb-2.5 size-5 shrink-0 self-center md:self-auto" />
+
+        <div class="flex flex-1 flex-wrap gap-4">
+          <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+            <Label
+              id="etiqueta-categoria-resumen-descripcion"
+              for="selector-categoria-resumen-descripcion"
+              >Categoría del Resumen anual (para esta descripción)</Label
+            >
+            <Combobox
+              v-model="formularioDescripcion.categoriaResumenId"
+              open-on-click
+              open-on-focus
+            >
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-categoria-resumen-descripcion"
+                  aria-labelledby="etiqueta-categoria-resumen-descripcion"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarCategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
+                  v-for="item in tiendaCategorias.categorias"
+                  :key="item.categoria.id"
+                  :value="String(item.categoria.id)"
+                >
+                  {{ item.categoria.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+
+          <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+            <Label
+              id="etiqueta-subcategoria-resumen-descripcion"
+              for="selector-subcategoria-resumen-descripcion"
+              >Subcategoría del Resumen anual (para esta descripción)</Label
+            >
+            <Combobox
+              v-model="formularioDescripcion.subcategoriaResumenId"
+              open-on-click
+              open-on-focus
+            >
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-subcategoria-resumen-descripcion"
+                  aria-labelledby="etiqueta-subcategoria-resumen-descripcion"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarSubcategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                <ComboboxItem
+                  v-for="s in subcategoriasDelResumenDescripcion"
+                  :key="s.id"
+                  :value="String(s.id)"
+                >
+                  {{ s.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
         </div>
       </div>
 
-      <Button
-        type="submit"
-        variant="success"
-        :disabled="!formulario.categoriaResumenId || !formulario.categoriaMovimientoId"
-      >
-        <Link2 class="size-4" />
-        Crear asociación
-      </Button>
+      <div class="flex justify-end">
+        <Button type="submit" variant="success" :disabled="!formularioListo">
+          <Link2 class="size-4" />
+          Crear asociación
+        </Button>
+      </div>
     </form>
 
     <p v-if="errorFormulario" class="mt-2 text-sm text-destructive" role="alert">
@@ -393,6 +525,62 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
                 <DialogoConfirmarEliminacion
                   :descripcion="`esta asociación`"
                   @confirmar="eliminarAsociacion(asociacion.id)"
+                >
+                  <template #disparador>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="text-destructive"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </template>
+                </DialogoConfirmarEliminacion>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <h3 class="text-muted-foreground text-sm font-medium">
+        Asociaciones por descripción creadas
+      </h3>
+      <p
+        v-if="tiendaAsociaciones.asociacionesDescripcion.length === 0"
+        class="text-muted-foreground mt-2 text-sm"
+      >
+        Todavía no has creado ninguna asociación por descripción.
+      </p>
+      <div v-else class="mt-2 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Concepto del Resumen anual</TableHead>
+              <TableHead>Descripción de Movimientos contiene</TableHead>
+              <TableHead class="w-9"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow
+              v-for="asociacion in tiendaAsociaciones.asociacionesDescripcion"
+              :key="asociacion.id"
+            >
+              <TableCell>
+                {{
+                  nombreConcepto(
+                    asociacion.categoria_resumen_id,
+                    asociacion.subcategoria_resumen_id,
+                  )
+                }}
+              </TableCell>
+              <TableCell>{{ asociacion.descripcion }}</TableCell>
+              <TableCell class="text-right">
+                <DialogoConfirmarEliminacion
+                  :descripcion="`esta asociación`"
+                  @confirmar="eliminarAsociacionDescripcion(asociacion.id)"
                 >
                   <template #disparador>
                     <Button

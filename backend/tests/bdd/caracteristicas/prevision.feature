@@ -56,3 +56,12 @@ Característica: Resumen anual de previsión
     Cuando asocio la categoría "Comida" del resumen anual con la categoría "Alimentación" de movimientos
     Y consulto el resumen anual de 2026
     Entonces el concepto muestra el importe real "-150.00" en el mes 3
+
+  Escenario: Una asociación por descripción hace que el resumen anual encuentre el importe real de un movimiento suelto
+    Dado que existe la categoría "Impuestos" con un concepto previsto mensual de importe "-40.00"
+    Y existe la categoría "Varios" con un movimiento de descripción "Recibo Ayuntamiento Las Rozas" e importe "-40.00" en la fecha "2026-03-15"
+    Cuando consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe previsto "-40.00" en el mes 3
+    Cuando asocio la categoría "Impuestos" del resumen anual con la descripción "Ayuntamiento Las Rozas" de movimientos
+    Y consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe real "-40.00" en el mes 3

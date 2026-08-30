@@ -119,3 +119,16 @@ class AsociacionConceptoModelo(Base):
     subcategoria_movimiento: Mapped[SubcategoriaModelo | None] = relationship(
         foreign_keys=[subcategoria_movimiento_id]
     )
+
+
+class AsociacionDescripcionModelo(Base):
+    __tablename__ = "asociaciones_descripciones"
+    __table_args__ = (UniqueConstraint("descripcion"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    categoria_resumen_id: Mapped[int] = mapped_column(ForeignKey("categorias.id"))
+    subcategoria_resumen_id: Mapped[int | None] = mapped_column(ForeignKey("subcategorias.id"))
+    descripcion: Mapped[str] = mapped_column(String(500))
+
+    categoria_resumen: Mapped[CategoriaModelo] = relationship()
+    subcategoria_resumen: Mapped[SubcategoriaModelo | None] = relationship()

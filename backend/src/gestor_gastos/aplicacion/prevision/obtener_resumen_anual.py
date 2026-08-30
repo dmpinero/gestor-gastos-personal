@@ -1,10 +1,13 @@
+from collections import defaultdict
 from decimal import Decimal
 
 from gestor_gastos.dominio.categoria.repositorio import RepositorioCategorias
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
+from gestor_gastos.dominio.prevision.entidades import AsociacionDescripcion
 from gestor_gastos.dominio.prevision.repositorio import (
     RepositorioAjustesMensuales,
     RepositorioAsociaciones,
+    RepositorioAsociacionesDescripcion,
     RepositorioPrevisiones,
 )
 from gestor_gastos.dominio.prevision.valores import FilaResumenAnual, ResumenAnual, ValorMensual
@@ -18,12 +21,14 @@ class ObtenerResumenAnual:
         repositorio_movimientos: RepositorioMovimientos,
         repositorio_ajustes: RepositorioAjustesMensuales,
         repositorio_asociaciones: RepositorioAsociaciones,
+        repositorio_asociaciones_descripcion: RepositorioAsociacionesDescripcion,
     ) -> None:
         self._repositorio = repositorio
         self._repositorio_categorias = repositorio_categorias
         self._repositorio_movimientos = repositorio_movimientos
         self._repositorio_ajustes = repositorio_ajustes
         self._repositorio_asociaciones = repositorio_asociaciones
+        self._repositorio_asociaciones_descripcion = repositorio_asociaciones_descripcion
 
     def ejecutar(self, anio: int) -> ResumenAnual:
         conceptos = self._repositorio.listar()
@@ -43,6 +48,25 @@ class ObtenerResumenAnual:
             for a in self._repositorio_asociaciones.listar()
         }
 
+        # Una AsociacionDescripcion suma el importe real de los movimientos
+        # cuya descripción contiene un texto dado al de la categoría/
+        # subcategoría de movimientos asociada, si la hay (ver
+        # AsociacionDescripcion). Se agrupan por categoría/subcategoría del
+        # resumen porque puede haber varias descripciones para un mismo
+        # concepto.
+        asociaciones_descripcion: dict[tuple[int, int | None], list[AsociacionDescripcion]] = (
+            defaultdict(list)
+        )
+        for a in self._repositorio_asociaciones_descripcion.listar():
+            asociaciones_descripcion[(a.categoria_resumen_id, a.subcategoria_resumen_id)].append(a)
+        sumas_por_descripcion = {
+            a.descripcion: self._repositorio_movimientos.sumar_movimientos_por_descripcion_y_mes(
+                anio, a.descripcion
+            )
+            for asociaciones_del_concepto in asociaciones_descripcion.values()
+            for a in asociaciones_del_concepto
+        }
+
         filas_gastos: list[FilaResumenAnual] = []
         filas_ingresos: list[FilaResumenAnual] = []
         totales_gastos = [Decimal("0")] * 12
@@ -54,15 +78,25 @@ class ObtenerResumenAnual:
                 (concepto.categoria_id, concepto.subcategoria_id),
                 (concepto.categoria_id, concepto.subcategoria_id),
             )
+            asociaciones_descripcion_concepto = asociaciones_descripcion.get(
+                (concepto.categoria_id, concepto.subcategoria_id), []
+            )
             valores: list[ValorMensual] = []
             for mes in range(1, 13):
                 ajuste = ajustes.get((concepto.id, mes))
                 clave = (categoria_real, subcategoria_real, mes)
-                real = sumas_reales.get(clave)
+                real_categoria = sumas_reales.get(clave)
+                real_total = real_categoria if real_categoria is not None else Decimal("0")
+                hay_real = real_categoria is not None
+                for a in asociaciones_descripcion_concepto:
+                    real_descripcion = sumas_por_descripcion[a.descripcion].get(mes)
+                    if real_descripcion is not None:
+                        real_total += real_descripcion
+                        hay_real = True
                 if ajuste is not None:
                     valores.append(ValorMensual(mes=mes, importe=ajuste, origen="ajustado"))
-                elif real is not None:
-                    valores.append(ValorMensual(mes=mes, importe=real, origen="real"))
+                elif hay_real:
+                    valores.append(ValorMensual(mes=mes, importe=real_total, origen="real"))
                 elif mes in meses_aplicables:
                     valores.append(
                         ValorMensual(mes=mes, importe=concepto.importe_previsto, origen="previsto")

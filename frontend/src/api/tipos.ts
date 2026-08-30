@@ -172,6 +172,19 @@ export interface DatosAsociacion {
   subcategoria_movimiento_id?: number | null
 }
 
+export interface AsociacionDescripcion {
+  id: number
+  categoria_resumen_id: number
+  subcategoria_resumen_id: number | null
+  descripcion: string
+}
+
+export interface DatosAsociacionDescripcion {
+  categoria_resumen_id: number
+  subcategoria_resumen_id?: number | null
+  descripcion: string
+}
+
 export interface ResumenImportacionResumenAnual {
   celdas_actualizadas: number
   celdas_eliminadas: number

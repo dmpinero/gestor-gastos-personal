@@ -57,3 +57,19 @@ class AsociacionConcepto:
     categoria_movimiento_id: int
     subcategoria_movimiento_id: int | None
     id: int | None = None
+
+
+@dataclass
+class AsociacionDescripcion:
+    """Hace corresponder una descripción (o un fragmento de ella) de
+    movimientos reales con la categoría/subcategoría con la que se nombra un
+    concepto previsto del resumen anual, para casos que una AsociacionConcepto
+    por categoría no cubre (p. ej. un recibo con descripción propia que no
+    comparte categoría/subcategoría con ningún otro movimiento). Su importe
+    real se SUMA al de la categoría/subcategoría de movimientos asociada, si
+    la hay (ver ObtenerResumenAnual)."""
+
+    categoria_resumen_id: int
+    subcategoria_resumen_id: int | None
+    descripcion: str
+    id: int | None = None

@@ -18,6 +18,7 @@ from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 
@@ -54,6 +55,12 @@ _CABECERA_ASOCIACIONES = [
     "ID categoría movimiento",
     "ID subcategoría movimiento",
 ]
+_CABECERA_ASOCIACIONES_DESCRIPCION = [
+    "ID",
+    "ID categoría resumen",
+    "ID subcategoría resumen",
+    "Descripción",
+]
 
 _CABECERAS_ESPERADAS = {
     "Cuentas": _CABECERA_CUENTAS,
@@ -63,6 +70,7 @@ _CABECERAS_ESPERADAS = {
     "Conceptos previstos": _CABECERA_CONCEPTOS_PREVISTOS,
     "Ajustes mensuales": _CABECERA_AJUSTES,
     "Asociaciones": _CABECERA_ASOCIACIONES,
+    "Asociaciones por descripción": _CABECERA_ASOCIACIONES_DESCRIPCION,
 }
 
 
@@ -127,7 +135,7 @@ def _periodicidad(valor: object, hoja: str, fila: int, columna: str) -> str:
 
 class LectorExportacionCompletaOpenpyxl:
     """Adaptador de LectorExportacionCompleta para el formato propio generado
-    por EscritorExportacionCompletaOpenpyxl (6 hojas, una por tabla, con fila
+    por EscritorExportacionCompletaOpenpyxl (una hoja por tabla, con fila
     de cabecera y columna ID visible)."""
 
     def leer(self, contenido: bytes, nombre_fichero: str) -> DatosCompletos:
@@ -140,7 +148,8 @@ class LectorExportacionCompletaOpenpyxl:
         libro = openpyxl.load_workbook(io.BytesIO(contenido), data_only=True)
         if not all(nombre in libro.sheetnames for nombre in _CABECERAS_ESPERADAS):
             raise HojasExcelNoReconocidasError(
-                "El fichero no tiene las 6 hojas esperadas: " + ", ".join(_CABECERAS_ESPERADAS)
+                f"El fichero no tiene las {len(_CABECERAS_ESPERADAS)} hojas esperadas: "
+                + ", ".join(_CABECERAS_ESPERADAS)
             )
         for nombre, cabecera in _CABECERAS_ESPERADAS.items():
             self._validar_cabecera(libro[nombre], nombre, cabecera)
@@ -153,6 +162,9 @@ class LectorExportacionCompletaOpenpyxl:
             conceptos_previstos=self._leer_conceptos_previstos(libro["Conceptos previstos"]),
             ajustes=self._leer_ajustes(libro["Ajustes mensuales"]),
             asociaciones=self._leer_asociaciones(libro["Asociaciones"]),
+            asociaciones_descripcion=self._leer_asociaciones_descripcion(
+                libro["Asociaciones por descripción"]
+            ),
         )
 
     def _extraer_extension(self, nombre_fichero: str) -> str:
@@ -295,6 +307,25 @@ class LectorExportacionCompletaOpenpyxl:
                     subcategoria_movimiento_id=_entero_o_none(
                         fila[4].value, hoja.title, numero_fila, "ID subcategoría movimiento"
                     ),
+                )
+            )
+        return asociaciones
+
+    def _leer_asociaciones_descripcion(self, hoja: Worksheet) -> list[AsociacionDescripcion]:
+        asociaciones: list[AsociacionDescripcion] = []
+        for numero_fila, fila in enumerate(hoja.iter_rows(min_row=2), start=2):
+            if fila[0].value is None:
+                break
+            asociaciones.append(
+                AsociacionDescripcion(
+                    id=_entero(fila[0].value, hoja.title, numero_fila, "ID"),
+                    categoria_resumen_id=_entero(
+                        fila[1].value, hoja.title, numero_fila, "ID categoría resumen"
+                    ),
+                    subcategoria_resumen_id=_entero_o_none(
+                        fila[2].value, hoja.title, numero_fila, "ID subcategoría resumen"
+                    ),
+                    descripcion=_texto(fila[3].value, hoja.title, numero_fila, "Descripción"),
                 )
             )
         return asociaciones

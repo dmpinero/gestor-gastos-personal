@@ -4,6 +4,9 @@ from gestor_gastos.aplicacion.movimiento.listar_todos_los_movimientos import (
     ListarTodosLosMovimientos,
 )
 from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
+from gestor_gastos.aplicacion.prevision.listar_asociaciones_descripcion import (
+    ListarAsociacionesDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
@@ -23,6 +26,7 @@ class ExportarDatosCompletos:
         listar_conceptos_previstos: ListarConceptosPrevistos,
         listar_ajustes: ListarTodosLosAjustes,
         listar_asociaciones: ListarAsociaciones,
+        listar_asociaciones_descripcion: ListarAsociacionesDescripcion,
         escritor: EscritorExportacionCompleta,
     ) -> None:
         self._listar_cuentas = listar_cuentas
@@ -31,6 +35,7 @@ class ExportarDatosCompletos:
         self._listar_conceptos_previstos = listar_conceptos_previstos
         self._listar_ajustes = listar_ajustes
         self._listar_asociaciones = listar_asociaciones
+        self._listar_asociaciones_descripcion = listar_asociaciones_descripcion
         self._escritor = escritor
 
     def ejecutar(self) -> bytes:
@@ -47,5 +52,6 @@ class ExportarDatosCompletos:
             conceptos_previstos=self._listar_conceptos_previstos.ejecutar(),
             ajustes=self._listar_ajustes.ejecutar(),
             asociaciones=self._listar_asociaciones.ejecutar(),
+            asociaciones_descripcion=self._listar_asociaciones_descripcion.ejecutar(),
         )
         return self._escritor.escribir(datos)

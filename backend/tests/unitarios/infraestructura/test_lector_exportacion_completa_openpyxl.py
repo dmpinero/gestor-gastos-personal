@@ -18,6 +18,7 @@ from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_openpyxl import (
@@ -64,6 +65,14 @@ def _datos_completos() -> DatosCompletos:
                 subcategoria_movimiento_id=100,
             )
         ],
+        asociaciones_descripcion=[
+            AsociacionDescripcion(
+                id=1,
+                categoria_resumen_id=10,
+                subcategoria_resumen_id=100,
+                descripcion="Recibo Ayuntamiento",
+            )
+        ],
     )
 
 
@@ -83,7 +92,7 @@ def test_una_extension_no_soportada_lanza_error() -> None:
         LectorExportacionCompletaOpenpyxl().leer(contenido, "backup.csv")
 
 
-def test_un_fichero_sin_las_seis_hojas_lanza_error() -> None:
+def test_un_fichero_sin_todas_las_hojas_lanza_error() -> None:
     libro = openpyxl.Workbook()
     libro.active.title = "Cuentas"
     buffer = io.BytesIO()

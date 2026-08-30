@@ -60,6 +60,7 @@ describe('useTiendaExportacion', () => {
       conceptos_previstos_importados: 5,
       ajustes_importados: 6,
       asociaciones_importadas: 7,
+      asociaciones_descripcion_importadas: 8,
     }
     vi.mocked(clienteApi.subirArchivo).mockResolvedValue(resumen)
     const fichero = new File(['contenido'], 'backup-gestor-gastos.xlsx')

@@ -9,7 +9,7 @@ Característica: Exportación completa de datos
     Y existe la categoría "Suscripciones" con la subcategoría "Streaming"
     Y existe un movimiento en esa cuenta y esa subcategoría con descripción "Netflix" e importe "-9.99"
     Cuando exporto todos los datos
-    Entonces el Excel exportado contiene las hojas "Cuentas", "Categorías", "Subcategorías", "Movimientos", "Conceptos previstos", "Ajustes mensuales" y "Asociaciones"
+    Entonces el Excel exportado contiene las hojas "Cuentas", "Categorías", "Subcategorías", "Movimientos", "Conceptos previstos", "Ajustes mensuales", "Asociaciones" y "Asociaciones por descripción"
     Y la hoja "Cuentas" del Excel exportado contiene la cuenta "ES00 1234"
     Y la hoja "Movimientos" del Excel exportado contiene un movimiento con descripción "Netflix"
 

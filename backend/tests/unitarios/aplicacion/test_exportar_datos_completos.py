@@ -11,8 +11,14 @@ from gestor_gastos.aplicacion.movimiento.listar_todos_los_movimientos import (
     ListarTodosLosMovimientos,
 )
 from gestor_gastos.aplicacion.prevision.crear_asociacion import CrearAsociacion
+from gestor_gastos.aplicacion.prevision.crear_asociacion_descripcion import (
+    CrearAsociacionDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConceptoPrevisto
 from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
+from gestor_gastos.aplicacion.prevision.listar_asociaciones_descripcion import (
+    ListarAsociacionesDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
@@ -22,6 +28,7 @@ from gestor_gastos.dominio.prevision.entidades import AjusteMensual
 from tests.unitarios.aplicacion.dobles import (
     EscritorExportacionCompletaFalso,
     RepositorioAjustesPrevisionFalso,
+    RepositorioAsociacionesDescripcionFalso,
     RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
     RepositorioCuentasFalso,
@@ -37,6 +44,7 @@ def test_exportar_delega_los_datos_de_las_seis_tablas_en_el_escritor() -> None:
     repo_previsiones = RepositorioPrevisionesFalso()
     repo_ajustes = RepositorioAjustesPrevisionFalso()
     repo_asociaciones = RepositorioAsociacionesFalso()
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionFalso()
 
     cuenta = CrearCuenta(repo_cuentas).ejecutar("ES00 1234")
     categoria = CrearCategoria(repo_categorias).ejecutar("Suscripciones")
@@ -47,6 +55,11 @@ def test_exportar_delega_los_datos_de_las_seis_tablas_en_el_escritor() -> None:
         subcategoria_resumen_id=None,
         categoria_movimiento_id=categoria.id,
         subcategoria_movimiento_id=subcategoria.id,
+    )
+    CrearAsociacionDescripcion(repo_asociaciones_descripcion, repo_categorias).ejecutar(
+        categoria_resumen_id=categoria_resumen.id,
+        subcategoria_resumen_id=None,
+        descripcion="Recibo Ayuntamiento",
     )
     repo_movimientos.crear(
         Movimiento(
@@ -77,6 +90,7 @@ def test_exportar_delega_los_datos_de_las_seis_tablas_en_el_escritor() -> None:
         ListarConceptosPrevistos(repo_previsiones),
         ListarTodosLosAjustes(repo_ajustes),
         ListarAsociaciones(repo_asociaciones),
+        ListarAsociacionesDescripcion(repo_asociaciones_descripcion),
         escritor,
     ).ejecutar()
 
@@ -89,3 +103,4 @@ def test_exportar_delega_los_datos_de_las_seis_tablas_en_el_escritor() -> None:
     assert len(datos.conceptos_previstos) == 1
     assert len(datos.ajustes) == 1
     assert len(datos.asociaciones) == 1
+    assert len(datos.asociaciones_descripcion) == 1

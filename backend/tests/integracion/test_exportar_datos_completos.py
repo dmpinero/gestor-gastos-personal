@@ -11,6 +11,9 @@ from gestor_gastos.aplicacion.movimiento.listar_todos_los_movimientos import (
     ListarTodosLosMovimientos,
 )
 from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
+from gestor_gastos.aplicacion.prevision.listar_asociaciones_descripcion import (
+    ListarAsociacionesDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
@@ -21,6 +24,7 @@ from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_openpyxl import (
@@ -28,6 +32,9 @@ from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_ope
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesDescripcionSqlAlchemy,
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesSqlAlchemy,
@@ -46,13 +53,14 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_previsi
 )
 
 
-def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) -> None:
+def test_exporta_datos_reales_de_todas_las_tablas_a_un_excel_valido(sesion_bd) -> None:
     repo_cuentas = RepositorioCuentasSqlAlchemy(sesion_bd)
     repo_categorias = RepositorioCategoriasSqlAlchemy(sesion_bd)
     repo_movimientos = RepositorioMovimientosSqlAlchemy(sesion_bd)
     repo_previsiones = RepositorioPrevisionesSqlAlchemy(sesion_bd)
     repo_ajustes = RepositorioAjustesPrevisionSqlAlchemy(sesion_bd)
     repo_asociaciones = RepositorioAsociacionesSqlAlchemy(sesion_bd)
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionSqlAlchemy(sesion_bd)
 
     cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
     categoria = repo_categorias.crear_categoria(Categoria(nombre="Suscripciones"))
@@ -66,6 +74,13 @@ def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) ->
             subcategoria_resumen_id=None,
             categoria_movimiento_id=categoria.id,
             subcategoria_movimiento_id=subcategoria.id,
+        )
+    )
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=categoria_resumen.id,
+            subcategoria_resumen_id=None,
+            descripcion="Recibo Ayuntamiento",
         )
     )
     repo_movimientos.crear(
@@ -98,6 +113,7 @@ def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) ->
         ListarConceptosPrevistos(repo_previsiones),
         ListarTodosLosAjustes(repo_ajustes),
         ListarAsociaciones(repo_asociaciones),
+        ListarAsociacionesDescripcion(repo_asociaciones_descripcion),
         EscritorExportacionCompletaOpenpyxl(),
     ).ejecutar()
 
@@ -110,8 +126,10 @@ def test_exporta_datos_reales_de_las_seis_tablas_a_un_excel_valido(sesion_bd) ->
         "Conceptos previstos",
         "Ajustes mensuales",
         "Asociaciones",
+        "Asociaciones por descripción",
     ]
     assert libro["Cuentas"]["B2"].value == "ES00 1234"
     assert libro["Movimientos"]["F2"].value == "Netflix"
     assert libro["Asociaciones"]["B2"].value == categoria_resumen.id
     assert libro["Asociaciones"]["D2"].value == categoria.id
+    assert libro["Asociaciones por descripción"]["D2"].value == "Recibo Ayuntamiento"

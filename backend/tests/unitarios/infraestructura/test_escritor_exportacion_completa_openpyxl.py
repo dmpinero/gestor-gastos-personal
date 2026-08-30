@@ -11,6 +11,7 @@ from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 from gestor_gastos.infraestructura.exportacion.escritor_exportacion_completa_openpyxl import (
@@ -54,10 +55,18 @@ def _datos_completos() -> DatosCompletos:
                 subcategoria_movimiento_id=100,
             )
         ],
+        asociaciones_descripcion=[
+            AsociacionDescripcion(
+                id=1,
+                categoria_resumen_id=10,
+                subcategoria_resumen_id=100,
+                descripcion="Recibo Ayuntamiento",
+            )
+        ],
     )
 
 
-def test_escribe_las_seis_hojas() -> None:
+def test_escribe_todas_las_hojas() -> None:
     contenido = EscritorExportacionCompletaOpenpyxl().escribir(_datos_completos())
     libro = openpyxl.load_workbook(io.BytesIO(contenido))
 
@@ -69,6 +78,7 @@ def test_escribe_las_seis_hojas() -> None:
         "Conceptos previstos",
         "Ajustes mensuales",
         "Asociaciones",
+        "Asociaciones por descripción",
     ]
 
 
@@ -86,6 +96,7 @@ def test_cada_hoja_tiene_cabecera_y_una_fila_por_registro() -> None:
     assert libro["Ajustes mensuales"]["E2"].value == -12.0
     assert libro["Asociaciones"]["B2"].value == 10
     assert libro["Asociaciones"]["D2"].value == 10
+    assert libro["Asociaciones por descripción"]["D2"].value == "Recibo Ayuntamiento"
 
 
 def test_un_texto_con_caracteres_de_control_no_rompe_la_escritura() -> None:

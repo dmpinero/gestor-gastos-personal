@@ -62,3 +62,11 @@ class RepositorioMovimientos(Protocol):
     def sumar_movimientos_por_mes(
         self, anio: int
     ) -> dict[tuple[int, int | None, int], Decimal]: ...
+
+    def sumar_movimientos_por_descripcion_y_mes(
+        self, anio: int, fragmento_descripcion: str
+    ) -> dict[int, Decimal]:
+        """Suma, mes a mes, los movimientos de ese año cuya descripción
+        contiene `fragmento_descripcion` (sin distinguir mayúsculas/
+        minúsculas)."""
+        ...

@@ -7,6 +7,7 @@ class DependenciasCategoria:
     movimientos: int
     conceptos_previstos: int
     asociaciones: int
+    asociaciones_descripcion: int
 
 
 @dataclass(frozen=True)
@@ -14,3 +15,4 @@ class DependenciasSubcategoria:
     movimientos: int
     conceptos_previstos: int
     asociaciones: int
+    asociaciones_descripcion: int

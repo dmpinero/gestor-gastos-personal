@@ -20,20 +20,37 @@ const asociacionEjemplo = {
   subcategoria_movimiento_id: null,
 }
 
+const asociacionDescripcionEjemplo = {
+  id: 1,
+  categoria_resumen_id: 10,
+  subcategoria_resumen_id: null,
+  descripcion: 'Recibo Ayuntamiento',
+}
+
+function mockearObtener(conceptos: unknown[] = [], descripciones: unknown[] = []): void {
+  vi.mocked(clienteApi.obtener).mockImplementation((url: unknown) =>
+    Promise.resolve(
+      (url as string) === '/previsiones/asociaciones-descripcion' ? descripciones : conceptos,
+    ),
+  )
+}
+
 describe('useTiendaAsociaciones', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
   })
 
-  it('carga la lista de asociaciones', async () => {
-    vi.mocked(clienteApi.obtener).mockResolvedValue([asociacionEjemplo])
+  it('carga la lista de asociaciones por categoría y por descripción', async () => {
+    mockearObtener([asociacionEjemplo], [asociacionDescripcionEjemplo])
 
     const tienda = useTiendaAsociaciones()
     await tienda.cargar()
 
     expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/asociaciones')
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/asociaciones-descripcion')
     expect(tienda.asociaciones).toEqual([asociacionEjemplo])
+    expect(tienda.asociacionesDescripcion).toEqual([asociacionDescripcionEjemplo])
   })
 
   it('guarda el mensaje de error si cargar falla', async () => {
@@ -45,9 +62,9 @@ describe('useTiendaAsociaciones', () => {
     expect(tienda.error).toBe('fallo de red')
   })
 
-  it('crea una asociación y recarga la lista', async () => {
+  it('crea una asociación por categoría y recarga la lista', async () => {
     vi.mocked(clienteApi.crear).mockResolvedValue(asociacionEjemplo)
-    vi.mocked(clienteApi.obtener).mockResolvedValue([asociacionEjemplo])
+    mockearObtener([asociacionEjemplo])
 
     const tienda = useTiendaAsociaciones()
     await tienda.crear({
@@ -88,5 +105,51 @@ describe('useTiendaAsociaciones', () => {
 
     expect(clienteApi.eliminar).toHaveBeenCalledWith('/previsiones/asociaciones/1')
     expect(tienda.asociaciones).toEqual([{ ...asociacionEjemplo, id: 2 }])
+  })
+
+  it('crea una asociación por descripción y recarga la lista', async () => {
+    vi.mocked(clienteApi.crear).mockResolvedValue(asociacionDescripcionEjemplo)
+    mockearObtener([], [asociacionDescripcionEjemplo])
+
+    const tienda = useTiendaAsociaciones()
+    await tienda.crearDescripcion({
+      categoria_resumen_id: 10,
+      subcategoria_resumen_id: null,
+      descripcion: 'Recibo Ayuntamiento',
+    })
+
+    expect(clienteApi.crear).toHaveBeenCalledWith('/previsiones/asociaciones-descripcion', {
+      categoria_resumen_id: 10,
+      subcategoria_resumen_id: null,
+      descripcion: 'Recibo Ayuntamiento',
+    })
+    expect(tienda.asociacionesDescripcion).toEqual([asociacionDescripcionEjemplo])
+  })
+
+  it('crearDescripcion propaga el error para que la vista lo muestre', async () => {
+    vi.mocked(clienteApi.crear).mockRejectedValue(new Error('ya existe una asociación'))
+
+    const tienda = useTiendaAsociaciones()
+
+    await expect(
+      tienda.crearDescripcion({
+        categoria_resumen_id: 10,
+        descripcion: 'Recibo Ayuntamiento',
+      }),
+    ).rejects.toThrow('ya existe una asociación')
+  })
+
+  it('elimina una asociación por descripción de la lista en memoria sin recargar', async () => {
+    vi.mocked(clienteApi.eliminar).mockResolvedValue(undefined)
+    const tienda = useTiendaAsociaciones()
+    tienda.asociacionesDescripcion = [
+      asociacionDescripcionEjemplo,
+      { ...asociacionDescripcionEjemplo, id: 2 },
+    ]
+
+    await tienda.eliminarDescripcion(1)
+
+    expect(clienteApi.eliminar).toHaveBeenCalledWith('/previsiones/asociaciones-descripcion/1')
+    expect(tienda.asociacionesDescripcion).toEqual([{ ...asociacionDescripcionEjemplo, id: 2 }])
   })
 })

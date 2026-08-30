@@ -3,6 +3,7 @@ from typing import Protocol
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 
@@ -66,6 +67,28 @@ class RepositorioAsociaciones(Protocol):
     def contar_por_subcategoria(self, id_subcategoria: int) -> int:
         """Igual que contar_por_categoria, pero para una subcategoría."""
         ...
+
+    def eliminar_por_categoria(self, id_categoria: int) -> None: ...
+
+    def eliminar_por_subcategoria(self, id_subcategoria: int) -> None: ...
+
+
+class RepositorioAsociacionesDescripcion(Protocol):
+    """Puerto de persistencia para AsociacionDescripcion."""
+
+    def crear(self, asociacion: AsociacionDescripcion) -> AsociacionDescripcion: ...
+
+    def obtener_por_id(self, id_asociacion: int) -> AsociacionDescripcion | None: ...
+
+    def listar(self) -> list[AsociacionDescripcion]: ...
+
+    def obtener_por_descripcion(self, descripcion: str) -> AsociacionDescripcion | None: ...
+
+    def eliminar(self, id_asociacion: int) -> None: ...
+
+    def contar_por_categoria(self, id_categoria: int) -> int: ...
+
+    def contar_por_subcategoria(self, id_subcategoria: int) -> int: ...
 
     def eliminar_por_categoria(self, id_categoria: int) -> None: ...
 

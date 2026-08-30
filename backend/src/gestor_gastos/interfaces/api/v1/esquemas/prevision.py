@@ -85,3 +85,16 @@ class AsociacionConceptoSalidaEsquema(BaseModel):
     subcategoria_resumen_id: int | None
     categoria_movimiento_id: int
     subcategoria_movimiento_id: int | None
+
+
+class AsociacionDescripcionCrearEsquema(BaseModel):
+    categoria_resumen_id: int
+    subcategoria_resumen_id: int | None = None
+    descripcion: str = Field(min_length=1, max_length=500)
+
+
+class AsociacionDescripcionSalidaEsquema(BaseModel):
+    id: int
+    categoria_resumen_id: int
+    subcategoria_resumen_id: int | None
+    descripcion: str

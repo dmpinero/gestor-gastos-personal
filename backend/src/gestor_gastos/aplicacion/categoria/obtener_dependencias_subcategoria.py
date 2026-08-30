@@ -4,6 +4,7 @@ from gestor_gastos.dominio.excepciones import EntidadNoEncontradaError
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
 from gestor_gastos.dominio.prevision.repositorio import (
     RepositorioAsociaciones,
+    RepositorioAsociacionesDescripcion,
     RepositorioPrevisiones,
 )
 
@@ -15,11 +16,13 @@ class ObtenerDependenciasSubcategoria:
         repositorio_movimientos: RepositorioMovimientos,
         repositorio_previsiones: RepositorioPrevisiones,
         repositorio_asociaciones: RepositorioAsociaciones,
+        repositorio_asociaciones_descripcion: RepositorioAsociacionesDescripcion,
     ) -> None:
         self._repositorio = repositorio
         self._repositorio_movimientos = repositorio_movimientos
         self._repositorio_previsiones = repositorio_previsiones
         self._repositorio_asociaciones = repositorio_asociaciones
+        self._repositorio_asociaciones_descripcion = repositorio_asociaciones_descripcion
 
     def ejecutar(self, id_subcategoria: int) -> DependenciasSubcategoria:
         if self._repositorio.obtener_subcategoria_por_id(id_subcategoria) is None:
@@ -33,4 +36,7 @@ class ObtenerDependenciasSubcategoria:
                 id_subcategoria
             ),
             asociaciones=self._repositorio_asociaciones.contar_por_subcategoria(id_subcategoria),
+            asociaciones_descripcion=(
+                self._repositorio_asociaciones_descripcion.contar_por_subcategoria(id_subcategoria)
+            ),
         )

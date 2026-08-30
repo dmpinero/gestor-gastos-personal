@@ -16,6 +16,9 @@ from gestor_gastos.aplicacion.categoria.obtener_dependencias_categoria import (
 from gestor_gastos.aplicacion.categoria.obtener_dependencias_subcategoria import (
     ObtenerDependenciasSubcategoria,
 )
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesDescripcionSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesSqlAlchemy,
 )
@@ -105,6 +108,7 @@ def eliminar(
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     ).ejecutar(id_categoria, cascada=cascada)
 
 
@@ -121,6 +125,7 @@ def obtener_dependencias(
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     ).ejecutar(id_categoria)
     return DependenciasCategoriaEsquema(**asdict(dependencias))
 
@@ -173,6 +178,7 @@ def eliminar_subcategoria(
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     ).ejecutar(id_subcategoria, cascada=cascada)
 
 
@@ -189,5 +195,6 @@ def obtener_dependencias_subcategoria(
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     ).ejecutar(id_subcategoria)
     return DependenciasSubcategoriaEsquema(**asdict(dependencias))

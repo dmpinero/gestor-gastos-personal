@@ -210,3 +210,17 @@ class RepositorioMovimientosSqlAlchemy:
             (categoria_id, subcategoria_id, int(mes)): total
             for categoria_id, subcategoria_id, mes, total in filas
         }
+
+    def sumar_movimientos_por_descripcion_y_mes(
+        self, anio: int, fragmento_descripcion: str
+    ) -> dict[int, Decimal]:
+        mes = func.extract("month", MovimientoModelo.fecha_valor)
+        filas = self._sesion.execute(
+            select(mes, func.sum(MovimientoModelo.importe))
+            .where(
+                func.extract("year", MovimientoModelo.fecha_valor) == anio,
+                MovimientoModelo.descripcion.icontains(fragmento_descripcion),
+            )
+            .group_by(mes)
+        ).all()
+        return {int(mes): total for mes, total in filas}

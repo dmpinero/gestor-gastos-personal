@@ -9,6 +9,7 @@ from gestor_gastos.aplicacion.exportacion.importar_datos_completos import Import
 from gestor_gastos.aplicacion.movimiento.listar_todos_los_movimientos import (
     ListarTodosLosMovimientos,
 )
+from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
@@ -21,6 +22,9 @@ from gestor_gastos.infraestructura.exportacion.lector_exportacion_completa_openp
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesSqlAlchemy,
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
@@ -62,6 +66,7 @@ def exportar_datos(sesion: Session = Depends(obtener_sesion)) -> Response:
         ListarTodosLosMovimientos(RepositorioMovimientosSqlAlchemy(sesion)),
         ListarConceptosPrevistos(RepositorioPrevisionesSqlAlchemy(sesion)),
         ListarTodosLosAjustes(RepositorioAjustesPrevisionSqlAlchemy(sesion)),
+        ListarAsociaciones(RepositorioAsociacionesSqlAlchemy(sesion)),
         EscritorExportacionCompletaOpenpyxl(),
     ).ejecutar()
     return Response(
@@ -91,4 +96,5 @@ async def importar_datos(
         movimientos_importados=resumen.movimientos_importados,
         conceptos_previstos_importados=resumen.conceptos_previstos_importados,
         ajustes_importados=resumen.ajustes_importados,
+        asociaciones_importadas=resumen.asociaciones_importadas,
     )

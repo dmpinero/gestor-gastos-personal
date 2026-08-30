@@ -15,7 +15,11 @@ from gestor_gastos.dominio.exportacion.excepciones import (
 from gestor_gastos.dominio.exportacion.valores import DatosCompletos
 from gestor_gastos.dominio.importacion.excepciones import ExtensionNoSoportadaError
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from gestor_gastos.dominio.prevision.entidades import AjusteMensual, ConceptoPrevisto
+from gestor_gastos.dominio.prevision.entidades import (
+    AjusteMensual,
+    AsociacionConcepto,
+    ConceptoPrevisto,
+)
 
 _EXTENSIONES_SOPORTADAS = {".xlsx"}
 _PERIODICIDADES_VALIDAS = {"mensual", "trimestral", "semestral", "anual"}
@@ -43,6 +47,13 @@ _CABECERA_CONCEPTOS_PREVISTOS = [
     "Mes de inicio",
 ]
 _CABECERA_AJUSTES = ["ID", "ID concepto", "Año", "Mes", "Importe"]
+_CABECERA_ASOCIACIONES = [
+    "ID",
+    "ID categoría resumen",
+    "ID subcategoría resumen",
+    "ID categoría movimiento",
+    "ID subcategoría movimiento",
+]
 
 _CABECERAS_ESPERADAS = {
     "Cuentas": _CABECERA_CUENTAS,
@@ -51,6 +62,7 @@ _CABECERAS_ESPERADAS = {
     "Movimientos": _CABECERA_MOVIMIENTOS,
     "Conceptos previstos": _CABECERA_CONCEPTOS_PREVISTOS,
     "Ajustes mensuales": _CABECERA_AJUSTES,
+    "Asociaciones": _CABECERA_ASOCIACIONES,
 }
 
 
@@ -140,6 +152,7 @@ class LectorExportacionCompletaOpenpyxl:
             movimientos=self._leer_movimientos(libro["Movimientos"]),
             conceptos_previstos=self._leer_conceptos_previstos(libro["Conceptos previstos"]),
             ajustes=self._leer_ajustes(libro["Ajustes mensuales"]),
+            asociaciones=self._leer_asociaciones(libro["Asociaciones"]),
         )
 
     def _extraer_extension(self, nombre_fichero: str) -> str:
@@ -261,3 +274,27 @@ class LectorExportacionCompletaOpenpyxl:
                 )
             )
         return ajustes
+
+    def _leer_asociaciones(self, hoja: Worksheet) -> list[AsociacionConcepto]:
+        asociaciones: list[AsociacionConcepto] = []
+        for numero_fila, fila in enumerate(hoja.iter_rows(min_row=2), start=2):
+            if fila[0].value is None:
+                break
+            asociaciones.append(
+                AsociacionConcepto(
+                    id=_entero(fila[0].value, hoja.title, numero_fila, "ID"),
+                    categoria_resumen_id=_entero(
+                        fila[1].value, hoja.title, numero_fila, "ID categoría resumen"
+                    ),
+                    subcategoria_resumen_id=_entero_o_none(
+                        fila[2].value, hoja.title, numero_fila, "ID subcategoría resumen"
+                    ),
+                    categoria_movimiento_id=_entero(
+                        fila[3].value, hoja.title, numero_fila, "ID categoría movimiento"
+                    ),
+                    subcategoria_movimiento_id=_entero_o_none(
+                        fila[4].value, hoja.title, numero_fila, "ID subcategoría movimiento"
+                    ),
+                )
+            )
+        return asociaciones

@@ -192,4 +192,5 @@ export interface ResumenImportacionDatosCompletos {
   movimientos_importados: number
   conceptos_previstos_importados: number
   ajustes_importados: number
+  asociaciones_importadas: number
 }

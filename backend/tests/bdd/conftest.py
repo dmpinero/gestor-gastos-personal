@@ -10,6 +10,7 @@ from gestor_gastos.main import crear_aplicacion
 def cliente() -> TestClient:
     """Cliente HTTP contra la aplicación real, con las tablas relevantes vacías."""
     sesion = FabricaSesiones()
+    sesion.execute(modelos.AsociacionConceptoModelo.__table__.delete())
     sesion.execute(modelos.MovimientoModelo.__table__.delete())
     sesion.execute(modelos.AjustePrevisionMensualModelo.__table__.delete())
     sesion.execute(modelos.ConceptoPrevistoModelo.__table__.delete())

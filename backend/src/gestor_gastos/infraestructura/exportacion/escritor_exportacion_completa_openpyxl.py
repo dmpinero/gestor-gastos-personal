@@ -102,6 +102,27 @@ class EscritorExportacionCompletaOpenpyxl:
         for ajuste in datos.ajustes:
             hoja.append([ajuste.id, ajuste.concepto_id, ajuste.anio, ajuste.mes, ajuste.importe])
 
+        hoja = libro.create_sheet("Asociaciones")
+        hoja.append(
+            [
+                "ID",
+                "ID categoría resumen",
+                "ID subcategoría resumen",
+                "ID categoría movimiento",
+                "ID subcategoría movimiento",
+            ]
+        )
+        for asociacion in datos.asociaciones:
+            hoja.append(
+                [
+                    asociacion.id,
+                    asociacion.categoria_resumen_id,
+                    asociacion.subcategoria_resumen_id,
+                    asociacion.categoria_movimiento_id,
+                    asociacion.subcategoria_movimiento_id,
+                ]
+            )
+
         buffer = io.BytesIO()
         libro.save(buffer)
         return buffer.getvalue()

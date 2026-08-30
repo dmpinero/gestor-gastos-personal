@@ -63,14 +63,15 @@ def exporto_todos_los_datos(cliente: TestClient) -> bytes:
 
 @then(
     parsers.parse(
-        'el Excel exportado contiene las hojas "{h1}", "{h2}", "{h3}", "{h4}", "{h5}" y "{h6}"'
+        'el Excel exportado contiene las hojas "{h1}", "{h2}", "{h3}", "{h4}", "{h5}", '
+        '"{h6}" y "{h7}"'
     )
 )
 def el_excel_contiene_las_hojas(
-    excel_datos_completos: bytes, h1: str, h2: str, h3: str, h4: str, h5: str, h6: str
+    excel_datos_completos: bytes, h1: str, h2: str, h3: str, h4: str, h5: str, h6: str, h7: str
 ) -> None:
     libro = openpyxl.load_workbook(io.BytesIO(excel_datos_completos))
-    assert libro.sheetnames == [h1, h2, h3, h4, h5, h6]
+    assert libro.sheetnames == [h1, h2, h3, h4, h5, h6, h7]
 
 
 @then(parsers.parse('la hoja "{hoja}" del Excel exportado contiene la cuenta "{numero_cuenta}"'))

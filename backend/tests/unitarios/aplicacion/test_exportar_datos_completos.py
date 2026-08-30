@@ -10,7 +10,9 @@ from gestor_gastos.aplicacion.exportacion.exportar_datos_completos import Export
 from gestor_gastos.aplicacion.movimiento.listar_todos_los_movimientos import (
     ListarTodosLosMovimientos,
 )
+from gestor_gastos.aplicacion.prevision.crear_asociacion import CrearAsociacion
 from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConceptoPrevisto
+from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
 )
@@ -20,6 +22,7 @@ from gestor_gastos.dominio.prevision.entidades import AjusteMensual
 from tests.unitarios.aplicacion.dobles import (
     EscritorExportacionCompletaFalso,
     RepositorioAjustesPrevisionFalso,
+    RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
     RepositorioCuentasFalso,
     RepositorioMovimientosFalso,
@@ -33,10 +36,18 @@ def test_exportar_delega_los_datos_de_las_seis_tablas_en_el_escritor() -> None:
     repo_movimientos = RepositorioMovimientosFalso()
     repo_previsiones = RepositorioPrevisionesFalso()
     repo_ajustes = RepositorioAjustesPrevisionFalso()
+    repo_asociaciones = RepositorioAsociacionesFalso()
 
     cuenta = CrearCuenta(repo_cuentas).ejecutar("ES00 1234")
     categoria = CrearCategoria(repo_categorias).ejecutar("Suscripciones")
     subcategoria = CrearSubcategoria(repo_categorias).ejecutar(categoria.id, "Streaming")
+    categoria_resumen = CrearCategoria(repo_categorias).ejecutar("Ocio")
+    CrearAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=categoria_resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=categoria.id,
+        subcategoria_movimiento_id=subcategoria.id,
+    )
     repo_movimientos.crear(
         Movimiento(
             cuenta_id=cuenta.id,
@@ -65,14 +76,16 @@ def test_exportar_delega_los_datos_de_las_seis_tablas_en_el_escritor() -> None:
         ListarTodosLosMovimientos(repo_movimientos),
         ListarConceptosPrevistos(repo_previsiones),
         ListarTodosLosAjustes(repo_ajustes),
+        ListarAsociaciones(repo_asociaciones),
         escritor,
     ).ejecutar()
 
     assert contenido == b"contenido-falso"
     datos = escritor.datos_recibidos
     assert len(datos.cuentas) == 1
-    assert len(datos.categorias) == 1
+    assert len(datos.categorias) == 2
     assert len(datos.subcategorias) == 1
     assert len(datos.movimientos) == 1
     assert len(datos.conceptos_previstos) == 1
     assert len(datos.ajustes) == 1
+    assert len(datos.asociaciones) == 1

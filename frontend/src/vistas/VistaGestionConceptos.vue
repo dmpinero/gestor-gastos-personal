@@ -146,55 +146,6 @@ const conceptosSinAsociar = computed(() => {
     >
       <div class="flex flex-1 flex-wrap gap-4">
         <div class="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-categoria-resumen" for="selector-categoria-resumen"
-            >Categoría del Resumen anual</Label
-          >
-          <Select v-model="formulario.categoriaResumenId">
-            <SelectTrigger
-              id="selector-categoria-resumen"
-              aria-labelledby="etiqueta-categoria-resumen"
-              class="w-full"
-            >
-              <SelectValue placeholder="Selecciona una categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="item in tiendaCategorias.categorias"
-                :key="item.categoria.id"
-                :value="String(item.categoria.id)"
-              >
-                {{ item.categoria.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
-          <Label id="etiqueta-subcategoria-resumen" for="selector-subcategoria-resumen"
-            >Subcategoría del Resumen anual</Label
-          >
-          <Select v-model="formulario.subcategoriaResumenId">
-            <SelectTrigger
-              id="selector-subcategoria-resumen"
-              aria-labelledby="etiqueta-subcategoria-resumen"
-              class="w-full"
-            >
-              <SelectValue placeholder="(sin subcategoría)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-              <SelectItem v-for="s in subcategoriasDelResumen" :key="s.id" :value="String(s.id)">
-                {{ s.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <ArrowRight class="text-muted-foreground mb-2.5 size-5 shrink-0 self-center md:self-auto" />
-
-      <div class="flex flex-1 flex-wrap gap-4">
-        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
           <Label id="etiqueta-categoria-movimiento" for="selector-categoria-movimiento"
             >Categoría real de Movimientos</Label
           >
@@ -233,6 +184,55 @@ const conceptosSinAsociar = computed(() => {
             <SelectContent>
               <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
               <SelectItem v-for="s in subcategoriasDelMovimiento" :key="s.id" :value="String(s.id)">
+                {{ s.nombre }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <ArrowRight class="text-muted-foreground mb-2.5 size-5 shrink-0 self-center md:self-auto" />
+
+      <div class="flex flex-1 flex-wrap gap-4">
+        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+          <Label id="etiqueta-categoria-resumen" for="selector-categoria-resumen"
+            >Categoría del Resumen anual</Label
+          >
+          <Select v-model="formulario.categoriaResumenId">
+            <SelectTrigger
+              id="selector-categoria-resumen"
+              aria-labelledby="etiqueta-categoria-resumen"
+              class="w-full"
+            >
+              <SelectValue placeholder="Selecciona una categoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="item in tiendaCategorias.categorias"
+                :key="item.categoria.id"
+                :value="String(item.categoria.id)"
+              >
+                {{ item.categoria.nombre }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="flex min-w-48 flex-1 flex-col gap-1.5">
+          <Label id="etiqueta-subcategoria-resumen" for="selector-subcategoria-resumen"
+            >Subcategoría del Resumen anual</Label
+          >
+          <Select v-model="formulario.subcategoriaResumenId">
+            <SelectTrigger
+              id="selector-subcategoria-resumen"
+              aria-labelledby="etiqueta-subcategoria-resumen"
+              class="w-full"
+            >
+              <SelectValue placeholder="(sin subcategoría)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
+              <SelectItem v-for="s in subcategoriasDelResumen" :key="s.id" :value="String(s.id)">
                 {{ s.nombre }}
               </SelectItem>
             </SelectContent>

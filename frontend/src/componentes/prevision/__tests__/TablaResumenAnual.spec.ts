@@ -1,7 +1,13 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FilaResumenAnual } from '@/api/tipos'
+import { useTiendaPrevisiones } from '@/stores/previsiones'
 import TablaResumenAnual from '../TablaResumenAnual.vue'
+
+afterEach(() => {
+  document.body.innerHTML = ''
+})
 
 function crearFila(): FilaResumenAnual {
   return {
@@ -24,10 +30,26 @@ function crearFila(): FilaResumenAnual {
 
 const totales = Array(12).fill('-9.99')
 
+function montar(
+  props: { titulo: string; filas: FilaResumenAnual[]; totales: string[]; mensajeVacio: string },
+  opciones: { attachTo?: Element } = {},
+) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  return mount(TablaResumenAnual, {
+    global: { plugins: [pinia] },
+    props: { anio: 2026, ...props },
+    ...opciones,
+  })
+}
+
 describe('TablaResumenAnual', () => {
   it('al hacer clic en una celda, la convierte en un campo editable con el valor sin formatear', async () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
 
     await wrapper.get('td button').trigger('click')
@@ -37,8 +59,11 @@ describe('TablaResumenAnual', () => {
   })
 
   it('confirmar con Enter emite editar-celda con el nuevo importe', async () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
 
     await wrapper.get('td button').trigger('click')
@@ -50,8 +75,11 @@ describe('TablaResumenAnual', () => {
   })
 
   it('vaciar la celda y confirmar emite editar-celda con importe null (revertir)', async () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
 
     await wrapper.get('td button').trigger('click')
@@ -63,8 +91,11 @@ describe('TablaResumenAnual', () => {
   })
 
   it('Escape cancela la edición sin emitir editar-celda', async () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
 
     await wrapper.get('td button').trigger('click')
@@ -77,8 +108,11 @@ describe('TablaResumenAnual', () => {
   })
 
   it('distingue visualmente celdas reales, previstas y ajustadas', () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
     const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
 
@@ -89,8 +123,11 @@ describe('TablaResumenAnual', () => {
   })
 
   it('colorea en rojo los importes negativos confirmados o ajustados, pero no los previstos', () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
     const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
 
@@ -103,8 +140,11 @@ describe('TablaResumenAnual', () => {
   })
 
   it('muestra el número de conceptos, en singular si solo hay uno', () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
     })
 
     expect(wrapper.text()).toContain('1 concepto')
@@ -112,24 +152,76 @@ describe('TablaResumenAnual', () => {
   })
 
   it('con varios conceptos, pluraliza el contador', () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: {
-        titulo: 'Gastos',
-        filas: [crearFila(), { ...crearFila(), concepto_id: 2, nombre: 'Netflix' }],
-        totales,
-        mensajeVacio: 'Vacío',
-      },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila(), { ...crearFila(), concepto_id: 2, nombre: 'Netflix' }],
+      totales,
+      mensajeVacio: 'Vacío',
     })
 
     expect(wrapper.text()).toContain('2 conceptos')
   })
 
   it('sin filas, no muestra el contador (solo el mensaje de vacío)', () => {
-    const wrapper = mount(TablaResumenAnual, {
-      props: { titulo: 'Gastos', filas: [], totales, mensajeVacio: 'Nada que mostrar' },
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [],
+      totales,
+      mensajeVacio: 'Nada que mostrar',
     })
 
     expect(wrapper.text()).toContain('Nada que mostrar')
     expect(wrapper.text()).not.toContain('concepto')
+  })
+
+  it('el icono de ver detalle solo aparece en celdas reales o ajustadas, no en las previstas', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    expect(celdas[1]?.find('button[aria-label^="Ver movimientos"]').exists()).toBe(false) // previsto
+    expect(celdas[3]?.find('button[aria-label^="Ver movimientos"]').exists()).toBe(true) // real
+    expect(celdas[5]?.find('button[aria-label^="Ver movimientos"]').exists()).toBe(true) // ajustado
+  })
+
+  it('al abrir el detalle de un mes, pide los movimientos de ese concepto/año/mes al store', async () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const tienda = useTiendaPrevisiones()
+    const espia = vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[3]!.get('button[aria-label^="Ver movimientos"]').trigger('click')
+
+    expect(espia).toHaveBeenCalledWith(1, 2026, 3)
+  })
+
+  it('el botón de cargar acumulado pide confirmación antes de emitir cargar-acumulado-real', async () => {
+    const wrapper = montar(
+      { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+      { attachTo: document.body },
+    )
+
+    await wrapper.get('button[aria-label="Cargar acumulado real"]').trigger('click')
+    await new Promise((resolver) => setTimeout(resolver, 0))
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('cargar-acumulado-real')).toBeUndefined()
+    const botonCargar = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button'),
+    ).find((boton) => boton.textContent?.trim() === 'Cargar')
+    botonCargar?.click()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('cargar-acumulado-real')).toEqual([[1]])
+    wrapper.unmount()
   })
 })

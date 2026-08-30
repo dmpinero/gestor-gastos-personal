@@ -10,6 +10,7 @@ from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
     ActualizarConceptoPrevisto,
 )
 from gestor_gastos.aplicacion.prevision.ajustar_valor_mensual import AjustarValorMensual
+from gestor_gastos.aplicacion.prevision.cargar_acumulado_real import CargarAcumuladoReal
 from gestor_gastos.aplicacion.prevision.crear_concepto_previsto import CrearConceptoPrevisto
 from gestor_gastos.aplicacion.prevision.eliminar_ajuste_mensual import EliminarAjusteMensual
 from gestor_gastos.aplicacion.prevision.eliminar_concepto_previsto import (
@@ -17,6 +18,9 @@ from gestor_gastos.aplicacion.prevision.eliminar_concepto_previsto import (
 )
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
+)
+from gestor_gastos.aplicacion.prevision.listar_movimientos_de_concepto import (
+    ListarMovimientosDeConcepto,
 )
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
@@ -606,3 +610,290 @@ def test_resumen_anual_un_ajuste_en_un_mes_no_aplicable_lo_muestra_igualmente() 
     valor_junio = next(v for v in fila.valores if v.mes == 6)
     assert valor_junio.importe == Decimal("-15.00")
     assert valor_junio.origen == "ajustado"
+
+
+def test_cargar_acumulado_real_crea_ajustes_para_los_meses_con_movimientos() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, categoria = (
+        _preparar()
+    )
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=categoria.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-9.99"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=categoria.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Amazon Prime",
+        importe=Decimal("-4.99"),
+        saldo=Decimal("100.00"),
+    )
+
+    meses_actualizados = CargarAcumuladoReal(
+        repo_previsiones,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(concepto.id, 2026)
+
+    assert meses_actualizados == 1
+    ajustes = repo_ajustes.listar_por_anio(2026)
+    assert len(ajustes) == 1
+    assert ajustes[0].mes == 3
+    assert ajustes[0].importe == Decimal("-4.99")
+
+
+def test_cargar_acumulado_real_sobrescribe_un_ajuste_manual_existente() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, categoria = (
+        _preparar()
+    )
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=categoria.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-9.99"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=categoria.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Amazon Prime",
+        importe=Decimal("-4.99"),
+        saldo=Decimal("100.00"),
+    )
+    AjustarValorMensual(repo_previsiones, repo_ajustes).ejecutar(
+        concepto.id, 2026, 3, Decimal("-1.00")
+    )
+
+    meses_actualizados = CargarAcumuladoReal(
+        repo_previsiones,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(concepto.id, 2026)
+
+    assert meses_actualizados == 1
+    ajustes = repo_ajustes.listar_por_anio(2026)
+    assert len(ajustes) == 1
+    assert ajustes[0].importe == Decimal("-4.99")
+
+
+def test_cargar_acumulado_real_no_toca_meses_sin_movimientos() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, _, repo_ajustes, categoria = _preparar()
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=categoria.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-9.99"),
+    )
+
+    meses_actualizados = CargarAcumuladoReal(
+        repo_previsiones,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(concepto.id, 2026)
+
+    assert meses_actualizados == 0
+    assert repo_ajustes.listar_por_anio(2026) == []
+
+
+def test_cargar_acumulado_real_usa_asociacion_por_categoria_y_por_descripcion() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, comida = (
+        _preparar()
+    )
+    alimentacion = CrearCategoria(repo_categorias).ejecutar("Alimentación")
+    otra_categoria = CrearCategoria(repo_categorias).ejecutar("Varios")
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=comida.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-200.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=alimentacion.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Supermercado",
+        importe=Decimal("-150.00"),
+        saldo=Decimal("100.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=otra_categoria.id,
+        fecha_valor=datetime.date(2026, 3, 20),
+        descripcion="Reembolso comida trabajo",
+        importe=Decimal("-25.00"),
+        saldo=Decimal("75.00"),
+    )
+    repo_asociaciones = RepositorioAsociacionesFalso()
+    repo_asociaciones.crear(
+        AsociacionConcepto(
+            categoria_resumen_id=comida.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=alimentacion.id,
+            subcategoria_movimiento_id=None,
+        )
+    )
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionFalso()
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=comida.id,
+            subcategoria_resumen_id=None,
+            descripcion="comida trabajo",
+        )
+    )
+
+    CargarAcumuladoReal(
+        repo_previsiones,
+        repo_movimientos,
+        repo_ajustes,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+    ).ejecutar(concepto.id, 2026)
+
+    ajustes = repo_ajustes.listar_por_anio(2026)
+    assert len(ajustes) == 1
+    assert ajustes[0].importe == Decimal("-175.00")
+
+
+def test_cargar_acumulado_real_con_concepto_inexistente_falla() -> None:
+    repo_previsiones, _, repo_movimientos, _, repo_ajustes, _ = _preparar()
+
+    with pytest.raises(EntidadNoEncontradaError):
+        CargarAcumuladoReal(
+            repo_previsiones,
+            repo_movimientos,
+            repo_ajustes,
+            RepositorioAsociacionesFalso(),
+            RepositorioAsociacionesDescripcionFalso(),
+        ).ejecutar(999, 2026)
+
+
+def test_listar_movimientos_de_concepto_usa_la_categoria_real_de_la_asociacion() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, _, comida = _preparar()
+    alimentacion = CrearCategoria(repo_categorias).ejecutar("Alimentación")
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=comida.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-200.00"),
+    )
+    movimiento = CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=alimentacion.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Supermercado",
+        importe=Decimal("-150.00"),
+        saldo=Decimal("100.00"),
+    )
+    # Un movimiento del mes/año equivocado no debe aparecer.
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=alimentacion.id,
+        fecha_valor=datetime.date(2026, 4, 1),
+        descripcion="Supermercado abril",
+        importe=Decimal("-30.00"),
+        saldo=Decimal("70.00"),
+    )
+    repo_asociaciones = RepositorioAsociacionesFalso()
+    repo_asociaciones.crear(
+        AsociacionConcepto(
+            categoria_resumen_id=comida.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=alimentacion.id,
+            subcategoria_movimiento_id=None,
+        )
+    )
+
+    movimientos = ListarMovimientosDeConcepto(
+        repo_previsiones,
+        repo_movimientos,
+        repo_asociaciones,
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(concepto.id, 2026, 3)
+
+    assert [m.id for m in movimientos] == [movimiento.id]
+
+
+def test_listar_movimientos_de_concepto_incluye_los_de_descripcion_sin_duplicar() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, _, comida = _preparar()
+    alimentacion = CrearCategoria(repo_categorias).ejecutar("Alimentación")
+    otra_categoria = CrearCategoria(repo_categorias).ejecutar("Varios")
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=comida.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-200.00"),
+    )
+    # Este movimiento coincide con la categoría asociada Y con la
+    # descripción asociada: no debe aparecer duplicado.
+    movimiento_categoria = CrearMovimiento(
+        repo_movimientos, repo_cuentas, repo_categorias
+    ).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=alimentacion.id,
+        fecha_valor=datetime.date(2026, 3, 15),
+        descripcion="Supermercado comida trabajo",
+        importe=Decimal("-150.00"),
+        saldo=Decimal("100.00"),
+    )
+    movimiento_descripcion = CrearMovimiento(
+        repo_movimientos, repo_cuentas, repo_categorias
+    ).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=otra_categoria.id,
+        fecha_valor=datetime.date(2026, 3, 20),
+        descripcion="Reembolso comida trabajo",
+        importe=Decimal("-25.00"),
+        saldo=Decimal("75.00"),
+    )
+    repo_asociaciones = RepositorioAsociacionesFalso()
+    repo_asociaciones.crear(
+        AsociacionConcepto(
+            categoria_resumen_id=comida.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=alimentacion.id,
+            subcategoria_movimiento_id=None,
+        )
+    )
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionFalso()
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=comida.id,
+            subcategoria_resumen_id=None,
+            descripcion="comida trabajo",
+        )
+    )
+
+    movimientos = ListarMovimientosDeConcepto(
+        repo_previsiones,
+        repo_movimientos,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+    ).ejecutar(concepto.id, 2026, 3)
+
+    assert {m.id for m in movimientos} == {movimiento_categoria.id, movimiento_descripcion.id}
+    assert len(movimientos) == 2
+
+
+def test_listar_movimientos_de_concepto_con_concepto_inexistente_falla() -> None:
+    repo_previsiones, _, repo_movimientos, _, _, _ = _preparar()
+
+    with pytest.raises(EntidadNoEncontradaError):
+        ListarMovimientosDeConcepto(
+            repo_previsiones,
+            repo_movimientos,
+            RepositorioAsociacionesFalso(),
+            RepositorioAsociacionesDescripcionFalso(),
+        ).ejecutar(999, 2026, 3)

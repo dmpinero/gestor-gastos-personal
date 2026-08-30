@@ -170,6 +170,52 @@ describe('useTiendaPrevisiones', () => {
     expect(tienda.resumenAnual).toEqual(resumenEjemplo)
   })
 
+  it('carga el acumulado real, recarga el resumen y devuelve los meses actualizados', async () => {
+    vi.mocked(clienteApi.crear).mockResolvedValue({ meses_actualizados: 3 })
+    vi.mocked(clienteApi.obtener).mockResolvedValue(resumenEjemplo)
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.cargarAcumuladoReal(1, 2026)
+
+    expect(clienteApi.crear).toHaveBeenCalledWith('/previsiones/1/cargar-real/2026', undefined)
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
+    expect(tienda.resumenAnual).toEqual(resumenEjemplo)
+    expect(devuelto).toBe(3)
+  })
+
+  it('guarda el mensaje de error si cargar el acumulado real falla y devuelve 0', async () => {
+    vi.mocked(clienteApi.crear).mockRejectedValue(new Error('fallo de red'))
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.cargarAcumuladoReal(1, 2026)
+
+    expect(tienda.error).toBe('fallo de red')
+    expect(devuelto).toBe(0)
+  })
+
+  it('lista los movimientos de un concepto en un mes concreto', async () => {
+    const movimientos = [
+      {
+        id: 1,
+        cuenta_id: 1,
+        categoria_id: 1,
+        subcategoria_id: null,
+        fecha_valor: '2026-03-15',
+        descripcion: 'Amazon Prime',
+        comentario: null,
+        importe: '-4.99',
+        saldo: '100.00',
+      },
+    ]
+    vi.mocked(clienteApi.obtener).mockResolvedValue(movimientos)
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.listarMovimientosDeConcepto(1, 2026, 3)
+
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/1/movimientos?anio=2026&mes=3')
+    expect(devuelto).toEqual(movimientos)
+  })
+
   it('exporta un solo año y dispara la descarga del fichero con su nombre', async () => {
     const blob = new Blob(['contenido'])
     vi.mocked(clienteApi.descargar).mockResolvedValue(blob)

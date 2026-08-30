@@ -8,6 +8,7 @@ from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
     ActualizarConceptoPrevisto,
 )
 from gestor_gastos.aplicacion.prevision.ajustar_valor_mensual import AjustarValorMensual
+from gestor_gastos.aplicacion.prevision.cargar_acumulado_real import CargarAcumuladoReal
 from gestor_gastos.aplicacion.prevision.crear_asociacion import CrearAsociacion
 from gestor_gastos.aplicacion.prevision.crear_asociacion_descripcion import (
     CrearAsociacionDescripcion,
@@ -36,6 +37,9 @@ from gestor_gastos.aplicacion.prevision.listar_asociaciones_descripcion import (
 )
 from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
     ListarConceptosPrevistos,
+)
+from gestor_gastos.aplicacion.prevision.listar_movimientos_de_concepto import (
+    ListarMovimientosDeConcepto,
 )
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
@@ -72,12 +76,14 @@ from gestor_gastos.interfaces.api.respuestas_error import (
     RESPUESTA_FILTRO_INVALIDO,
     RESPUESTA_NO_ENCONTRADO,
 )
+from gestor_gastos.interfaces.api.v1.esquemas.movimiento import MovimientoSalidaEsquema
 from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     AjusteMensualEsquema,
     AsociacionConceptoCrearEsquema,
     AsociacionConceptoSalidaEsquema,
     AsociacionDescripcionCrearEsquema,
     AsociacionDescripcionSalidaEsquema,
+    CargaAcumuladoRealEsquema,
     ConceptoPrevistoActualizarEsquema,
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
@@ -268,6 +274,46 @@ def eliminar_ajuste_mensual(
     EliminarAjusteMensual(
         RepositorioPrevisionesSqlAlchemy(sesion), RepositorioAjustesPrevisionSqlAlchemy(sesion)
     ).ejecutar(id_concepto, anio, mes)
+
+
+@enrutador.post(
+    "/{id_concepto:int}/cargar-real/{anio:int}",
+    response_model=CargaAcumuladoRealEsquema,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def cargar_acumulado_real(
+    id_concepto: int,
+    anio: int = Path(ge=1, le=9999),
+    sesion: Session = Depends(obtener_sesion),
+) -> CargaAcumuladoRealEsquema:
+    meses_actualizados = CargarAcumuladoReal(
+        RepositorioPrevisionesSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioAjustesPrevisionSqlAlchemy(sesion),
+        RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+    ).ejecutar(id_concepto, anio)
+    return CargaAcumuladoRealEsquema(meses_actualizados=meses_actualizados)
+
+
+@enrutador.get(
+    "/{id_concepto:int}/movimientos",
+    response_model=list[MovimientoSalidaEsquema],
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def movimientos_de_concepto(
+    id_concepto: int,
+    anio: int = Query(ge=1, le=9999),
+    mes: int = Query(ge=1, le=12),
+    sesion: Session = Depends(obtener_sesion),
+) -> list[MovimientoSalidaEsquema]:
+    movimientos = ListarMovimientosDeConcepto(
+        RepositorioPrevisionesSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+    ).ejecutar(id_concepto, anio, mes)
+    return [MovimientoSalidaEsquema(**asdict(m)) for m in movimientos]
 
 
 @enrutador.get("/asociaciones", response_model=list[AsociacionConceptoSalidaEsquema])

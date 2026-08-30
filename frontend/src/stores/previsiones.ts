@@ -3,8 +3,10 @@ import { ref } from 'vue'
 
 import { clienteApi, ErrorApi } from '@/api/cliente'
 import type {
+  CargaAcumuladoReal,
   ConceptoPrevisto,
   DatosConceptoPrevisto,
+  Movimiento,
   ResumenAnual,
   ResumenImportacionConceptosPrevistos,
   ResumenImportacionResumenAnual,
@@ -96,6 +98,32 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
+  async function cargarAcumuladoReal(idConcepto: number, anio: number): Promise<number> {
+    error.value = null
+    errorTraza.value = null
+    try {
+      const resultado = await clienteApi.crear<CargaAcumuladoReal>(
+        `/previsiones/${idConcepto}/cargar-real/${anio}`,
+        undefined,
+      )
+      await cargarResumenAnual(anio)
+      return resultado.meses_actualizados
+    } catch (motivo) {
+      _guardarError(motivo)
+      return 0
+    }
+  }
+
+  async function listarMovimientosDeConcepto(
+    idConcepto: number,
+    anio: number,
+    mes: number,
+  ): Promise<Movimiento[]> {
+    return clienteApi.obtener<Movimiento[]>(
+      `/previsiones/${idConcepto}/movimientos?anio=${anio}&mes=${mes}`,
+    )
+  }
+
   async function exportarResumenAnual(anioDesde: number, anioHasta: number): Promise<void> {
     error.value = null
     errorTraza.value = null
@@ -161,6 +189,8 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     cargarResumenAnual,
     ajustarCelda,
     eliminarAjuste,
+    cargarAcumuladoReal,
+    listarMovimientosDeConcepto,
     exportarResumenAnual,
     importarResumenAnualExcel,
     importarConceptosPrevistosExcel,

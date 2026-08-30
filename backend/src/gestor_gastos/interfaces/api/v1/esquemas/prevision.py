@@ -42,6 +42,10 @@ class AjusteMensualEsquema(BaseModel):
     importe: Decimal = Field(max_digits=12, decimal_places=2)
 
 
+class CargaAcumuladoRealEsquema(BaseModel):
+    meses_actualizados: int
+
+
 class FilaResumenAnualEsquema(BaseModel):
     concepto_id: int
     categoria_id: int

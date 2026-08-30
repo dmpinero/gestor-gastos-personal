@@ -157,6 +157,10 @@ export interface ResumenAnual {
   totales_ingresos: string[]
 }
 
+export interface CargaAcumuladoReal {
+  meses_actualizados: number
+}
+
 export interface AsociacionConcepto {
   id: number
   categoria_resumen_id: number

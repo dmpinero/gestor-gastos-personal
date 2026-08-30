@@ -65,3 +65,21 @@ Característica: Resumen anual de previsión
     Cuando asocio la categoría "Impuestos" del resumen anual con la descripción "Ayuntamiento Las Rozas" de movimientos
     Y consulto el resumen anual de 2026
     Entonces el concepto muestra el importe real "-40.00" en el mes 3
+
+  Escenario: Cargar el acumulado real sobrescribe un ajuste manual existente
+    Dado que existe la categoría "Suscripciones" con un concepto previsto mensual de importe "-4.99"
+    Y existe la cuenta "ES00 1234" con un movimiento en esa categoría en la fecha "2026-03-15" e importe "-4.99"
+    Y se ajusta manualmente el importe del mes 3 de 2026 a "-1.00"
+    Cuando cargo el acumulado real del concepto en 2026
+    Entonces la carga actualiza 1 mes
+    Cuando consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe ajustado "-4.99" en el mes 3
+
+  Escenario: Listar los movimientos de un concepto en un mes incluye los de categoría y los de descripción
+    Dado que existe la categoría "Comida" con un concepto previsto mensual de importe "-200.00"
+    Y existe la categoría "Alimentación" con un movimiento de "-150.00" en la fecha "2026-03-15"
+    Y existe la categoría "Varios" con un movimiento de descripción "Reembolso comida trabajo" e importe "-25.00" en la fecha "2026-03-20"
+    Cuando asocio la categoría "Comida" del resumen anual con la categoría "Alimentación" de movimientos
+    Y asocio la categoría "Comida" del resumen anual con la descripción "comida trabajo" de movimientos
+    Y listo los movimientos del concepto en el mes 3 de 2026
+    Entonces se listan 2 movimientos

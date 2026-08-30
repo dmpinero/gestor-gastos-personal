@@ -33,7 +33,7 @@ function montar(props: { titulo: string; filas: FilaResumenAnual[]; mensajeVacio
 
   return mount(TablaResumenAnualAgrupada, {
     global: { plugins: [pinia] },
-    props,
+    props: { anio: 2026, ...props },
   })
 }
 

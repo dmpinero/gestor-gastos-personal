@@ -99,6 +99,24 @@ describe('ModalListaMovimientos', () => {
     wrapper.unmount()
   })
 
+  it('con el slot "disparador", usa ese trigger en vez del enlace "Detalles" por defecto', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const wrapper = mount(ModalListaMovimientos, {
+      attachTo: document.body,
+      global: { plugins: [pinia] },
+      props: { titulo: 'Total gastado', movimientos },
+      slots: { disparador: '<button type="button">Ver detalle personalizado</button>' },
+    })
+
+    expect(wrapper.text()).not.toContain('Detalles')
+    await wrapper.get('button').trigger('click')
+
+    const modal = document.body.querySelector('[role="dialog"]')
+    expect(modal?.textContent).toContain('Total gastado')
+    wrapper.unmount()
+  })
+
   it('sin ordenar, muestra los movimientos en el orden recibido, con cuenta/categoría/subcategoría resueltas', async () => {
     const wrapper = montar()
     await wrapper.get('button').trigger('click')

@@ -322,3 +322,135 @@ def test_listar_por_subcategoria_cruza_cuentas(sesion_bd) -> None:
     movimientos = repositorio.listar_por_subcategoria(subcategoria.id)
 
     assert [m.id for m in movimientos] == [movimiento.id]
+
+
+def test_listar_por_categoria_y_mes_filtra_categoria_subcategoria_anio_y_mes(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    subcategoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_subcategoria(
+        Subcategoria(nombre="Cafes", categoria_id=categoria.id)
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    encaja = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 3, 5),
+            descripcion="Café marzo",
+            importe=Decimal("-3.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+    # Mismo mes/año pero sin la subcategoría: no debe aparecer.
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 6),
+            descripcion="Sin subcategoría",
+            importe=Decimal("-1.00"),
+            saldo=Decimal("99.00"),
+        )
+    )
+    # Mismo mes/categoría/subcategoría pero otro año: no debe aparecer.
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2025, 3, 5),
+            descripcion="Otro año",
+            importe=Decimal("-9.00"),
+            saldo=Decimal("1.00"),
+        )
+    )
+    # Mismo año/categoría/subcategoría pero otro mes: no debe aparecer.
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 4, 5),
+            descripcion="Otro mes",
+            importe=Decimal("-9.00"),
+            saldo=Decimal("1.00"),
+        )
+    )
+
+    movimientos = repositorio.listar_por_categoria_y_mes(categoria.id, subcategoria.id, 2026, 3)
+
+    assert [m.id for m in movimientos] == [encaja.id]
+
+
+def test_listar_por_categoria_y_mes_con_subcategoria_none_exige_movimientos_sin_subcategoria(
+    sesion_bd,
+) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    subcategoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_subcategoria(
+        Subcategoria(nombre="Cafes", categoria_id=categoria.id)
+    )
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    sin_subcategoria = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 5),
+            descripcion="Sin subcategoría",
+            importe=Decimal("-1.00"),
+            saldo=Decimal("99.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            subcategoria_id=subcategoria.id,
+            fecha_valor=datetime.date(2026, 3, 6),
+            descripcion="Con subcategoría",
+            importe=Decimal("-2.00"),
+            saldo=Decimal("97.00"),
+        )
+    )
+
+    movimientos = repositorio.listar_por_categoria_y_mes(categoria.id, None, 2026, 3)
+
+    assert [m.id for m in movimientos] == [sin_subcategoria.id]
+
+
+def test_listar_por_descripcion_y_mes_filtra_por_fragmento_anio_y_mes(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    encaja = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 5),
+            descripcion="Recibo Ayuntamiento Las Rozas",
+            importe=Decimal("-40.00"),
+            saldo=Decimal("60.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 6),
+            descripcion="Otra descripción",
+            importe=Decimal("-1.00"),
+            saldo=Decimal("59.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2025, 3, 5),
+            descripcion="Recibo Ayuntamiento Las Rozas",
+            importe=Decimal("-40.00"),
+            saldo=Decimal("1.00"),
+        )
+    )
+
+    movimientos = repositorio.listar_por_descripcion_y_mes("ayuntamiento las rozas", 2026, 3)
+
+    assert [m.id for m in movimientos] == [encaja.id]

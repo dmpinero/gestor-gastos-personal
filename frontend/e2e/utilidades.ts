@@ -28,6 +28,27 @@ export async function elegirOpcion(page: Page, disparador: Locator, texto: strin
 }
 
 /**
+ * Igual que `elegirOpcion`, pero para los Combobox (con buscador propio):
+ * a diferencia de Select, el foco del DOM se queda siempre en el input (el
+ * combobox sigue el patrón ARIA 1.2, con `aria-activedescendant` en vez de
+ * tabindex rotatorio), así que la opción resaltada nunca pasa `:focused` —
+ * hay que esperar a que Reka UI le añada `data-highlighted` en su lugar.
+ */
+export async function elegirOpcionBuscador(
+  page: Page,
+  disparador: Locator,
+  texto: string,
+): Promise<void> {
+  await disparador.click()
+  await page.keyboard.type(texto, { delay: 0 })
+  await expect(page.getByRole('option', { name: texto, exact: true })).toHaveAttribute(
+    'data-highlighted',
+    '',
+  )
+  await page.keyboard.press('Enter')
+}
+
+/**
  * Selector de "Cuenta" del formulario de crear/editar movimiento: un Select
  * normal de una sola opción (mismo patrón que Categoría/Subcategoría), con
  * nombre accesible "Cuenta". `exact: true` porque, sin él, coincidiría

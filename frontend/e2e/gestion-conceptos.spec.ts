@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcion, elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('crear una asociación hace que el Resumen anual encuentre el importe real en otra categoría', async ({
   page,
@@ -75,9 +75,12 @@ test('crear una asociación hace que el Resumen anual encuentre el importe real 
   await page.goto('/administracion/gestion-conceptos')
   await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible()
 
-  // El botón de "sin asociar" prellena el lado del resumen del formulario.
+  // Los conceptos sin asociar se agrupan por categoría y empiezan contraídos:
+  // hay que expandir el grupo antes de poder pulsar el concepto, que prellena
+  // el lado del resumen del formulario.
+  await page.getByRole('button', { name: nombreCategoriaResumen }).click()
   await page.getByRole('button', { name: nombreCategoriaResumen, exact: true }).click()
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     page.getByLabel('Categoría real de Movimientos', { exact: true }),
     nombreCategoriaMovimiento,

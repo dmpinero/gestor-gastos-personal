@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { ArrowRight, Link2, Trash2 } from '@lucide/vue'
-import { computed, onMounted, reactive } from 'vue'
+import { ArrowRight, ChevronRight, Link2, Trash2 } from '@lucide/vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import type { ConceptoPrevisto } from '@/api/tipos'
 import { useTiendaAsociaciones } from '@/stores/asociaciones'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 import { Button } from '@/componentes/ui/button'
-import { Label } from '@/componentes/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/componentes/ui/select'
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from '@/componentes/ui/combobox'
+import { Label } from '@/componentes/ui/label'
 import {
   Table,
   TableBody,
@@ -73,6 +75,17 @@ function subcategoriasDe(idCategoriaTexto: string) {
 const subcategoriasDelResumen = computed(() => subcategoriasDe(formulario.categoriaResumenId))
 const subcategoriasDelMovimiento = computed(() => subcategoriasDe(formulario.categoriaMovimientoId))
 
+// display-value de los Combobox: qué texto se muestra en el input para el
+// valor actualmente seleccionado (los propios <ComboboxItem> solo aportan el
+// texto que se busca al escribir).
+function mostrarCategoria(valor: string): string {
+  return nombreCategoria(Number(valor))
+}
+
+function mostrarSubcategoria(valor: string): string {
+  return valor === SIN_SUBCATEGORIA ? '(sin subcategoría)' : nombreSubcategoria(Number(valor))
+}
+
 const errorFormulario = computed(() => tiendaAsociaciones.error)
 
 function limpiarFormulario(): void {
@@ -129,6 +142,40 @@ const conceptosSinAsociar = computed(() => {
     return true
   })
 })
+
+interface GrupoConceptosSinAsociar {
+  categoriaId: number
+  nombre: string
+  conceptos: ConceptoPrevisto[]
+}
+
+// Agrupa los conceptos sin asociar por categoría, para poder mostrarlos como
+// una fila de categoría con sus conceptos debajo, en vez de una lista plana.
+const gruposConceptosSinAsociar = computed<GrupoConceptosSinAsociar[]>(() => {
+  const grupos = new Map<number, GrupoConceptosSinAsociar>()
+  for (const concepto of conceptosSinAsociar.value) {
+    let grupo = grupos.get(concepto.categoria_id)
+    if (!grupo) {
+      grupo = {
+        categoriaId: concepto.categoria_id,
+        nombre: nombreCategoria(concepto.categoria_id),
+        conceptos: [],
+      }
+      grupos.set(concepto.categoria_id, grupo)
+    }
+    grupo.conceptos.push(concepto)
+  }
+  return [...grupos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre))
+})
+
+const categoriasSinAsociarAbiertas = ref<Set<number>>(new Set())
+
+function alternarCategoriaSinAsociar(idCategoria: number): void {
+  const nuevo = new Set(categoriasSinAsociarAbiertas.value)
+  if (nuevo.has(idCategoria)) nuevo.delete(idCategoria)
+  else nuevo.add(idCategoria)
+  categoriasSinAsociarAbiertas.value = nuevo
+}
 </script>
 
 <template>
@@ -149,45 +196,53 @@ const conceptosSinAsociar = computed(() => {
           <Label id="etiqueta-categoria-movimiento" for="selector-categoria-movimiento"
             >Categoría real de Movimientos</Label
           >
-          <Select v-model="formulario.categoriaMovimientoId">
-            <SelectTrigger
-              id="selector-categoria-movimiento"
-              aria-labelledby="etiqueta-categoria-movimiento"
-              class="w-full"
-            >
-              <SelectValue placeholder="Selecciona una categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
+          <Combobox v-model="formulario.categoriaMovimientoId" open-on-click open-on-focus>
+            <ComboboxTrigger class="w-full">
+              <ComboboxInput
+                id="selector-categoria-movimiento"
+                aria-labelledby="etiqueta-categoria-movimiento"
+                placeholder="Selecciona o escribe para buscar"
+                :display-value="mostrarCategoria"
+              />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+              <ComboboxItem
                 v-for="item in tiendaCategorias.categorias"
                 :key="item.categoria.id"
                 :value="String(item.categoria.id)"
               >
                 {{ item.categoria.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </ComboboxItem>
+            </ComboboxContent>
+          </Combobox>
         </div>
 
         <div class="flex min-w-48 flex-1 flex-col gap-1.5">
           <Label id="etiqueta-subcategoria-movimiento" for="selector-subcategoria-movimiento"
             >Subcategoría real de Movimientos</Label
           >
-          <Select v-model="formulario.subcategoriaMovimientoId">
-            <SelectTrigger
-              id="selector-subcategoria-movimiento"
-              aria-labelledby="etiqueta-subcategoria-movimiento"
-              class="w-full"
-            >
-              <SelectValue placeholder="(sin subcategoría)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-              <SelectItem v-for="s in subcategoriasDelMovimiento" :key="s.id" :value="String(s.id)">
+          <Combobox v-model="formulario.subcategoriaMovimientoId" open-on-click open-on-focus>
+            <ComboboxTrigger class="w-full">
+              <ComboboxInput
+                id="selector-subcategoria-movimiento"
+                aria-labelledby="etiqueta-subcategoria-movimiento"
+                placeholder="Selecciona o escribe para buscar"
+                :display-value="mostrarSubcategoria"
+              />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+              <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+              <ComboboxItem
+                v-for="s in subcategoriasDelMovimiento"
+                :key="s.id"
+                :value="String(s.id)"
+              >
                 {{ s.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </ComboboxItem>
+            </ComboboxContent>
+          </Combobox>
         </div>
       </div>
 
@@ -198,45 +253,49 @@ const conceptosSinAsociar = computed(() => {
           <Label id="etiqueta-categoria-resumen" for="selector-categoria-resumen"
             >Categoría del Resumen anual</Label
           >
-          <Select v-model="formulario.categoriaResumenId">
-            <SelectTrigger
-              id="selector-categoria-resumen"
-              aria-labelledby="etiqueta-categoria-resumen"
-              class="w-full"
-            >
-              <SelectValue placeholder="Selecciona una categoría" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
+          <Combobox v-model="formulario.categoriaResumenId" open-on-click open-on-focus>
+            <ComboboxTrigger class="w-full">
+              <ComboboxInput
+                id="selector-categoria-resumen"
+                aria-labelledby="etiqueta-categoria-resumen"
+                placeholder="Selecciona o escribe para buscar"
+                :display-value="mostrarCategoria"
+              />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+              <ComboboxItem
                 v-for="item in tiendaCategorias.categorias"
                 :key="item.categoria.id"
                 :value="String(item.categoria.id)"
               >
                 {{ item.categoria.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </ComboboxItem>
+            </ComboboxContent>
+          </Combobox>
         </div>
 
         <div class="flex min-w-48 flex-1 flex-col gap-1.5">
           <Label id="etiqueta-subcategoria-resumen" for="selector-subcategoria-resumen"
             >Subcategoría del Resumen anual</Label
           >
-          <Select v-model="formulario.subcategoriaResumenId">
-            <SelectTrigger
-              id="selector-subcategoria-resumen"
-              aria-labelledby="etiqueta-subcategoria-resumen"
-              class="w-full"
-            >
-              <SelectValue placeholder="(sin subcategoría)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-              <SelectItem v-for="s in subcategoriasDelResumen" :key="s.id" :value="String(s.id)">
+          <Combobox v-model="formulario.subcategoriaResumenId" open-on-click open-on-focus>
+            <ComboboxTrigger class="w-full">
+              <ComboboxInput
+                id="selector-subcategoria-resumen"
+                aria-labelledby="etiqueta-subcategoria-resumen"
+                placeholder="Selecciona o escribe para buscar"
+                :display-value="mostrarSubcategoria"
+              />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+              <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+              <ComboboxItem v-for="s in subcategoriasDelResumen" :key="s.id" :value="String(s.id)">
                 {{ s.nombre }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </ComboboxItem>
+            </ComboboxContent>
+          </Combobox>
         </div>
       </div>
 
@@ -258,18 +317,41 @@ const conceptosSinAsociar = computed(() => {
       <h3 class="text-muted-foreground text-sm font-medium">
         Conceptos del Resumen anual sin asociar
       </h3>
-      <ul class="mt-2 flex flex-wrap gap-2">
-        <li v-for="concepto in conceptosSinAsociar" :key="concepto.id">
-          <Button
+      <div class="mt-2 flex flex-col gap-2">
+        <div
+          v-for="grupo in gruposConceptosSinAsociar"
+          :key="grupo.categoriaId"
+          class="overflow-hidden rounded-lg border"
+        >
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            @click="usarConceptoSinAsociar(concepto.categoria_id, concepto.subcategoria_id)"
+            class="hover:bg-muted/50 flex w-full items-center gap-3 p-2 text-left"
+            :aria-expanded="categoriasSinAsociarAbiertas.has(grupo.categoriaId)"
+            @click="alternarCategoriaSinAsociar(grupo.categoriaId)"
           >
-            {{ nombreConcepto(concepto.categoria_id, concepto.subcategoria_id) }}
-          </Button>
-        </li>
-      </ul>
+            <ChevronRight
+              class="size-4 shrink-0 transition-transform"
+              :class="categoriasSinAsociarAbiertas.has(grupo.categoriaId) ? 'rotate-90' : ''"
+            />
+            <span class="flex-1 truncate font-medium">{{ grupo.nombre }}</span>
+            <span class="text-muted-foreground text-sm"
+              >{{ grupo.conceptos.length }} concepto(s)</span
+            >
+          </button>
+
+          <ul v-if="categoriasSinAsociarAbiertas.has(grupo.categoriaId)" class="divide-y border-t">
+            <li v-for="concepto in grupo.conceptos" :key="concepto.id">
+              <button
+                type="button"
+                class="hover:bg-muted/50 flex w-full items-center px-3 py-2 pl-9 text-left text-sm"
+                @click="usarConceptoSinAsociar(concepto.categoria_id, concepto.subcategoria_id)"
+              >
+                {{ nombreConcepto(concepto.categoria_id, concepto.subcategoria_id) }}
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
 
     <div class="mt-6">

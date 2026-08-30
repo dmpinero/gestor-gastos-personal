@@ -123,6 +123,18 @@ class EscritorExportacionCompletaOpenpyxl:
                 ]
             )
 
+        hoja = libro.create_sheet("Asociaciones por descripción")
+        hoja.append(["ID", "ID categoría resumen", "ID subcategoría resumen", "Descripción"])
+        for asociacion in datos.asociaciones_descripcion:
+            hoja.append(
+                [
+                    asociacion.id,
+                    asociacion.categoria_resumen_id,
+                    asociacion.subcategoria_resumen_id,
+                    _texto(asociacion.descripcion),
+                ]
+            )
+
         buffer = io.BytesIO()
         libro.save(buffer)
         return buffer.getvalue()

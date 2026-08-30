@@ -6,6 +6,7 @@ from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
+    AsociacionDescripcion,
     ConceptoPrevisto,
 )
 
@@ -22,6 +23,7 @@ class DatosCompletos:
     conceptos_previstos: list[ConceptoPrevisto]
     ajustes: list[AjusteMensual]
     asociaciones: list[AsociacionConcepto]
+    asociaciones_descripcion: list[AsociacionDescripcion]
 
 
 @dataclass
@@ -35,3 +37,4 @@ class ResumenImportacionDatosCompletos:
     conceptos_previstos_importados: int
     ajustes_importados: int
     asociaciones_importadas: int
+    asociaciones_descripcion_importadas: int

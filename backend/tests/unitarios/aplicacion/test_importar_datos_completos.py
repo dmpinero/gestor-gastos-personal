@@ -18,6 +18,7 @@ def _datos_de_ejemplo() -> DatosCompletos:
         conceptos_previstos=[],
         ajustes=[],
         asociaciones=[],
+        asociaciones_descripcion=[],
     )
 
 

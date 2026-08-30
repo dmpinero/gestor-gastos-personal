@@ -27,4 +27,5 @@ class ImportarDatosCompletos:
             conceptos_previstos_importados=len(datos.conceptos_previstos),
             ajustes_importados=len(datos.ajustes),
             asociaciones_importadas=len(datos.asociaciones),
+            asociaciones_descripcion_importadas=len(datos.asociaciones_descripcion),
         )

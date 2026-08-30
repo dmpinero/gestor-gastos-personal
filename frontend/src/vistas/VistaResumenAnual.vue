@@ -258,6 +258,13 @@ async function editarCelda(conceptoId: number, mes: number, importe: string | nu
   }
 }
 
+async function cargarAcumuladoReal(conceptoId: number): Promise<void> {
+  const mesesActualizados = await tienda.cargarAcumuladoReal(conceptoId, anio.value)
+  if (mesesActualizados === 0) {
+    tienda.error = 'No hay movimientos asociados a este concepto en ese año.'
+  }
+}
+
 const panelExportarAbierto = ref(false)
 const anioExportarDesde = ref(0)
 const anioExportarHasta = ref(0)
@@ -688,18 +695,22 @@ const agrupadoPorCategoria = ref(false)
         <TablaResumenAnualAgrupada
           titulo="Gastos"
           :filas="filasGastosFiltradas"
+          :anio="anio"
           mensaje-vacio="No hay conceptos de gasto configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
+          @cargar-acumulado-real="cargarAcumuladoReal"
         />
         <TablaResumenAnualAgrupada
           titulo="Ingresos"
           :filas="filasIngresosFiltradas"
+          :anio="anio"
           mensaje-vacio="No hay conceptos de ingreso configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
+          @cargar-acumulado-real="cargarAcumuladoReal"
         />
       </template>
       <template v-else>
@@ -707,19 +718,23 @@ const agrupadoPorCategoria = ref(false)
           titulo="Gastos"
           :filas="filasGastosFiltradas"
           :totales="totalesGastosMostrados"
+          :anio="anio"
           mensaje-vacio="No hay conceptos de gasto configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
+          @cargar-acumulado-real="cargarAcumuladoReal"
         />
         <TablaResumenAnual
           titulo="Ingresos"
           :filas="filasIngresosFiltradas"
           :totales="totalesIngresosMostrados"
+          :anio="anio"
           mensaje-vacio="No hay conceptos de ingreso configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
+          @cargar-acumulado-real="cargarAcumuladoReal"
         />
       </template>
     </div>

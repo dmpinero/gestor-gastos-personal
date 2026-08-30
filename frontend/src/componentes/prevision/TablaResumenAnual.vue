@@ -1,11 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Pencil, Tag, Trash2 } from '@lucide/vue'
-import type { FilaResumenAnual, OrigenValorMensual, Periodicidad } from '@/api/tipos'
+import { Eye, Pencil, RefreshCw, Tag, Trash2 } from '@lucide/vue'
+import type { FilaResumenAnual, Movimiento, OrigenValorMensual, Periodicidad } from '@/api/tipos'
 import { claseColorImporte, formatearImporte } from '@/lib/formato'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { useTiendaPrevisiones } from '@/stores/previsiones'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
+import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/componentes/ui/alert-dialog'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
 import {
@@ -52,6 +65,7 @@ const props = withDefaults(
     filas: FilaResumenAnual[]
     totales: string[]
     mensajeVacio: string
+    anio: number
     ocultarTitulo?: boolean
   }>(),
   { ocultarTitulo: false },
@@ -61,7 +75,34 @@ const emit = defineEmits<{
   editar: [conceptoId: number]
   eliminar: [conceptoId: number]
   'editar-celda': [conceptoId: number, mes: number, importe: string | null]
+  'cargar-acumulado-real': [conceptoId: number]
 }>()
+
+const tiendaPrevisiones = useTiendaPrevisiones()
+const detalleMovimientos = ref<Record<string, Movimiento[]>>({})
+
+function claveDetalle(conceptoId: number, mes: number): string {
+  return `${conceptoId}-${mes}`
+}
+
+async function abrirDetalleMes(conceptoId: number, mes: number): Promise<void> {
+  const clave = claveDetalle(conceptoId, mes)
+  if (detalleMovimientos.value[clave]) return
+  detalleMovimientos.value[clave] = await tiendaPrevisiones.listarMovimientosDeConcepto(
+    conceptoId,
+    props.anio,
+    mes,
+  )
+}
+
+// ObtenerResumenAnual marca como "real" (con importe 0) los meses en los que
+// un concepto no mensual no aplica y tampoco hay movimientos: no hay nada
+// que inspeccionar ahí, así que el icono de detalle no debe aparecer.
+function mostrarDetalleMes(valor: { origen: OrigenValorMensual; importe: string }): boolean {
+  if (valor.origen === 'previsto') return false
+  if (valor.origen === 'real' && Number(valor.importe) === 0) return false
+  return true
+}
 
 // Solo "Concepto" es un campo realmente ordenable en este listado: los
 // meses son columnas fijas en su orden natural (Ene-Dic), no campos por los
@@ -164,16 +205,60 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
                   @keydown.escape="cancelarEdicion()"
                   @blur="confirmarEdicion()"
                 />
-                <button
-                  v-else
-                  type="button"
-                  class="hover:bg-muted/50 w-full px-2 py-2 text-right"
-                  @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
-                >
-                  {{ formatearImporte(valor.importe) }}
-                </button>
+                <div v-else class="flex items-center justify-end">
+                  <ModalListaMovimientos
+                    v-if="mostrarDetalleMes(valor)"
+                    :titulo="`${fila.nombre} — ${MESES_CORTOS[valor.mes - 1]} ${anio}`"
+                    :movimientos="
+                      detalleMovimientos[claveDetalle(fila.concepto_id, valor.mes)] ?? []
+                    "
+                  >
+                    <template #disparador>
+                      <button
+                        type="button"
+                        class="text-muted-foreground hover:text-foreground shrink-0 pl-2"
+                        :aria-label="`Ver movimientos de ${fila.nombre} en ${MESES_CORTOS[valor.mes - 1]}`"
+                        @click="abrirDetalleMes(fila.concepto_id, valor.mes)"
+                      >
+                        <Eye class="size-3.5" />
+                      </button>
+                    </template>
+                  </ModalListaMovimientos>
+                  <button
+                    type="button"
+                    class="hover:bg-muted/50 flex-1 px-2 py-2 text-right"
+                    @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
+                  >
+                    {{ formatearImporte(valor.importe) }}
+                  </button>
+                </div>
               </TableCell>
               <TableCell class="text-right whitespace-nowrap">
+                <AlertDialog>
+                  <AlertDialogTrigger as-child>
+                    <Button variant="ghost" size="icon" aria-label="Cargar acumulado real">
+                      <RefreshCw class="size-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle
+                        >¿Cargar acumulado real de "{{ fila.nombre }}"?</AlertDialogTitle
+                      >
+                      <AlertDialogDescription>
+                        Se sobrescribirá con el importe real de los movimientos cualquier mes de
+                        {{ anio }} que ya tengas ajustado a mano. Los meses sin movimientos
+                        asociados no se modifican.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogAction @click="emit('cargar-acumulado-real', fila.concepto_id)"
+                        >Cargar</AlertDialogAction
+                      >
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button
                   variant="ghost"
                   size="icon"

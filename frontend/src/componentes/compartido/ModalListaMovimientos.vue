@@ -108,7 +108,9 @@ const filasParaExportar = computed(() =>
 <template>
   <Dialog>
     <DialogTrigger as-child>
-      <Button variant="link" class="h-auto shrink-0 p-0 text-xs">Detalles</Button>
+      <slot name="disparador">
+        <Button variant="link" class="h-auto shrink-0 p-0 text-xs">Detalles</Button>
+      </slot>
     </DialogTrigger>
     <DialogContent class="flex max-h-[85vh] max-w-5xl flex-col">
       <DialogHeader class="shrink-0">

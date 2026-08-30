@@ -378,3 +378,37 @@ def la_importacion_crea_la_categoria(resultado_importacion_conceptos: dict, nomb
 @then(parsers.parse('la importación de conceptos previstos crea la subcategoría "{nombre}"'))
 def la_importacion_crea_la_subcategoria(resultado_importacion_conceptos: dict, nombre: str) -> None:
     assert nombre in resultado_importacion_conceptos["subcategorias_creadas"]
+
+
+@when(
+    parsers.parse("cargo el acumulado real del concepto en {anio:d}"),
+    target_fixture="resultado_carga",
+)
+def cargo_el_acumulado_real(cliente: TestClient, contexto: dict, anio: int) -> dict:
+    respuesta = cliente.post(f"/api/v1/previsiones/{contexto['concepto_id']}/cargar-real/{anio}")
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@then(parsers.parse("la carga actualiza {cantidad:d} mes"))
+def la_carga_actualiza_n_meses(resultado_carga: dict, cantidad: int) -> None:
+    assert resultado_carga["meses_actualizados"] == cantidad
+
+
+@when(
+    parsers.parse("listo los movimientos del concepto en el mes {mes:d} de {anio:d}"),
+    target_fixture="movimientos_concepto",
+)
+def listo_los_movimientos_del_concepto(
+    cliente: TestClient, contexto: dict, mes: int, anio: int
+) -> list:
+    respuesta = cliente.get(
+        f"/api/v1/previsiones/{contexto['concepto_id']}/movimientos?anio={anio}&mes={mes}"
+    )
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@then(parsers.parse("se listan {cantidad:d} movimientos"))
+def se_listan_n_movimientos(movimientos_concepto: list, cantidad: int) -> None:
+    assert len(movimientos_concepto) == cantidad

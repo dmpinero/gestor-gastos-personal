@@ -70,3 +70,17 @@ class RepositorioMovimientos(Protocol):
         contiene `fragmento_descripcion` (sin distinguir mayúsculas/
         minúsculas)."""
         ...
+
+    def listar_por_categoria_y_mes(
+        self, id_categoria: int, id_subcategoria: int | None, anio: int, mes: int
+    ) -> list[Movimiento]:
+        """Mismo filtro que `sumar_movimientos_por_mes`, pero devolviendo los
+        movimientos en vez de su suma."""
+        ...
+
+    def listar_por_descripcion_y_mes(
+        self, fragmento_descripcion: str, anio: int, mes: int
+    ) -> list[Movimiento]:
+        """Mismo filtro que `sumar_movimientos_por_descripcion_y_mes`, pero
+        devolviendo los movimientos en vez de su suma."""
+        ...

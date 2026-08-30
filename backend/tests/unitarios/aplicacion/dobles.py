@@ -269,6 +269,31 @@ class RepositorioMovimientosFalso:
             totales[mes] = totales.get(mes, Decimal("0")) + movimiento.importe
         return totales
 
+    def listar_por_categoria_y_mes(
+        self, id_categoria: int, id_subcategoria: int | None, anio: int, mes: int
+    ) -> list[Movimiento]:
+        movimientos = [
+            m
+            for m in self._movimientos.values()
+            if m.categoria_id == id_categoria
+            and m.subcategoria_id == id_subcategoria
+            and m.fecha_valor.year == anio
+            and m.fecha_valor.month == mes
+        ]
+        return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
+
+    def listar_por_descripcion_y_mes(
+        self, fragmento_descripcion: str, anio: int, mes: int
+    ) -> list[Movimiento]:
+        movimientos = [
+            m
+            for m in self._movimientos.values()
+            if fragmento_descripcion.lower() in m.descripcion.lower()
+            and m.fecha_valor.year == anio
+            and m.fecha_valor.month == mes
+        ]
+        return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
+
 
 class RepositorioPrevisionesFalso:
     """Doble de RepositorioPrevisiones en memoria."""

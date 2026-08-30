@@ -224,3 +224,32 @@ class RepositorioMovimientosSqlAlchemy:
             .group_by(mes)
         ).all()
         return {int(mes): total for mes, total in filas}
+
+    def listar_por_categoria_y_mes(
+        self, id_categoria: int, id_subcategoria: int | None, anio: int, mes: int
+    ) -> list[Movimiento]:
+        modelos = self._sesion.scalars(
+            select(MovimientoModelo)
+            .where(
+                MovimientoModelo.categoria_id == id_categoria,
+                MovimientoModelo.subcategoria_id == id_subcategoria,
+                func.extract("year", MovimientoModelo.fecha_valor) == anio,
+                func.extract("month", MovimientoModelo.fecha_valor) == mes,
+            )
+            .order_by(MovimientoModelo.fecha_valor.desc())
+        ).all()
+        return [_a_entidad(m) for m in modelos]
+
+    def listar_por_descripcion_y_mes(
+        self, fragmento_descripcion: str, anio: int, mes: int
+    ) -> list[Movimiento]:
+        modelos = self._sesion.scalars(
+            select(MovimientoModelo)
+            .where(
+                MovimientoModelo.descripcion.icontains(fragmento_descripcion),
+                func.extract("year", MovimientoModelo.fecha_valor) == anio,
+                func.extract("month", MovimientoModelo.fecha_valor) == mes,
+            )
+            .order_by(MovimientoModelo.fecha_valor.desc())
+        ).all()
+        return [_a_entidad(m) for m in modelos]

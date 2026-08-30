@@ -155,7 +155,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await expect(celdaMes(filaMensual, mesActualNumero)).toContainText('-30,00 €')
 
   // Editar en línea una celda prevista: fija un ajuste manual solo para ese mes.
-  await celdaMes(filaMensual, otroMes).getByRole('button').click()
+  await celdaMes(filaMensual, otroMes).getByRole('button').last().click()
   const entradaCelda = celdaMes(filaMensual, otroMes).locator('input')
   await expect(entradaCelda).toHaveValue('-60.00')
   await entradaCelda.fill('-99.00')
@@ -170,7 +170,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-03-celda-ajustada.png' })
 
   // Añadir un valor bajo demanda en una celda vacía (mes fuera de la periodicidad anual).
-  await celdaMes(filaAnual, 4).getByRole('button').click()
+  await celdaMes(filaAnual, 4).getByRole('button').last().click()
   const entradaCeldaVacia = celdaMes(filaAnual, 4).locator('input')
   await entradaCeldaVacia.fill('-20.00')
   await entradaCeldaVacia.press('Enter')
@@ -178,7 +178,9 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await expect(celdaMes(filaAnual, 4)).toHaveClass(/border-dashed/)
 
   // Revertir el ajuste (vaciar la celda) vuelve al valor calculado (previsto).
-  await celdaMes(filaMensual, otroMes).getByRole('button').click()
+  // La celda está "ajustada" (no vacía), así que además del botón de importe
+  // tiene el icono de "ver detalle": se usa .last() para no ambigüar.
+  await celdaMes(filaMensual, otroMes).getByRole('button').last().click()
   const entradaReversion = celdaMes(filaMensual, otroMes).locator('input')
   await entradaReversion.fill('')
   await entradaReversion.press('Enter')
@@ -681,7 +683,7 @@ test('agrupar el resumen anual por categoría permite expandir un grupo y editar
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-05-agrupado.png' })
 
   // Editar una celda dentro del grupo expandido funciona igual que sin agrupar.
-  await celdaMes(filaConcepto, 1).getByRole('button').click()
+  await celdaMes(filaConcepto, 1).getByRole('button').last().click()
   const entradaCelda = celdaMes(filaConcepto, 1).locator('input')
   await entradaCelda.fill('-99.00')
   await entradaCelda.press('Enter')
@@ -753,4 +755,114 @@ test('el buscador filtra los conceptos por nombre, tanto agrupados como sin agru
   // Limpiar la búsqueda vuelve a mostrar ambos conceptos dentro del grupo.
   await buscador.fill('')
   await expect(page.locator('tbody tr', { hasText: nombreSubcategoriaB })).toBeVisible()
+})
+
+test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del mes permite cambiar la categoría de un movimiento', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 CARGA ${sufijo}`
+  const nombreCategoria = `Categoria CARGA ${sufijo}`
+  const nombreSubcategoria = `Subcategoria CARGA ${sufijo}`
+  const nombreOtraCategoria = `Categoria CARGA-OTRA ${sufijo}`
+  const descripcionMovimiento = `Gasto real CARGA ${sufijo}`
+
+  const hoy = new Date()
+  const mesActualNumero = hoy.getMonth() + 1
+  const fechaMovimiento = `${hoy.getFullYear()}-${String(mesActualNumero).padStart(2, '0')}-15`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  const tarjetaCategoria = page.locator('[data-slot="card"]', { hasText: nombreCategoria })
+  await expect(tarjetaCategoria).toBeVisible()
+  await tarjetaCategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoria)
+  await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
+  await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreOtraCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreOtraCategoria })).toBeVisible()
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcion(
+    page,
+    panelConcepto.getByLabel('Subcategoría', { exact: true }),
+    nombreSubcategoria,
+  )
+  await panelConcepto.getByLabel('Importe previsto').fill('50.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+  const filaConcepto = page.locator('tbody tr', { hasText: nombreSubcategoria })
+  await expect(filaConcepto).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoria,
+    nombreSubcategoria,
+    descripcionMovimiento,
+    '-30.00',
+    fechaMovimiento,
+  )
+
+  await page.goto('/resumen-anual')
+  await expect(celdaMes(filaConcepto, mesActualNumero)).toContainText('-30,00 €')
+
+  // Ajuste manual "equivocado" en el mes actual, para demostrar que "cargar
+  // acumulado real" lo sobrescribe con el importe real de los movimientos.
+  await celdaMes(filaConcepto, mesActualNumero).getByRole('button').last().click()
+  const entradaCelda = celdaMes(filaConcepto, mesActualNumero).locator('input')
+  await entradaCelda.fill('-1.00')
+  await entradaCelda.press('Enter')
+  await expect(celdaMes(filaConcepto, mesActualNumero)).toContainText('-1,00 €')
+  await expect(celdaMes(filaConcepto, mesActualNumero)).toHaveClass(/border-dashed/)
+
+  await filaConcepto.getByRole('button', { name: 'Cargar acumulado real' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Cargar' }).click()
+  await expect(celdaMes(filaConcepto, mesActualNumero)).toContainText('-30,00 €')
+  await expect(celdaMes(filaConcepto, mesActualNumero)).toHaveClass(/border-dashed/)
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-06-cargar-acumulado.png' })
+
+  // Detalle del mes: se ve el movimiento real que compone el importe, y se
+  // le puede cambiar la categoría sin salir del Resumen anual.
+  await celdaMes(filaConcepto, mesActualNumero)
+    .getByRole('button', { name: /^Ver movimientos/ })
+    .click()
+  const modalDetalle = page.getByRole('dialog').filter({ hasText: descripcionMovimiento })
+  await expect(modalDetalle).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-07-detalle-movimientos.png' })
+
+  await modalDetalle.getByRole('button', { name: 'Editar' }).click()
+  const panelEdicion = page.getByRole('dialog').filter({ hasText: 'Editar movimiento' })
+  await expect(panelEdicion).toBeVisible()
+  await elegirOpcion(
+    page,
+    panelEdicion.getByLabel('Categoría', { exact: true }),
+    nombreOtraCategoria,
+  )
+  await panelEdicion.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(panelEdicion).toBeHidden()
+  // Cerrar el panel de edición no cierra la modal de detalle.
+  await expect(modalDetalle).toBeVisible()
+
+  // El movimiento ya no pertenece a la categoría original.
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  await expect(page.locator('tr', { hasText: descripcionMovimiento })).toContainText(
+    nombreOtraCategoria,
+  )
 })

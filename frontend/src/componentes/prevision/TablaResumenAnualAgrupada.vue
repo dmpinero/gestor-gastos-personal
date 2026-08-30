@@ -11,12 +11,14 @@ const props = defineProps<{
   titulo: string
   filas: FilaResumenAnual[]
   mensajeVacio: string
+  anio: number
 }>()
 
 const emit = defineEmits<{
   editar: [conceptoId: number]
   eliminar: [conceptoId: number]
   'editar-celda': [conceptoId: number, mes: number, importe: string | null]
+  'cargar-acumulado-real': [conceptoId: number]
 }>()
 
 const tiendaCategorias = useTiendaCategorias()
@@ -75,6 +77,7 @@ function alternarCategoria(idCategoria: number): void {
             :titulo="grupo.nombre"
             :filas="grupo.filas"
             :totales="grupo.totalesPorMes"
+            :anio="anio"
             mensaje-vacio=""
             ocultar-titulo
             @editar="emit('editar', $event)"
@@ -82,6 +85,7 @@ function alternarCategoria(idCategoria: number): void {
             @editar-celda="
               (conceptoId, mes, importe) => emit('editar-celda', conceptoId, mes, importe)
             "
+            @cargar-acumulado-real="emit('cargar-acumulado-real', $event)"
           />
         </div>
       </div>

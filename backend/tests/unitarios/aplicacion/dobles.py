@@ -257,13 +257,22 @@ class RepositorioMovimientosFalso:
         return totales
 
     def sumar_movimientos_por_descripcion_y_mes(
-        self, anio: int, fragmento_descripcion: str
+        self,
+        anio: int,
+        fragmento_descripcion: str,
+        categoria_excluida: int,
+        subcategoria_excluida: int | None,
     ) -> dict[int, Decimal]:
         totales: dict[int, Decimal] = {}
         for movimiento in self._movimientos.values():
             if movimiento.fecha_valor.year != anio:
                 continue
             if fragmento_descripcion.lower() not in movimiento.descripcion.lower():
+                continue
+            if (
+                movimiento.categoria_id == categoria_excluida
+                and movimiento.subcategoria_id == subcategoria_excluida
+            ):
                 continue
             mes = movimiento.fecha_valor.month
             totales[mes] = totales.get(mes, Decimal("0")) + movimiento.importe

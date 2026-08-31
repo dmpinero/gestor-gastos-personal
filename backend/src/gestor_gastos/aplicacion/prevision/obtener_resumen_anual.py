@@ -59,13 +59,22 @@ class ObtenerResumenAnual:
         )
         for a in self._repositorio_asociaciones_descripcion.listar():
             asociaciones_descripcion[(a.categoria_resumen_id, a.subcategoria_resumen_id)].append(a)
-        sumas_por_descripcion = {
-            a.descripcion: self._repositorio_movimientos.sumar_movimientos_por_descripcion_y_mes(
-                anio, a.descripcion
-            )
-            for asociaciones_del_concepto in asociaciones_descripcion.values()
-            for a in asociaciones_del_concepto
-        }
+        # Un movimiento cuya categoría/subcategoría ya es la real de este
+        # concepto, y cuya descripción TAMBIÉN coincide con una de sus
+        # AsociacionDescripcion, no debe sumarse dos veces: se excluye aquí
+        # de la suma por descripción (la suma por categoría ya lo cuenta).
+        sumas_por_descripcion: dict[str, dict[int, Decimal]] = {}
+        for asociaciones_del_concepto in asociaciones_descripcion.values():
+            for a in asociaciones_del_concepto:
+                categoria_real_asoc, subcategoria_real_asoc = asociaciones.get(
+                    (a.categoria_resumen_id, a.subcategoria_resumen_id),
+                    (a.categoria_resumen_id, a.subcategoria_resumen_id),
+                )
+                sumas_por_descripcion[a.descripcion] = (
+                    self._repositorio_movimientos.sumar_movimientos_por_descripcion_y_mes(
+                        anio, a.descripcion, categoria_real_asoc, subcategoria_real_asoc
+                    )
+                )
 
         filas_gastos: list[FilaResumenAnual] = []
         filas_ingresos: list[FilaResumenAnual] = []

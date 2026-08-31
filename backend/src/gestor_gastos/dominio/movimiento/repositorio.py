@@ -64,11 +64,19 @@ class RepositorioMovimientos(Protocol):
     ) -> dict[tuple[int, int | None, int], Decimal]: ...
 
     def sumar_movimientos_por_descripcion_y_mes(
-        self, anio: int, fragmento_descripcion: str
+        self,
+        anio: int,
+        fragmento_descripcion: str,
+        categoria_excluida: int,
+        subcategoria_excluida: int | None,
     ) -> dict[int, Decimal]:
         """Suma, mes a mes, los movimientos de ese año cuya descripción
         contiene `fragmento_descripcion` (sin distinguir mayúsculas/
-        minúsculas)."""
+        minúsculas), EXCLUYENDO los que ya pertenecen a
+        categoria_excluida/subcategoria_excluida: quien llama combina este
+        resultado con el de esa categoría/subcategoría (ver
+        sumar_movimientos_por_mes), y sin esta exclusión un movimiento que
+        coincidiera con ambos criterios se contaría dos veces."""
         ...
 
     def listar_por_categoria_y_mes(

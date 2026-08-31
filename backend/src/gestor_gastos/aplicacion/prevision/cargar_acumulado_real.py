@@ -49,9 +49,12 @@ class CargarAcumuladoReal:
             if a.categoria_resumen_id == concepto.categoria_id
             and a.subcategoria_resumen_id == concepto.subcategoria_id
         ]
+        # Un movimiento cuya categoría/subcategoría ya es categoria_real, y
+        # cuya descripción TAMBIÉN coincide con una AsociacionDescripcion, no
+        # debe sumarse dos veces (la suma por categoría ya lo cuenta).
         sumas_por_descripcion = {
             a.descripcion: self._repositorio_movimientos.sumar_movimientos_por_descripcion_y_mes(
-                anio, a.descripcion
+                anio, a.descripcion, categoria_real, subcategoria_real
             )
             for a in asociaciones_descripcion_concepto
         }

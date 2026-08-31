@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, not_, select, update
 from sqlalchemy.orm import Session
 
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
@@ -212,7 +212,11 @@ class RepositorioMovimientosSqlAlchemy:
         }
 
     def sumar_movimientos_por_descripcion_y_mes(
-        self, anio: int, fragmento_descripcion: str
+        self,
+        anio: int,
+        fragmento_descripcion: str,
+        categoria_excluida: int,
+        subcategoria_excluida: int | None,
     ) -> dict[int, Decimal]:
         mes = func.extract("month", MovimientoModelo.fecha_valor)
         filas = self._sesion.execute(
@@ -220,6 +224,12 @@ class RepositorioMovimientosSqlAlchemy:
             .where(
                 func.extract("year", MovimientoModelo.fecha_valor) == anio,
                 MovimientoModelo.descripcion.icontains(fragmento_descripcion),
+                not_(
+                    and_(
+                        MovimientoModelo.categoria_id == categoria_excluida,
+                        MovimientoModelo.subcategoria_id == subcategoria_excluida,
+                    )
+                ),
             )
             .group_by(mes)
         ).all()

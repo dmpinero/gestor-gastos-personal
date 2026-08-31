@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ArrowRight, ChevronRight, Link2, Trash2 } from '@lucide/vue'
+import { ArrowRight, ChevronRight, Link2, Pencil, Trash2 } from '@lucide/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
-import type { ConceptoPrevisto } from '@/api/tipos'
+import type { AsociacionConcepto, AsociacionDescripcion, ConceptoPrevisto } from '@/api/tipos'
 import { useTiendaAsociaciones } from '@/stores/asociaciones'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
@@ -117,19 +117,79 @@ function usarConceptoSinAsociar(idCategoria: number, idSubcategoria: number | nu
     idSubcategoria === null ? SIN_SUBCATEGORIA : String(idSubcategoria)
 }
 
-// El formulario tiene dos formas alternativas de crear una asociación (por
-// categoría de movimientos o por descripción); un único botón crea la que
-// esté rellena, priorizando la descripción si ambas lo están.
+// El formulario tiene dos formas alternativas de crear/editar una asociación
+// (por categoría de movimientos o por descripción); un único botón guarda la
+// que esté rellena, priorizando la descripción si ambas lo están. Al editar,
+// `edicion` fija cuál de las dos se está editando (independientemente de qué
+// campos tenga rellenos en ese momento).
 const formularioListo = computed(
   () =>
     (formulario.categoriaResumenId && formulario.categoriaMovimientoId) ||
     (formularioDescripcion.categoriaResumenId && formularioDescripcion.descripcion.trim()),
 )
 
-async function crearAsociacion(): Promise<void> {
+const edicion = ref<{ tipo: 'categoria' | 'descripcion'; id: number } | null>(null)
+
+function editarAsociacion(asociacion: AsociacionConcepto): void {
+  limpiarFormulario()
+  limpiarFormularioDescripcion()
+  formulario.categoriaResumenId = String(asociacion.categoria_resumen_id)
+  formulario.subcategoriaResumenId =
+    asociacion.subcategoria_resumen_id === null
+      ? SIN_SUBCATEGORIA
+      : String(asociacion.subcategoria_resumen_id)
+  formulario.categoriaMovimientoId = String(asociacion.categoria_movimiento_id)
+  formulario.subcategoriaMovimientoId =
+    asociacion.subcategoria_movimiento_id === null
+      ? SIN_SUBCATEGORIA
+      : String(asociacion.subcategoria_movimiento_id)
+  edicion.value = { tipo: 'categoria', id: asociacion.id }
+}
+
+function editarAsociacionDescripcion(asociacion: AsociacionDescripcion): void {
+  limpiarFormulario()
+  limpiarFormularioDescripcion()
+  formularioDescripcion.categoriaResumenId = String(asociacion.categoria_resumen_id)
+  formularioDescripcion.subcategoriaResumenId =
+    asociacion.subcategoria_resumen_id === null
+      ? SIN_SUBCATEGORIA
+      : String(asociacion.subcategoria_resumen_id)
+  formularioDescripcion.descripcion = asociacion.descripcion
+  edicion.value = { tipo: 'descripcion', id: asociacion.id }
+}
+
+function cancelarEdicion(): void {
+  limpiarFormulario()
+  limpiarFormularioDescripcion()
+  edicion.value = null
+}
+
+async function guardarAsociacion(): Promise<void> {
   tiendaAsociaciones.error = null
   try {
-    if (formularioDescripcion.descripcion.trim()) {
+    if (edicion.value?.tipo === 'categoria') {
+      await tiendaAsociaciones.actualizar(edicion.value.id, {
+        categoria_resumen_id: Number(formulario.categoriaResumenId),
+        subcategoria_resumen_id:
+          formulario.subcategoriaResumenId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formulario.subcategoriaResumenId),
+        categoria_movimiento_id: Number(formulario.categoriaMovimientoId),
+        subcategoria_movimiento_id:
+          formulario.subcategoriaMovimientoId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formulario.subcategoriaMovimientoId),
+      })
+    } else if (edicion.value?.tipo === 'descripcion') {
+      await tiendaAsociaciones.actualizarDescripcion(edicion.value.id, {
+        categoria_resumen_id: Number(formularioDescripcion.categoriaResumenId),
+        subcategoria_resumen_id:
+          formularioDescripcion.subcategoriaResumenId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formularioDescripcion.subcategoriaResumenId),
+        descripcion: formularioDescripcion.descripcion.trim(),
+      })
+    } else if (formularioDescripcion.descripcion.trim()) {
       await tiendaAsociaciones.crearDescripcion({
         categoria_resumen_id: Number(formularioDescripcion.categoriaResumenId),
         subcategoria_resumen_id:
@@ -154,6 +214,7 @@ async function crearAsociacion(): Promise<void> {
     }
     limpiarFormulario()
     limpiarFormularioDescripcion()
+    edicion.value = null
   } catch {
     // El error ya queda reflejado en tiendaAsociaciones.error.
   }
@@ -235,7 +296,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
 
     <form
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
-      @submit.prevent="crearAsociacion"
+      @submit.prevent="guardarAsociacion"
     >
       <div class="flex flex-col gap-4 md:flex-row md:items-end">
         <div class="flex flex-1 flex-wrap gap-4">
@@ -433,10 +494,13 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
         </div>
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-2">
+        <Button v-if="edicion" type="button" variant="destructive" @click="cancelarEdicion">
+          Cancelar
+        </Button>
         <Button type="submit" variant="success" :disabled="!formularioListo">
           <Link2 class="size-4" />
-          Crear asociación
+          {{ edicion ? 'Guardar cambios' : 'Crear asociación' }}
         </Button>
       </div>
     </form>
@@ -521,7 +585,15 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
                   )
                 }}
               </TableCell>
-              <TableCell class="text-right">
+              <TableCell class="text-right whitespace-nowrap">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Editar"
+                  @click="editarAsociacion(asociacion)"
+                >
+                  <Pencil class="size-4" />
+                </Button>
                 <DialogoConfirmarEliminacion
                   :descripcion="`esta asociación`"
                   @confirmar="eliminarAsociacion(asociacion.id)"
@@ -577,7 +649,15 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
                 }}
               </TableCell>
               <TableCell>{{ asociacion.descripcion }}</TableCell>
-              <TableCell class="text-right">
+              <TableCell class="text-right whitespace-nowrap">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Editar"
+                  @click="editarAsociacionDescripcion(asociacion)"
+                >
+                  <Pencil class="size-4" />
+                </Button>
                 <DialogoConfirmarEliminacion
                   :descripcion="`esta asociación`"
                   @confirmar="eliminarAsociacionDescripcion(asociacion.id)"

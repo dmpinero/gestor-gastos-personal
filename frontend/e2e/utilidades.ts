@@ -33,6 +33,11 @@ export async function elegirOpcion(page: Page, disparador: Locator, texto: strin
  * combobox sigue el patrón ARIA 1.2, con `aria-activedescendant` en vez de
  * tabindex rotatorio), así que la opción resaltada nunca pasa `:focused` —
  * hay que esperar a que Reka UI le añada `data-highlighted` en su lugar.
+ *
+ * Si el combobox ya tenía un valor elegido (p. ej. al editar un registro
+ * existente), el input conserva ese texto tras el click: se selecciona todo
+ * antes de escribir para que sustituya al valor anterior en vez de
+ * concatenarse con él.
  */
 export async function elegirOpcionBuscador(
   page: Page,
@@ -40,6 +45,7 @@ export async function elegirOpcionBuscador(
   texto: string,
 ): Promise<void> {
   await disparador.click()
+  await page.keyboard.press('ControlOrMeta+A')
   await page.keyboard.type(texto, { delay: 0 })
   await expect(page.getByRole('option', { name: texto, exact: true })).toHaveAttribute(
     'data-highlighted',

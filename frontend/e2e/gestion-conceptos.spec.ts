@@ -113,6 +113,114 @@ test('crear una asociación hace que el Resumen anual encuentre el importe real 
   await expect(celdaMarzo).toHaveClass(/italic/)
 })
 
+test('editar una asociación ya creada cambia la categoría real que usa el Resumen anual', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 EDITAR-ASOC ${sufijo}`
+  const nombreCategoriaResumen = `Categoria RESUMEN-EDITAR ${sufijo}`
+  const nombreCategoriaOriginal = `Categoria ORIGINAL-EDITAR ${sufijo}`
+  const nombreCategoriaNueva = `Categoria NUEVA-EDITAR ${sufijo}`
+  const anioActual = new Date().getFullYear()
+  const fechaMovimiento = `${anioActual}-03-15`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombre of [nombreCategoriaResumen, nombreCategoriaOriginal, nombreCategoriaNueva]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  await elegirOpcion(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaResumen,
+  )
+  await panelConcepto.getByLabel('Importe previsto').fill('200.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+
+  const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoriaResumen })
+  await expect(filaConcepto).toBeVisible()
+  const celdaMarzo = filaConcepto.locator('td').nth(3)
+
+  // Un movimiento en cada categoría candidata, con importes distintos para
+  // poder distinguir sin ambigüedad cuál de las dos usa el Resumen anual.
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  for (const [nombreCategoria, importe] of [
+    [nombreCategoriaOriginal, '-150.00'],
+    [nombreCategoriaNueva, '-90.00'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panelMovimiento = page.getByRole('dialog')
+    await panelMovimiento.locator('input[type="date"]').fill(fechaMovimiento)
+    await elegirOpcion(
+      page,
+      panelMovimiento.getByLabel('Categoría', { exact: true }),
+      nombreCategoria,
+    )
+    const descripcionMovimiento = `Movimiento ${nombreCategoria}`
+    await panelMovimiento.getByPlaceholder('Descripción').fill(descripcionMovimiento)
+    await panelMovimiento.getByPlaceholder('Importe').fill(importe)
+    await panelMovimiento.getByPlaceholder('Saldo').fill('1000.00')
+    await panelMovimiento.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcionMovimiento })).toBeVisible()
+  }
+
+  // Crear la asociación apuntando primero a la categoría "original".
+  await page.goto('/administracion/gestion-conceptos')
+  await page.getByRole('button', { name: nombreCategoriaResumen }).click()
+  await page.getByRole('button', { name: nombreCategoriaResumen, exact: true }).click()
+  await elegirOpcionBuscador(
+    page,
+    page.getByLabel('Categoría real de Movimientos', { exact: true }),
+    nombreCategoriaOriginal,
+  )
+  await page.getByRole('button', { name: 'Crear asociación' }).click()
+
+  const filaAsociacion = page.locator('tbody tr', { hasText: nombreCategoriaResumen })
+  await expect(filaAsociacion).toBeVisible()
+  await expect(filaAsociacion).toContainText(nombreCategoriaOriginal)
+
+  await page.goto('/resumen-anual')
+  await expect(celdaMarzo).toContainText('-150,00 €')
+
+  // Editar la asociación para que apunte a la categoría "nueva": el
+  // formulario se prellena y el botón pasa a "Guardar cambios".
+  await page.goto('/administracion/gestion-conceptos')
+  await filaAsociacion.getByRole('button', { name: 'Editar' }).click()
+  await expect(page.getByLabel('Categoría real de Movimientos', { exact: true })).toHaveValue(
+    nombreCategoriaOriginal,
+  )
+  await expect(page.getByRole('button', { name: 'Guardar cambios' })).toBeVisible()
+  await elegirOpcionBuscador(
+    page,
+    page.getByLabel('Categoría real de Movimientos', { exact: true }),
+    nombreCategoriaNueva,
+  )
+  await page.getByRole('button', { name: 'Guardar cambios' }).click()
+
+  await expect(filaAsociacion).toContainText(nombreCategoriaNueva)
+  await expect(page.getByRole('button', { name: 'Crear asociación' })).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/gestion-conceptos-03-asociacion-editada.png' })
+
+  // El Resumen anual ahora usa el importe de la categoría nueva.
+  await page.goto('/resumen-anual')
+  await expect(celdaMarzo).toContainText('-90,00 €')
+})
+
 test('crear una asociación por descripción hace que el Resumen anual encuentre el importe real de un movimiento suelto', async ({
   page,
 }) => {

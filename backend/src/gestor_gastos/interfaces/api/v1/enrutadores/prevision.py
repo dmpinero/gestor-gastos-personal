@@ -4,6 +4,10 @@ from fastapi import APIRouter, Depends, Path, Query, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from gestor_gastos.aplicacion.prevision.actualizar_asociacion import ActualizarAsociacion
+from gestor_gastos.aplicacion.prevision.actualizar_asociacion_descripcion import (
+    ActualizarAsociacionDescripcion,
+)
 from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
     ActualizarConceptoPrevisto,
 )
@@ -79,8 +83,10 @@ from gestor_gastos.interfaces.api.respuestas_error import (
 from gestor_gastos.interfaces.api.v1.esquemas.movimiento import MovimientoSalidaEsquema
 from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     AjusteMensualEsquema,
+    AsociacionConceptoActualizarEsquema,
     AsociacionConceptoCrearEsquema,
     AsociacionConceptoSalidaEsquema,
+    AsociacionDescripcionActualizarEsquema,
     AsociacionDescripcionCrearEsquema,
     AsociacionDescripcionSalidaEsquema,
     CargaAcumuladoRealEsquema,
@@ -344,6 +350,28 @@ def crear_asociacion(
     return AsociacionConceptoSalidaEsquema(**asdict(asociacion))
 
 
+@enrutador.put(
+    "/asociaciones/{id_asociacion:int}",
+    response_model=AsociacionConceptoSalidaEsquema,
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO, **RESPUESTA_CUERPO_MALFORMADO},
+)
+def actualizar_asociacion(
+    id_asociacion: int,
+    datos: AsociacionConceptoActualizarEsquema,
+    sesion: Session = Depends(obtener_sesion),
+) -> AsociacionConceptoSalidaEsquema:
+    asociacion = ActualizarAsociacion(
+        RepositorioAsociacionesSqlAlchemy(sesion), RepositorioCategoriasSqlAlchemy(sesion)
+    ).ejecutar(
+        id_asociacion,
+        categoria_resumen_id=datos.categoria_resumen_id,
+        subcategoria_resumen_id=datos.subcategoria_resumen_id,
+        categoria_movimiento_id=datos.categoria_movimiento_id,
+        subcategoria_movimiento_id=datos.subcategoria_movimiento_id,
+    )
+    return AsociacionConceptoSalidaEsquema(**asdict(asociacion))
+
+
 @enrutador.delete(
     "/asociaciones/{id_asociacion:int}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -376,6 +404,28 @@ def crear_asociacion_descripcion(
         RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
         RepositorioCategoriasSqlAlchemy(sesion),
     ).ejecutar(
+        categoria_resumen_id=datos.categoria_resumen_id,
+        subcategoria_resumen_id=datos.subcategoria_resumen_id,
+        descripcion=datos.descripcion,
+    )
+    return AsociacionDescripcionSalidaEsquema(**asdict(asociacion))
+
+
+@enrutador.put(
+    "/asociaciones-descripcion/{id_asociacion:int}",
+    response_model=AsociacionDescripcionSalidaEsquema,
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CONFLICTO, **RESPUESTA_CUERPO_MALFORMADO},
+)
+def actualizar_asociacion_descripcion(
+    id_asociacion: int,
+    datos: AsociacionDescripcionActualizarEsquema,
+    sesion: Session = Depends(obtener_sesion),
+) -> AsociacionDescripcionSalidaEsquema:
+    asociacion = ActualizarAsociacionDescripcion(
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+        RepositorioCategoriasSqlAlchemy(sesion),
+    ).ejecutar(
+        id_asociacion,
         categoria_resumen_id=datos.categoria_resumen_id,
         subcategoria_resumen_id=datos.subcategoria_resumen_id,
         descripcion=datos.descripcion,

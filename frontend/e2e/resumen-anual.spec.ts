@@ -155,7 +155,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await expect(celdaMes(filaMensual, mesActualNumero)).toContainText('-30,00 €')
 
   // Editar en línea una celda prevista: fija un ajuste manual solo para ese mes.
-  await celdaMes(filaMensual, otroMes).getByRole('button').last().click()
+  await celdaMes(filaMensual, otroMes).getByRole('button').first().click()
   const entradaCelda = celdaMes(filaMensual, otroMes).locator('input')
   await expect(entradaCelda).toHaveValue('-60.00')
   await entradaCelda.fill('-99.00')
@@ -170,7 +170,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-03-celda-ajustada.png' })
 
   // Añadir un valor bajo demanda en una celda vacía (mes fuera de la periodicidad anual).
-  await celdaMes(filaAnual, 4).getByRole('button').last().click()
+  await celdaMes(filaAnual, 4).getByRole('button').first().click()
   const entradaCeldaVacia = celdaMes(filaAnual, 4).locator('input')
   await entradaCeldaVacia.fill('-20.00')
   await entradaCeldaVacia.press('Enter')
@@ -179,8 +179,9 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
 
   // Revertir el ajuste (vaciar la celda) vuelve al valor calculado (previsto).
   // La celda está "ajustada" (no vacía), así que además del botón de importe
-  // tiene el icono de "ver detalle": se usa .last() para no ambigüar.
-  await celdaMes(filaMensual, otroMes).getByRole('button').last().click()
+  // tiene el icono de "ver detalle" (a su derecha): se usa .first() para no
+  // ambigüar.
+  await celdaMes(filaMensual, otroMes).getByRole('button').first().click()
   const entradaReversion = celdaMes(filaMensual, otroMes).locator('input')
   await entradaReversion.fill('')
   await entradaReversion.press('Enter')
@@ -683,7 +684,7 @@ test('agrupar el resumen anual por categoría permite expandir un grupo y editar
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-05-agrupado.png' })
 
   // Editar una celda dentro del grupo expandido funciona igual que sin agrupar.
-  await celdaMes(filaConcepto, 1).getByRole('button').last().click()
+  await celdaMes(filaConcepto, 1).getByRole('button').first().click()
   const entradaCelda = celdaMes(filaConcepto, 1).locator('input')
   await entradaCelda.fill('-99.00')
   await entradaCelda.press('Enter')
@@ -824,7 +825,7 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
 
   // Ajuste manual "equivocado" en el mes actual, para demostrar que "cargar
   // acumulado real" lo sobrescribe con el importe real de los movimientos.
-  await celdaMes(filaConcepto, mesActualNumero).getByRole('button').last().click()
+  await celdaMes(filaConcepto, mesActualNumero).getByRole('button').first().click()
   const entradaCelda = celdaMes(filaConcepto, mesActualNumero).locator('input')
   await entradaCelda.fill('-1.00')
   await entradaCelda.press('Enter')

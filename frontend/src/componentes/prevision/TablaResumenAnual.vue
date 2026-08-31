@@ -104,6 +104,10 @@ function mostrarDetalleMes(valor: { origen: OrigenValorMensual; importe: string 
   return true
 }
 
+function saldoAnual(fila: FilaResumenAnual): string {
+  return fila.valores.reduce((suma, valor) => suma + Number(valor.importe), 0).toFixed(2)
+}
+
 // Solo "Concepto" es un campo realmente ordenable en este listado: los
 // meses son columnas fijas en su orden natural (Ene-Dic), no campos por los
 // que tenga sentido reordenar filas.
@@ -186,6 +190,12 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
                   <Badge :class="COLOR_PERIODICIDAD[fila.periodicidad]" variant="outline">
                     {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
                   </Badge>
+                  <span
+                    class="text-xs tabular-nums whitespace-nowrap"
+                    :class="claseColorImporte(saldoAnual(fila)) || 'text-muted-foreground'"
+                  >
+                    Saldo año {{ anio }}: {{ formatearImporte(saldoAnual(fila)) }}
+                  </span>
                 </div>
               </TableCell>
               <TableCell
@@ -206,6 +216,13 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
                   @blur="confirmarEdicion()"
                 />
                 <div v-else class="flex items-center justify-end">
+                  <button
+                    type="button"
+                    class="hover:bg-muted/50 flex-1 px-2 py-2 text-right"
+                    @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
+                  >
+                    {{ formatearImporte(valor.importe) }}
+                  </button>
                   <ModalListaMovimientos
                     v-if="mostrarDetalleMes(valor)"
                     :titulo="`${fila.nombre} — ${MESES_CORTOS[valor.mes - 1]} ${anio}`"
@@ -216,7 +233,7 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
                     <template #disparador>
                       <button
                         type="button"
-                        class="text-muted-foreground hover:text-foreground shrink-0 pl-2"
+                        class="text-muted-foreground hover:text-foreground shrink-0 pr-2"
                         :aria-label="`Ver movimientos de ${fila.nombre} en ${MESES_CORTOS[valor.mes - 1]}`"
                         @click="abrirDetalleMes(fila.concepto_id, valor.mes)"
                       >
@@ -224,13 +241,6 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
                       </button>
                     </template>
                   </ModalListaMovimientos>
-                  <button
-                    type="button"
-                    class="hover:bg-muted/50 flex-1 px-2 py-2 text-right"
-                    @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
-                  >
-                    {{ formatearImporte(valor.importe) }}
-                  </button>
                 </div>
               </TableCell>
               <TableCell class="text-right whitespace-nowrap">

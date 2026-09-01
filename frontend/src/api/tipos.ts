@@ -161,6 +161,11 @@ export interface CargaAcumuladoReal {
   meses_actualizados: number
 }
 
+export interface CargaAcumuladoRealTodos {
+  conceptos_actualizados: number
+  meses_actualizados: number
+}
+
 export interface AsociacionConcepto {
   id: number
   categoria_resumen_id: number

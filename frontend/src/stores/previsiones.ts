@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { clienteApi, ErrorApi } from '@/api/cliente'
 import type {
   CargaAcumuladoReal,
+  CargaAcumuladoRealTodos,
   ConceptoPrevisto,
   DatosConceptoPrevisto,
   Movimiento,
@@ -114,6 +115,25 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
+  async function cargarAcumuladoRealTodos(anio: number): Promise<CargaAcumuladoRealTodos | null> {
+    cargando.value = true
+    error.value = null
+    errorTraza.value = null
+    try {
+      const resultado = await clienteApi.crear<CargaAcumuladoRealTodos>(
+        `/previsiones/cargar-real?anio=${anio}`,
+        undefined,
+      )
+      await cargarResumenAnual(anio)
+      return resultado
+    } catch (motivo) {
+      _guardarError(motivo)
+      return null
+    } finally {
+      cargando.value = false
+    }
+  }
+
   async function listarMovimientosDeConcepto(
     idConcepto: number,
     anio: number,
@@ -190,6 +210,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     ajustarCelda,
     eliminarAjuste,
     cargarAcumuladoReal,
+    cargarAcumuladoRealTodos,
     listarMovimientosDeConcepto,
     exportarResumenAnual,
     importarResumenAnualExcel,

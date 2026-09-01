@@ -193,6 +193,32 @@ describe('useTiendaPrevisiones', () => {
     expect(devuelto).toBe(0)
   })
 
+  it('carga el acumulado real de todos los conceptos, recarga el resumen y devuelve el resultado', async () => {
+    vi.mocked(clienteApi.crear).mockResolvedValue({
+      conceptos_actualizados: 2,
+      meses_actualizados: 5,
+    })
+    vi.mocked(clienteApi.obtener).mockResolvedValue(resumenEjemplo)
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.cargarAcumuladoRealTodos(2026)
+
+    expect(clienteApi.crear).toHaveBeenCalledWith('/previsiones/cargar-real?anio=2026', undefined)
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
+    expect(tienda.resumenAnual).toEqual(resumenEjemplo)
+    expect(devuelto).toEqual({ conceptos_actualizados: 2, meses_actualizados: 5 })
+  })
+
+  it('guarda el mensaje de error si cargar el acumulado real de todos falla y devuelve null', async () => {
+    vi.mocked(clienteApi.crear).mockRejectedValue(new Error('fallo de red'))
+
+    const tienda = useTiendaPrevisiones()
+    const devuelto = await tienda.cargarAcumuladoRealTodos(2026)
+
+    expect(tienda.error).toBe('fallo de red')
+    expect(devuelto).toBeNull()
+  })
+
   it('lista los movimientos de un concepto en un mes concreto', async () => {
     const movimientos = [
       {

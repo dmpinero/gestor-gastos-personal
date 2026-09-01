@@ -13,6 +13,9 @@ from gestor_gastos.aplicacion.prevision.actualizar_concepto_previsto import (
 )
 from gestor_gastos.aplicacion.prevision.ajustar_valor_mensual import AjustarValorMensual
 from gestor_gastos.aplicacion.prevision.cargar_acumulado_real import CargarAcumuladoReal
+from gestor_gastos.aplicacion.prevision.cargar_acumulado_real_todos import (
+    CargarAcumuladoRealTodos,
+)
 from gestor_gastos.aplicacion.prevision.crear_asociacion import CrearAsociacion
 from gestor_gastos.aplicacion.prevision.crear_asociacion_descripcion import (
     CrearAsociacionDescripcion,
@@ -90,6 +93,7 @@ from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     AsociacionDescripcionCrearEsquema,
     AsociacionDescripcionSalidaEsquema,
     CargaAcumuladoRealEsquema,
+    CargaAcumuladoRealTodosEsquema,
     ConceptoPrevistoActualizarEsquema,
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
@@ -300,6 +304,26 @@ def cargar_acumulado_real(
         RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     ).ejecutar(id_concepto, anio)
     return CargaAcumuladoRealEsquema(meses_actualizados=meses_actualizados)
+
+
+@enrutador.post(
+    "/cargar-real",
+    response_model=CargaAcumuladoRealTodosEsquema,
+)
+def cargar_acumulado_real_todos(
+    anio: int = Query(ge=1, le=9999),
+    sesion: Session = Depends(obtener_sesion),
+) -> CargaAcumuladoRealTodosEsquema:
+    conceptos_actualizados, meses_actualizados = CargarAcumuladoRealTodos(
+        RepositorioPrevisionesSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioAjustesPrevisionSqlAlchemy(sesion),
+        RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+    ).ejecutar(anio)
+    return CargaAcumuladoRealTodosEsquema(
+        conceptos_actualizados=conceptos_actualizados, meses_actualizados=meses_actualizados
+    )
 
 
 @enrutador.get(

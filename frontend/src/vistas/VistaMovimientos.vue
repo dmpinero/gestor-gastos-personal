@@ -511,109 +511,6 @@ function alternarSeleccion(id: number, marcado: boolean): void {
       />
     </div>
 
-    <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
-      <Collapsible v-model:open="filtrosAbiertos">
-        <CollapsibleTrigger
-          class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
-          :aria-label="filtrosAbiertos ? 'Contraer filtros' : 'Expandir filtros'"
-        >
-          <ChevronRight
-            class="size-4 transition-transform"
-            :class="filtrosAbiertos ? 'rotate-90' : ''"
-          />
-          Filtros
-        </CollapsibleTrigger>
-        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
-          <div class="flex flex-col gap-1.5">
-            <Label>Cuenta</Label>
-            <FiltroMultiple
-              v-model="cuentasSeleccionadas"
-              :items="itemsCuentasFiltro"
-              id-base="filtro-cuenta"
-              etiqueta-boton="Filtrar por cuenta"
-              nombre-singular="cuenta"
-              nombre-plural="cuentas"
-            />
-          </div>
-
-          <div v-if="!agrupadoPorCategoria" class="flex max-w-xs flex-col gap-1.5">
-            <Label for="buscar-movimientos">Buscar</Label>
-            <div class="relative">
-              <Search
-                class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
-              />
-              <Input
-                id="buscar-movimientos"
-                v-model="busqueda"
-                placeholder="Buscar movimientos…"
-                class="pl-8"
-              />
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label for="filtro-fecha-desde">Fecha desde</Label>
-            <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="filtro-fecha-hasta">Fecha hasta</Label>
-            <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
-          </div>
-          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesAnterior"
-            >Mes anterior</Button
-          >
-          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesSiguiente"
-            >Mes siguiente</Button
-          >
-
-          <div class="flex flex-col gap-1.5">
-            <Label>Filtrar por categoría</Label>
-            <FiltroMultiple
-              v-model="categoriasFiltro"
-              :items="itemsCategoriasFiltro"
-              id-base="filtro-categoria"
-              etiqueta-boton="Filtrar por categoría"
-              nombre-singular="categoría"
-              nombre-plural="categorías"
-            />
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <Label>Filtrar por subcategoría</Label>
-            <FiltroMultiple
-              v-model="subcategoriasFiltro"
-              :items="itemsSubcategoriasFiltro"
-              id-base="filtro-subcategoria"
-              etiqueta-boton="Filtrar por subcategoría"
-              nombre-singular="subcategoría"
-              nombre-plural="subcategorías"
-            />
-          </div>
-
-          <FiltroRangoNumero
-            label="Importe"
-            id-base="filtro-importe"
-            v-model:min="importeMin"
-            v-model:max="importeMax"
-          />
-          <FiltroRangoNumero
-            label="Saldo"
-            id-base="filtro-saldo"
-            v-model:min="saldoMin"
-            v-model:max="saldoMax"
-          />
-
-          <Button
-            type="button"
-            variant="outline"
-            class="border-blue-600 bg-blue-600 text-white hover:bg-blue-600/90"
-            @click="limpiarFiltros"
-            >Limpiar filtros</Button
-          >
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-
     <div
       v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
@@ -731,6 +628,109 @@ function alternarSeleccion(id: number, marcado: boolean): void {
               />
             </div>
           </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+
+    <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
+      <Collapsible v-model:open="filtrosAbiertos">
+        <CollapsibleTrigger
+          class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
+          :aria-label="filtrosAbiertos ? 'Contraer filtros' : 'Expandir filtros'"
+        >
+          <ChevronRight
+            class="size-4 transition-transform"
+            :class="filtrosAbiertos ? 'rotate-90' : ''"
+          />
+          Filtros
+        </CollapsibleTrigger>
+        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
+          <div class="flex flex-col gap-1.5">
+            <Label>Cuenta</Label>
+            <FiltroMultiple
+              v-model="cuentasSeleccionadas"
+              :items="itemsCuentasFiltro"
+              id-base="filtro-cuenta"
+              etiqueta-boton="Filtrar por cuenta"
+              nombre-singular="cuenta"
+              nombre-plural="cuentas"
+            />
+          </div>
+
+          <div v-if="!agrupadoPorCategoria" class="flex max-w-xs flex-col gap-1.5">
+            <Label for="buscar-movimientos">Buscar</Label>
+            <div class="relative">
+              <Search
+                class="text-muted-foreground pointer-events-none absolute top-2.5 left-2.5 size-4"
+              />
+              <Input
+                id="buscar-movimientos"
+                v-model="busqueda"
+                placeholder="Buscar movimientos…"
+                class="pl-8"
+              />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label for="filtro-fecha-desde">Fecha desde</Label>
+            <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="filtro-fecha-hasta">Fecha hasta</Label>
+            <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
+          </div>
+          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesAnterior"
+            >Mes anterior</Button
+          >
+          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesSiguiente"
+            >Mes siguiente</Button
+          >
+
+          <div class="flex flex-col gap-1.5">
+            <Label>Filtrar por categoría</Label>
+            <FiltroMultiple
+              v-model="categoriasFiltro"
+              :items="itemsCategoriasFiltro"
+              id-base="filtro-categoria"
+              etiqueta-boton="Filtrar por categoría"
+              nombre-singular="categoría"
+              nombre-plural="categorías"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label>Filtrar por subcategoría</Label>
+            <FiltroMultiple
+              v-model="subcategoriasFiltro"
+              :items="itemsSubcategoriasFiltro"
+              id-base="filtro-subcategoria"
+              etiqueta-boton="Filtrar por subcategoría"
+              nombre-singular="subcategoría"
+              nombre-plural="subcategorías"
+            />
+          </div>
+
+          <FiltroRangoNumero
+            label="Importe"
+            id-base="filtro-importe"
+            v-model:min="importeMin"
+            v-model:max="importeMax"
+          />
+          <FiltroRangoNumero
+            label="Saldo"
+            id-base="filtro-saldo"
+            v-model:min="saldoMin"
+            v-model:max="saldoMax"
+          />
+
+          <Button
+            type="button"
+            variant="outline"
+            class="border-blue-600 bg-blue-600 text-white hover:bg-blue-600/90"
+            @click="limpiarFiltros"
+            >Limpiar filtros</Button
+          >
         </CollapsibleContent>
       </Collapsible>
     </div>

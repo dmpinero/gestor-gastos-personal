@@ -46,6 +46,11 @@ class CargaAcumuladoRealEsquema(BaseModel):
     meses_actualizados: int
 
 
+class CargaAcumuladoRealTodosEsquema(BaseModel):
+    conceptos_actualizados: int
+    meses_actualizados: int
+
+
 class FilaResumenAnualEsquema(BaseModel):
     concepto_id: int
     categoria_id: int

@@ -430,3 +430,25 @@ def listo_los_movimientos_del_concepto(
 @then(parsers.parse("se listan {cantidad:d} movimientos"))
 def se_listan_n_movimientos(movimientos_concepto: list, cantidad: int) -> None:
     assert len(movimientos_concepto) == cantidad
+
+
+@when(
+    parsers.parse("cargo el acumulado real de todos los conceptos en {anio:d}"),
+    target_fixture="resultado_carga_todos",
+)
+def cargo_el_acumulado_real_de_todos_los_conceptos(cliente: TestClient, anio: int) -> dict:
+    respuesta = cliente.post(f"/api/v1/previsiones/cargar-real?anio={anio}")
+    assert respuesta.status_code == 200
+    return respuesta.json()
+
+
+@then(
+    parsers.parse(
+        "la carga de todos los conceptos actualiza {conceptos:d} concepto y {meses:d} mes"
+    )
+)
+def la_carga_de_todos_los_conceptos_actualiza(
+    resultado_carga_todos: dict, conceptos: int, meses: int
+) -> None:
+    assert resultado_carga_todos["conceptos_actualizados"] == conceptos
+    assert resultado_carga_todos["meses_actualizados"] == meses

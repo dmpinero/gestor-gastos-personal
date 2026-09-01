@@ -94,3 +94,12 @@ Característica: Resumen anual de previsión
     Cuando edito la asociación del resumen anual para usar la categoría "Congelados" de movimientos
     Y consulto el resumen anual de 2026
     Entonces el concepto muestra el importe real "-90.00" en el mes 3
+
+  Escenario: Cargar el acumulado real de todos los conceptos actualiza los que tienen movimientos asociados
+    Dado que existe la categoría "Suscripciones" con un concepto previsto mensual de importe "-4.99"
+    Y existe la cuenta "ES00 1234" con un movimiento en esa categoría en la fecha "2026-03-15" e importe "-4.99"
+    Y se ajusta manualmente el importe del mes 3 de 2026 a "-1.00"
+    Cuando cargo el acumulado real de todos los conceptos en 2026
+    Entonces la carga de todos los conceptos actualiza 1 concepto y 1 mes
+    Cuando consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe ajustado "-4.99" en el mes 3

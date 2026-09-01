@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, Plus, Search, Upload } from '@lucide/vue'
+import { Download, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import type {
@@ -16,6 +16,17 @@ import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vu
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import TablaResumenAnual from '@/componentes/prevision/TablaResumenAnual.vue'
 import TablaResumenAnualAgrupada from '@/componentes/prevision/TablaResumenAnualAgrupada.vue'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/componentes/ui/alert-dialog'
 import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
@@ -265,6 +276,13 @@ async function cargarAcumuladoReal(conceptoId: number): Promise<void> {
   }
 }
 
+async function cargarAcumuladoRealTodos(): Promise<void> {
+  const resultado = await tienda.cargarAcumuladoRealTodos(anio.value)
+  if (resultado && resultado.meses_actualizados === 0) {
+    tienda.error = 'No hay movimientos asociados a ningún concepto en ese año.'
+  }
+}
+
 const panelExportarAbierto = ref(false)
 const anioExportarDesde = ref(0)
 const anioExportarHasta = ref(0)
@@ -366,6 +384,33 @@ const agrupadoPorCategoria = ref(false)
           <Download class="size-4" />
           Exportar a Excel
         </Button>
+        <AlertDialog>
+          <AlertDialogTrigger as-child>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Cargar acumulado real de todos los conceptos"
+              :disabled="tienda.cargando"
+            >
+              <RefreshCw class="size-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Cargar acumulado real de todos los conceptos?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se sobrescribirá con el importe real de los movimientos cualquier mes de
+                {{ anio }} que ya tengas ajustado a mano, en todos los conceptos. Los meses sin
+                movimientos asociados no se modifican. Puede tardar unos segundos si hay muchos
+                conceptos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction @click="cargarAcumuladoRealTodos">Cargar</AlertDialogAction>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <Button variant="success" @click="abrirParaCrear">Añadir concepto</Button>
       </div>
     </div>

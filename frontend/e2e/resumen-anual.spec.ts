@@ -867,3 +867,101 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
     nombreOtraCategoria,
   )
 })
+
+test('cargar el acumulado real de todos los conceptos actualiza varios a la vez', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 CARGATODOS ${sufijo}`
+  const nombreCategoriaA = `Categoria CARGATODOS-A ${sufijo}`
+  const nombreCategoriaB = `Categoria CARGATODOS-B ${sufijo}`
+
+  const hoy = new Date()
+  const mesActualNumero = hoy.getMonth() + 1
+  const fechaMovimiento = `${hoy.getFullYear()}-${String(mesActualNumero).padStart(2, '0')}-15`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  for (const nombre of [nombreCategoriaA, nombreCategoriaB]) {
+    await page.getByRole('button', { name: 'Crear categoría' }).click()
+    const panelCategoria = page.getByRole('dialog')
+    await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombre)
+    await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+    await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
+  }
+
+  await page.goto('/resumen-anual')
+  const filasPorCategoria: Record<string, Locator> = {}
+  for (const [nombreCategoria, importePrevisto] of [
+    [nombreCategoriaA, '50.00'],
+    [nombreCategoriaB, '80.00'],
+  ] as const) {
+    await page.getByRole('button', { name: 'Añadir concepto' }).click()
+    const panelConcepto = page.getByRole('dialog')
+    await elegirOpcion(
+      page,
+      panelConcepto.getByLabel('Categoría', { exact: true }),
+      nombreCategoria,
+    )
+    await panelConcepto.getByLabel('Importe previsto').fill(importePrevisto)
+    await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+    const fila = page.locator('tbody tr', { hasText: nombreCategoria })
+    await expect(fila).toBeVisible()
+    filasPorCategoria[nombreCategoria] = fila
+  }
+
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoriaA,
+    null,
+    `Gasto A ${sufijo}`,
+    '-30.00',
+    fechaMovimiento,
+  )
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoriaB,
+    null,
+    `Gasto B ${sufijo}`,
+    '-45.00',
+    fechaMovimiento,
+  )
+
+  await page.goto('/resumen-anual')
+  const filaA = filasPorCategoria[nombreCategoriaA]!
+  const filaB = filasPorCategoria[nombreCategoriaB]!
+  await expect(celdaMes(filaA, mesActualNumero)).toContainText('-30,00 €')
+  await expect(celdaMes(filaB, mesActualNumero)).toContainText('-45,00 €')
+
+  // Ajustes manuales "equivocados" en ambos conceptos, para demostrar que
+  // "cargar acumulado real de todos" los sobrescribe a la vez.
+  for (const [fila, valor] of [
+    [filaA, '-1.00'],
+    [filaB, '-2.00'],
+  ] as const) {
+    await celdaMes(fila, mesActualNumero).getByRole('button').first().click()
+    const entrada = celdaMes(fila, mesActualNumero).locator('input')
+    await entrada.fill(valor)
+    await entrada.press('Enter')
+  }
+  await expect(celdaMes(filaA, mesActualNumero)).toContainText('-1,00 €')
+  await expect(celdaMes(filaB, mesActualNumero)).toContainText('-2,00 €')
+
+  await page.getByRole('button', { name: 'Cargar acumulado real de todos los conceptos' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Cargar' }).click()
+
+  await expect(celdaMes(filaA, mesActualNumero)).toContainText('-30,00 €')
+  await expect(celdaMes(filaB, mesActualNumero)).toContainText('-45,00 €')
+  await expect(celdaMes(filaA, mesActualNumero)).toHaveClass(/border-dashed/)
+  await expect(celdaMes(filaB, mesActualNumero)).toHaveClass(/border-dashed/)
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-08-cargar-acumulado-todos.png' })
+})

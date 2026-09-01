@@ -129,6 +129,15 @@ const formularioListo = computed(
 )
 
 const edicion = ref<{ tipo: 'categoria' | 'descripcion'; id: number } | null>(null)
+const formularioRef = ref<HTMLFormElement | null>(null)
+
+// El formulario está al principio de la página, mientras que las tablas de
+// asociaciones ya creadas (donde está el botón "Editar") quedan varias
+// secciones más abajo: sin este scroll, el formulario sí se rellena pero
+// queda fuera de la pantalla y da la sensación de que el botón no hace nada.
+function llevarFormularioAVista(): void {
+  formularioRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 function editarAsociacion(asociacion: AsociacionConcepto): void {
   limpiarFormulario()
@@ -144,6 +153,7 @@ function editarAsociacion(asociacion: AsociacionConcepto): void {
       ? SIN_SUBCATEGORIA
       : String(asociacion.subcategoria_movimiento_id)
   edicion.value = { tipo: 'categoria', id: asociacion.id }
+  llevarFormularioAVista()
 }
 
 function editarAsociacionDescripcion(asociacion: AsociacionDescripcion): void {
@@ -156,6 +166,7 @@ function editarAsociacionDescripcion(asociacion: AsociacionDescripcion): void {
       : String(asociacion.subcategoria_resumen_id)
   formularioDescripcion.descripcion = asociacion.descripcion
   edicion.value = { tipo: 'descripcion', id: asociacion.id }
+  llevarFormularioAVista()
 }
 
 function cancelarEdicion(): void {
@@ -295,6 +306,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
     </p>
 
     <form
+      ref="formularioRef"
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
       @submit.prevent="guardarAsociacion"
     >

@@ -19,6 +19,7 @@ async function crearMovimiento(
   descripcion: string,
   importe: string,
   fecha: string,
+  comentario?: string,
 ): Promise<void> {
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
@@ -29,6 +30,9 @@ async function crearMovimiento(
     await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
   }
   await panel.getByPlaceholder('Descripción').fill(descripcion)
+  if (comentario) {
+    await panel.getByPlaceholder('Comentario').fill(comentario)
+  }
   await panel.getByPlaceholder('Importe').fill(importe)
   await panel.getByPlaceholder('Saldo').fill('1000.00')
   await panel.getByRole('button', { name: 'Crear movimiento' }).click()
@@ -964,4 +968,62 @@ test('cargar el acumulado real de todos los conceptos actualiza varios a la vez'
   await expect(celdaMes(filaA, mesActualNumero)).toHaveClass(/border-dashed/)
   await expect(celdaMes(filaB, mesActualNumero)).toHaveClass(/border-dashed/)
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-08-cargar-acumulado-todos.png' })
+})
+
+test('al pasar el ratón por el importe acumulado, se ve el comentario del movimiento', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 COMENTARIO ${sufijo}`
+  const nombreCategoria = `Categoria COMENTARIO ${sufijo}`
+  const descripcionMovimiento = `Gasto con comentario ${sufijo}`
+  const comentarioMovimiento = `Revisar cargo duplicado ${sufijo}`
+
+  const hoy = new Date()
+  const mesActualNumero = hoy.getMonth() + 1
+  const fechaMovimiento = `${hoy.getFullYear()}-${String(mesActualNumero).padStart(2, '0')}-15`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoria = page.getByRole('dialog')
+  await panelCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoria)
+  await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
+
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Añadir concepto' }).click()
+  const panelConcepto = page.getByRole('dialog')
+  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await panelConcepto.getByLabel('Importe previsto').fill('50.00')
+  await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
+  const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })
+  await expect(filaConcepto).toBeVisible()
+
+  await page.goto('/gestion/movimientos')
+  await crearMovimiento(
+    page,
+    numeroCuenta,
+    nombreCategoria,
+    null,
+    descripcionMovimiento,
+    '-30.00',
+    fechaMovimiento,
+    comentarioMovimiento,
+  )
+
+  await page.goto('/resumen-anual')
+  const celdaImporte = celdaMes(filaConcepto, mesActualNumero)
+  await expect(celdaImporte).toContainText('-30,00 €')
+
+  await expect(page.getByText(comentarioMovimiento)).toHaveCount(0)
+  await celdaImporte.getByRole('button').first().hover()
+  await expect(page.getByText(comentarioMovimiento)).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/resumen-anual-09-tooltip-comentario.png' })
 })

@@ -1,9 +1,39 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { FilaResumenAnual } from '@/api/tipos'
+import type { FilaResumenAnual, Movimiento } from '@/api/tipos'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 import TablaResumenAnual from '../TablaResumenAnual.vue'
+
+// jsdom no implementa ResizeObserver; Reka UI lo usa internamente para
+// posicionar el contenido del Tooltip, así que sin este stub la primera
+// apertura del tooltip lanza un rechazo no controlado que corrompe el DOM
+// de los tests siguientes.
+class ResizeObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+
+function crearMovimiento(datos: Partial<Movimiento> = {}): Movimiento {
+  return {
+    id: 1,
+    cuenta_id: 1,
+    categoria_id: 1,
+    subcategoria_id: null,
+    fecha_valor: '2026-03-15',
+    descripcion: 'Amazon Prime',
+    comentario: null,
+    importe: '-4.99',
+    saldo: '100.00',
+    ...datos,
+  }
+}
+
+async function esperarMicrotareas(): Promise<void> {
+  await new Promise((resolver) => setTimeout(resolver, 0))
+}
 
 afterEach(() => {
   document.body.innerHTML = ''
@@ -222,6 +252,95 @@ describe('TablaResumenAnual', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('cargar-acumulado-real')).toEqual([[1]])
+    wrapper.unmount()
+  })
+
+  it('al pasar el ratón por un importe real, pide los movimientos si aún no estaban cargados', async () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const tienda = useTiendaPrevisiones()
+    const espia = vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[3]!.get('button').trigger('mouseenter')
+
+    expect(espia).toHaveBeenCalledWith(1, 2026, 3)
+  })
+
+  it('al pasar el ratón por una celda prevista no pide ningún movimiento', async () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const tienda = useTiendaPrevisiones()
+    const espia = vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[1]!.get('button').trigger('mouseenter') // mes 1 = previsto
+
+    expect(espia).not.toHaveBeenCalled()
+  })
+
+  it('muestra el comentario del único movimiento que compone el importe', async () => {
+    const wrapper = montar(
+      { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+      { attachTo: document.body },
+    )
+    const tienda = useTiendaPrevisiones()
+    vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([
+      crearMovimiento({ comentario: 'Revisar cargo duplicado' }),
+    ])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[3]!.get('button').trigger('focus')
+    await esperarMicrotareas()
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.textContent).toContain('Revisar cargo duplicado')
+    wrapper.unmount()
+  })
+
+  it('no muestra ningún tooltip si el movimiento no tiene comentario', async () => {
+    const wrapper = montar(
+      { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+      { attachTo: document.body },
+    )
+    const tienda = useTiendaPrevisiones()
+    vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([crearMovimiento()])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[3]!.get('button').trigger('focus')
+    await esperarMicrotareas()
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.querySelector('[data-slot="tooltip-content"]')).toBeNull()
+    wrapper.unmount()
+  })
+
+  it('con varios movimientos, el tooltip solo lista los que tienen comentario, con su descripción', async () => {
+    const wrapper = montar(
+      { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+      { attachTo: document.body },
+    )
+    const tienda = useTiendaPrevisiones()
+    vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([
+      crearMovimiento({ id: 1, descripcion: 'Supermercado', comentario: 'Compra semanal' }),
+      crearMovimiento({ id: 2, descripcion: 'Bizum a Juan', comentario: null }),
+    ])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[3]!.get('button').trigger('focus')
+    await esperarMicrotareas()
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.textContent).toContain('Supermercado: Compra semanal')
+    expect(document.body.textContent).not.toContain('Bizum a Juan')
     wrapper.unmount()
   })
 })

@@ -17,6 +17,7 @@ import {
 } from '@/componentes/ui/combobox'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 import {
   Table,
   TableBody,
@@ -117,79 +118,19 @@ function usarConceptoSinAsociar(idCategoria: number, idSubcategoria: number | nu
     idSubcategoria === null ? SIN_SUBCATEGORIA : String(idSubcategoria)
 }
 
-// El formulario tiene dos formas alternativas de crear/editar una asociación
-// (por categoría de movimientos o por descripción); un único botón guarda la
-// que esté rellena, priorizando la descripción si ambas lo están. Al editar,
-// `edicion` fija cuál de las dos se está editando (independientemente de qué
-// campos tenga rellenos en ese momento).
+// El formulario tiene dos formas alternativas de crear una asociación (por
+// categoría de movimientos o por descripción); un único botón crea la que
+// esté rellena, priorizando la descripción si ambas lo están.
 const formularioListo = computed(
   () =>
     (formulario.categoriaResumenId && formulario.categoriaMovimientoId) ||
     (formularioDescripcion.categoriaResumenId && formularioDescripcion.descripcion.trim()),
 )
 
-const edicion = ref<{ tipo: 'categoria' | 'descripcion'; id: number } | null>(null)
-
-function editarAsociacion(asociacion: AsociacionConcepto): void {
-  limpiarFormulario()
-  limpiarFormularioDescripcion()
-  formulario.categoriaResumenId = String(asociacion.categoria_resumen_id)
-  formulario.subcategoriaResumenId =
-    asociacion.subcategoria_resumen_id === null
-      ? SIN_SUBCATEGORIA
-      : String(asociacion.subcategoria_resumen_id)
-  formulario.categoriaMovimientoId = String(asociacion.categoria_movimiento_id)
-  formulario.subcategoriaMovimientoId =
-    asociacion.subcategoria_movimiento_id === null
-      ? SIN_SUBCATEGORIA
-      : String(asociacion.subcategoria_movimiento_id)
-  edicion.value = { tipo: 'categoria', id: asociacion.id }
-}
-
-function editarAsociacionDescripcion(asociacion: AsociacionDescripcion): void {
-  limpiarFormulario()
-  limpiarFormularioDescripcion()
-  formularioDescripcion.categoriaResumenId = String(asociacion.categoria_resumen_id)
-  formularioDescripcion.subcategoriaResumenId =
-    asociacion.subcategoria_resumen_id === null
-      ? SIN_SUBCATEGORIA
-      : String(asociacion.subcategoria_resumen_id)
-  formularioDescripcion.descripcion = asociacion.descripcion
-  edicion.value = { tipo: 'descripcion', id: asociacion.id }
-}
-
-function cancelarEdicion(): void {
-  limpiarFormulario()
-  limpiarFormularioDescripcion()
-  edicion.value = null
-}
-
-async function guardarAsociacion(): Promise<void> {
+async function crearAsociacion(): Promise<void> {
   tiendaAsociaciones.error = null
   try {
-    if (edicion.value?.tipo === 'categoria') {
-      await tiendaAsociaciones.actualizar(edicion.value.id, {
-        categoria_resumen_id: Number(formulario.categoriaResumenId),
-        subcategoria_resumen_id:
-          formulario.subcategoriaResumenId === SIN_SUBCATEGORIA
-            ? null
-            : Number(formulario.subcategoriaResumenId),
-        categoria_movimiento_id: Number(formulario.categoriaMovimientoId),
-        subcategoria_movimiento_id:
-          formulario.subcategoriaMovimientoId === SIN_SUBCATEGORIA
-            ? null
-            : Number(formulario.subcategoriaMovimientoId),
-      })
-    } else if (edicion.value?.tipo === 'descripcion') {
-      await tiendaAsociaciones.actualizarDescripcion(edicion.value.id, {
-        categoria_resumen_id: Number(formularioDescripcion.categoriaResumenId),
-        subcategoria_resumen_id:
-          formularioDescripcion.subcategoriaResumenId === SIN_SUBCATEGORIA
-            ? null
-            : Number(formularioDescripcion.subcategoriaResumenId),
-        descripcion: formularioDescripcion.descripcion.trim(),
-      })
-    } else if (formularioDescripcion.descripcion.trim()) {
+    if (formularioDescripcion.descripcion.trim()) {
       await tiendaAsociaciones.crearDescripcion({
         categoria_resumen_id: Number(formularioDescripcion.categoriaResumenId),
         subcategoria_resumen_id:
@@ -214,6 +155,105 @@ async function guardarAsociacion(): Promise<void> {
     }
     limpiarFormulario()
     limpiarFormularioDescripcion()
+  } catch {
+    // El error ya queda reflejado en tiendaAsociaciones.error.
+  }
+}
+
+// Editar una asociación se hace en un panel modal aparte (no reutilizando el
+// formulario de arriba): así se evita cualquier desplazamiento de la página
+// al pulsar "Editar" en una fila de la tabla, que puede quedar lejos del
+// formulario de creación.
+const panelEdicionAbierto = ref(false)
+const edicion = ref<{ tipo: 'categoria' | 'descripcion'; id: number } | null>(null)
+
+const formularioEdicion = reactive({
+  categoriaResumenId: '',
+  subcategoriaResumenId: SIN_SUBCATEGORIA,
+  categoriaMovimientoId: '',
+  subcategoriaMovimientoId: SIN_SUBCATEGORIA,
+  descripcion: '',
+})
+
+const subcategoriasDelResumenEdicion = computed(() =>
+  subcategoriasDe(formularioEdicion.categoriaResumenId),
+)
+const subcategoriasDelMovimientoEdicion = computed(() =>
+  subcategoriasDe(formularioEdicion.categoriaMovimientoId),
+)
+
+const formularioEdicionListo = computed(() => {
+  if (edicion.value?.tipo === 'categoria') {
+    return Boolean(formularioEdicion.categoriaResumenId && formularioEdicion.categoriaMovimientoId)
+  }
+  if (edicion.value?.tipo === 'descripcion') {
+    return Boolean(formularioEdicion.categoriaResumenId && formularioEdicion.descripcion.trim())
+  }
+  return false
+})
+
+function editarAsociacion(asociacion: AsociacionConcepto): void {
+  formularioEdicion.categoriaResumenId = String(asociacion.categoria_resumen_id)
+  formularioEdicion.subcategoriaResumenId =
+    asociacion.subcategoria_resumen_id === null
+      ? SIN_SUBCATEGORIA
+      : String(asociacion.subcategoria_resumen_id)
+  formularioEdicion.categoriaMovimientoId = String(asociacion.categoria_movimiento_id)
+  formularioEdicion.subcategoriaMovimientoId =
+    asociacion.subcategoria_movimiento_id === null
+      ? SIN_SUBCATEGORIA
+      : String(asociacion.subcategoria_movimiento_id)
+  edicion.value = { tipo: 'categoria', id: asociacion.id }
+  tiendaAsociaciones.error = null
+  panelEdicionAbierto.value = true
+}
+
+function editarAsociacionDescripcion(asociacion: AsociacionDescripcion): void {
+  formularioEdicion.categoriaResumenId = String(asociacion.categoria_resumen_id)
+  formularioEdicion.subcategoriaResumenId =
+    asociacion.subcategoria_resumen_id === null
+      ? SIN_SUBCATEGORIA
+      : String(asociacion.subcategoria_resumen_id)
+  formularioEdicion.descripcion = asociacion.descripcion
+  edicion.value = { tipo: 'descripcion', id: asociacion.id }
+  tiendaAsociaciones.error = null
+  panelEdicionAbierto.value = true
+}
+
+function cancelarEdicion(): void {
+  panelEdicionAbierto.value = false
+  edicion.value = null
+  tiendaAsociaciones.error = null
+}
+
+async function guardarEdicion(): Promise<void> {
+  if (!edicion.value) return
+  tiendaAsociaciones.error = null
+  try {
+    if (edicion.value.tipo === 'categoria') {
+      await tiendaAsociaciones.actualizar(edicion.value.id, {
+        categoria_resumen_id: Number(formularioEdicion.categoriaResumenId),
+        subcategoria_resumen_id:
+          formularioEdicion.subcategoriaResumenId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formularioEdicion.subcategoriaResumenId),
+        categoria_movimiento_id: Number(formularioEdicion.categoriaMovimientoId),
+        subcategoria_movimiento_id:
+          formularioEdicion.subcategoriaMovimientoId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formularioEdicion.subcategoriaMovimientoId),
+      })
+    } else {
+      await tiendaAsociaciones.actualizarDescripcion(edicion.value.id, {
+        categoria_resumen_id: Number(formularioEdicion.categoriaResumenId),
+        subcategoria_resumen_id:
+          formularioEdicion.subcategoriaResumenId === SIN_SUBCATEGORIA
+            ? null
+            : Number(formularioEdicion.subcategoriaResumenId),
+        descripcion: formularioEdicion.descripcion.trim(),
+      })
+    }
+    panelEdicionAbierto.value = false
     edicion.value = null
   } catch {
     // El error ya queda reflejado en tiendaAsociaciones.error.
@@ -296,7 +336,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
 
     <form
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
-      @submit.prevent="guardarAsociacion"
+      @submit.prevent="crearAsociacion"
     >
       <div class="flex flex-col gap-4 md:flex-row md:items-end">
         <div class="flex flex-1 flex-wrap gap-4">
@@ -494,13 +534,10 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
         </div>
       </div>
 
-      <div class="flex justify-end gap-2">
-        <Button v-if="edicion" type="button" variant="destructive" @click="cancelarEdicion">
-          Cancelar
-        </Button>
+      <div class="flex justify-end">
         <Button type="submit" variant="success" :disabled="!formularioListo">
           <Link2 class="size-4" />
-          {{ edicion ? 'Guardar cambios' : 'Crear asociación' }}
+          Crear asociación
         </Button>
       </div>
     </form>
@@ -679,5 +716,168 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
         </Table>
       </div>
     </div>
+
+    <Sheet v-model:open="panelEdicionAbierto">
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>
+            {{
+              edicion?.tipo === 'descripcion'
+                ? 'Editar asociación por descripción'
+                : 'Editar asociación por categoría'
+            }}
+          </SheetTitle>
+        </SheetHeader>
+
+        <form class="flex flex-col gap-4 px-4" @submit.prevent="guardarEdicion">
+          <template v-if="edicion?.tipo === 'categoria'">
+            <div class="flex flex-col gap-1.5">
+              <Label
+                id="etiqueta-categoria-movimiento-edicion"
+                for="selector-categoria-movimiento-edicion"
+                >Categoría real de Movimientos</Label
+              >
+              <Combobox
+                v-model="formularioEdicion.categoriaMovimientoId"
+                open-on-click
+                open-on-focus
+              >
+                <ComboboxTrigger class="w-full">
+                  <ComboboxInput
+                    id="selector-categoria-movimiento-edicion"
+                    aria-labelledby="etiqueta-categoria-movimiento-edicion"
+                    placeholder="Selecciona o escribe para buscar"
+                    :display-value="mostrarCategoria"
+                  />
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                  <ComboboxItem
+                    v-for="item in tiendaCategorias.categorias"
+                    :key="item.categoria.id"
+                    :value="String(item.categoria.id)"
+                  >
+                    {{ item.categoria.nombre }}
+                  </ComboboxItem>
+                </ComboboxContent>
+              </Combobox>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <Label
+                id="etiqueta-subcategoria-movimiento-edicion"
+                for="selector-subcategoria-movimiento-edicion"
+                >Subcategoría real de Movimientos</Label
+              >
+              <Combobox
+                v-model="formularioEdicion.subcategoriaMovimientoId"
+                open-on-click
+                open-on-focus
+              >
+                <ComboboxTrigger class="w-full">
+                  <ComboboxInput
+                    id="selector-subcategoria-movimiento-edicion"
+                    aria-labelledby="etiqueta-subcategoria-movimiento-edicion"
+                    placeholder="Selecciona o escribe para buscar"
+                    :display-value="mostrarSubcategoria"
+                  />
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                  <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                  <ComboboxItem
+                    v-for="s in subcategoriasDelMovimientoEdicion"
+                    :key="s.id"
+                    :value="String(s.id)"
+                  >
+                    {{ s.nombre }}
+                  </ComboboxItem>
+                </ComboboxContent>
+              </Combobox>
+            </div>
+          </template>
+
+          <div v-else-if="edicion?.tipo === 'descripcion'" class="flex flex-col gap-1.5">
+            <Label
+              id="etiqueta-descripcion-movimiento-edicion"
+              for="input-descripcion-movimiento-edicion"
+              >Descripción de Movimientos (contiene)</Label
+            >
+            <Input
+              id="input-descripcion-movimiento-edicion"
+              v-model="formularioEdicion.descripcion"
+              aria-labelledby="etiqueta-descripcion-movimiento-edicion"
+              placeholder="p. ej. Ayuntamiento Las Rozas"
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label id="etiqueta-categoria-resumen-edicion" for="selector-categoria-resumen-edicion"
+              >Categoría del Resumen anual</Label
+            >
+            <Combobox v-model="formularioEdicion.categoriaResumenId" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-categoria-resumen-edicion"
+                  aria-labelledby="etiqueta-categoria-resumen-edicion"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarCategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
+                  v-for="item in tiendaCategorias.categorias"
+                  :key="item.categoria.id"
+                  :value="String(item.categoria.id)"
+                >
+                  {{ item.categoria.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <Label
+              id="etiqueta-subcategoria-resumen-edicion"
+              for="selector-subcategoria-resumen-edicion"
+              >Subcategoría del Resumen anual</Label
+            >
+            <Combobox v-model="formularioEdicion.subcategoriaResumenId" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-subcategoria-resumen-edicion"
+                  aria-labelledby="etiqueta-subcategoria-resumen-edicion"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarSubcategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                <ComboboxItem
+                  v-for="s in subcategoriasDelResumenEdicion"
+                  :key="s.id"
+                  :value="String(s.id)"
+                >
+                  {{ s.nombre }}
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+
+          <p v-if="tiendaAsociaciones.error" class="text-sm text-destructive" role="alert">
+            {{ tiendaAsociaciones.error }}
+          </p>
+
+          <div class="flex gap-2">
+            <Button type="submit" variant="success" :disabled="!formularioEdicionListo">
+              Guardar cambios
+            </Button>
+            <Button type="button" variant="destructive" @click="cancelarEdicion">Cancelar</Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
   </section>
 </template>

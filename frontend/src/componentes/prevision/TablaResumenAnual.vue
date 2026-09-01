@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/componentes/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/componentes/ui/tooltip'
 
 const MESES_CORTOS = [
   'Ene',
@@ -102,6 +103,30 @@ function mostrarDetalleMes(valor: { origen: OrigenValorMensual; importe: string 
   if (valor.origen === 'previsto') return false
   if (valor.origen === 'real' && Number(valor.importe) === 0) return false
   return true
+}
+
+// Solo dispara la carga perezosa cuando hay algo que cargar (mismo criterio
+// que el icono "Ver movimientos"), para no pedir nada al pasar el ratón por
+// una celda prevista.
+function alPasarElRatonPorImporte(
+  conceptoId: number,
+  mes: number,
+  valor: { origen: OrigenValorMensual; importe: string },
+): void {
+  if (!mostrarDetalleMes(valor)) return
+  abrirDetalleMes(conceptoId, mes)
+}
+
+// Con un único movimiento se muestra su comentario tal cual (caso más
+// habitual); con varios, solo los que tengan comentario, cada uno con su
+// descripción por delante para no generar ambigüedad sobre a cuál pertenece.
+function comentarioCelda(conceptoId: number, mes: number): string {
+  const movimientos = detalleMovimientos.value[claveDetalle(conceptoId, mes)]
+  if (!movimientos) return ''
+  const conComentario = movimientos.filter((m) => m.comentario)
+  if (conComentario.length === 0) return ''
+  if (movimientos.length === 1) return conComentario[0]!.comentario!
+  return conComentario.map((m) => `${m.descripcion}: ${m.comentario}`).join('\n')
 }
 
 function saldoAnual(fila: FilaResumenAnual): string {
@@ -216,13 +241,27 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
                   @blur="confirmarEdicion()"
                 />
                 <div v-else class="flex items-center justify-end">
-                  <button
-                    type="button"
-                    class="hover:bg-muted/50 flex-1 px-2 py-2 text-right"
-                    @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
-                  >
-                    {{ formatearImporte(valor.importe) }}
-                  </button>
+                  <TooltipProvider>
+                    <Tooltip :delay-duration="300">
+                      <TooltipTrigger as-child>
+                        <button
+                          type="button"
+                          class="hover:bg-muted/50 flex-1 px-2 py-2 text-right"
+                          @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
+                          @mouseenter="alPasarElRatonPorImporte(fila.concepto_id, valor.mes, valor)"
+                          @focus="alPasarElRatonPorImporte(fila.concepto_id, valor.mes, valor)"
+                        >
+                          {{ formatearImporte(valor.importe) }}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        v-if="comentarioCelda(fila.concepto_id, valor.mes)"
+                        class="max-w-xs whitespace-pre-line"
+                      >
+                        {{ comentarioCelda(fila.concepto_id, valor.mes) }}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <ModalListaMovimientos
                     v-if="mostrarDetalleMes(valor)"
                     :titulo="`${fila.nombre} — ${MESES_CORTOS[valor.mes - 1]} ${anio}`"

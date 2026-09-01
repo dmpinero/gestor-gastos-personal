@@ -37,6 +37,11 @@ export const useTiendaAsociaciones = defineStore('asociaciones', () => {
     await cargar()
   }
 
+  async function actualizar(id: number, datos: DatosAsociacion): Promise<void> {
+    await clienteApi.actualizar(`/previsiones/asociaciones/${id}`, datos)
+    await cargar()
+  }
+
   async function eliminar(id: number): Promise<void> {
     await clienteApi.eliminar(`/previsiones/asociaciones/${id}`)
     asociaciones.value = asociaciones.value.filter((a) => a.id !== id)
@@ -44,6 +49,14 @@ export const useTiendaAsociaciones = defineStore('asociaciones', () => {
 
   async function crearDescripcion(datos: DatosAsociacionDescripcion): Promise<void> {
     await clienteApi.crear('/previsiones/asociaciones-descripcion', datos)
+    await cargar()
+  }
+
+  async function actualizarDescripcion(
+    id: number,
+    datos: DatosAsociacionDescripcion,
+  ): Promise<void> {
+    await clienteApi.actualizar(`/previsiones/asociaciones-descripcion/${id}`, datos)
     await cargar()
   }
 
@@ -59,8 +72,10 @@ export const useTiendaAsociaciones = defineStore('asociaciones', () => {
     error,
     cargar,
     crear,
+    actualizar,
     eliminar,
     crearDescripcion,
+    actualizarDescripcion,
     eliminarDescripcion,
   }
 })

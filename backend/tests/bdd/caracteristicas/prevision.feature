@@ -83,3 +83,14 @@ Característica: Resumen anual de previsión
     Y asocio la categoría "Comida" del resumen anual con la descripción "comida trabajo" de movimientos
     Y listo los movimientos del concepto en el mes 3 de 2026
     Entonces se listan 2 movimientos
+
+  Escenario: Editar una asociación existente cambia la categoría real usada por el resumen anual
+    Dado que existe la categoría "Comida" con un concepto previsto mensual de importe "-200.00"
+    Y existe la categoría "Alimentación" con un movimiento de "-150.00" en la fecha "2026-03-15"
+    Cuando asocio la categoría "Comida" del resumen anual con la categoría "Alimentación" de movimientos
+    Y consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe real "-150.00" en el mes 3
+    Dado existe la categoría "Congelados" con un movimiento de "-90.00" en la fecha "2026-03-20"
+    Cuando edito la asociación del resumen anual para usar la categoría "Congelados" de movimientos
+    Y consulto el resumen anual de 2026
+    Entonces el concepto muestra el importe real "-90.00" en el mes 3

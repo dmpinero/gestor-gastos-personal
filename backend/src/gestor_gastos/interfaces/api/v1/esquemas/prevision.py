@@ -83,6 +83,10 @@ class AsociacionConceptoCrearEsquema(BaseModel):
     subcategoria_movimiento_id: int | None = None
 
 
+class AsociacionConceptoActualizarEsquema(AsociacionConceptoCrearEsquema):
+    pass
+
+
 class AsociacionConceptoSalidaEsquema(BaseModel):
     id: int
     categoria_resumen_id: int
@@ -95,6 +99,10 @@ class AsociacionDescripcionCrearEsquema(BaseModel):
     categoria_resumen_id: int
     subcategoria_resumen_id: int | None = None
     descripcion: str = Field(min_length=1, max_length=500)
+
+
+class AsociacionDescripcionActualizarEsquema(AsociacionDescripcionCrearEsquema):
+    pass
 
 
 class AsociacionDescripcionSalidaEsquema(BaseModel):

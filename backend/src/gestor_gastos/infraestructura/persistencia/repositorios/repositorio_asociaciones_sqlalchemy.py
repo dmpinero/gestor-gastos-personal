@@ -49,6 +49,15 @@ class RepositorioAsociacionesSqlAlchemy:
         )
         return _a_entidad(modelo) if modelo else None
 
+    def actualizar(self, asociacion: AsociacionConcepto) -> AsociacionConcepto:
+        modelo = self._sesion.get(AsociacionConceptoModelo, asociacion.id)
+        modelo.categoria_resumen_id = asociacion.categoria_resumen_id
+        modelo.subcategoria_resumen_id = asociacion.subcategoria_resumen_id
+        modelo.categoria_movimiento_id = asociacion.categoria_movimiento_id
+        modelo.subcategoria_movimiento_id = asociacion.subcategoria_movimiento_id
+        self._sesion.commit()
+        return _a_entidad(modelo)
+
     def eliminar(self, id_asociacion: int) -> None:
         modelo = self._sesion.get(AsociacionConceptoModelo, id_asociacion)
         if modelo is not None:

@@ -2,6 +2,7 @@ import pytest
 
 from gestor_gastos.aplicacion.categoria.crear_categoria import CrearCategoria
 from gestor_gastos.aplicacion.categoria.crear_subcategoria import CrearSubcategoria
+from gestor_gastos.aplicacion.prevision.actualizar_asociacion import ActualizarAsociacion
 from gestor_gastos.aplicacion.prevision.crear_asociacion import CrearAsociacion
 from gestor_gastos.aplicacion.prevision.eliminar_asociacion import EliminarAsociacion
 from gestor_gastos.aplicacion.prevision.listar_asociaciones import ListarAsociaciones
@@ -134,3 +135,109 @@ def test_eliminar_asociacion_la_borra() -> None:
     EliminarAsociacion(repo_asociaciones).ejecutar(asociacion.id)
 
     assert repo_asociaciones.listar() == []
+
+
+def test_actualizar_asociacion_cambia_la_categoria_movimiento() -> None:
+    repo_asociaciones, repo_categorias, resumen, movimiento = _preparar()
+    otra_categoria_movimiento = CrearCategoria(repo_categorias).ejecutar("Otra")
+    asociacion = CrearAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+
+    actualizada = ActualizarAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        asociacion.id,
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=otra_categoria_movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+
+    assert actualizada.categoria_movimiento_id == otra_categoria_movimiento.id
+    assert repo_asociaciones.obtener_por_id(asociacion.id).categoria_movimiento_id == (
+        otra_categoria_movimiento.id
+    )
+
+
+def test_actualizar_asociacion_sin_cambiar_categoria_resumen_no_falla_por_duplicado_consigo_misma() -> (  # noqa: E501
+    None
+):
+    repo_asociaciones, repo_categorias, resumen, movimiento = _preparar()
+    asociacion = CrearAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+
+    actualizada = ActualizarAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        asociacion.id,
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+
+    assert actualizada.id == asociacion.id
+
+
+def test_actualizar_asociacion_a_la_categoria_resumen_de_otra_asociacion_falla() -> None:
+    repo_asociaciones, repo_categorias, resumen, movimiento = _preparar()
+    otra_categoria_resumen = CrearCategoria(repo_categorias).ejecutar("Otra resumen")
+    otra_categoria_movimiento = CrearCategoria(repo_categorias).ejecutar("Otra movimiento")
+    CrearAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+    asociacion_a_editar = CrearAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=otra_categoria_resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=otra_categoria_movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+
+    with pytest.raises(AsociacionDuplicadaError):
+        ActualizarAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+            asociacion_a_editar.id,
+            categoria_resumen_id=resumen.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=otra_categoria_movimiento.id,
+            subcategoria_movimiento_id=None,
+        )
+
+
+def test_actualizar_asociacion_inexistente_falla() -> None:
+    _, repo_categorias, resumen, movimiento = _preparar()
+    repo_asociaciones = RepositorioAsociacionesFalso()
+
+    with pytest.raises(EntidadNoEncontradaError):
+        ActualizarAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+            999,
+            categoria_resumen_id=resumen.id,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=movimiento.id,
+            subcategoria_movimiento_id=None,
+        )
+
+
+def test_actualizar_asociacion_con_categoria_resumen_inexistente_falla() -> None:
+    repo_asociaciones, repo_categorias, resumen, movimiento = _preparar()
+    asociacion = CrearAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        categoria_movimiento_id=movimiento.id,
+        subcategoria_movimiento_id=None,
+    )
+
+    with pytest.raises(EntidadNoEncontradaError):
+        ActualizarAsociacion(repo_asociaciones, repo_categorias).ejecutar(
+            asociacion.id,
+            categoria_resumen_id=999,
+            subcategoria_resumen_id=None,
+            categoria_movimiento_id=movimiento.id,
+            subcategoria_movimiento_id=None,
+        )

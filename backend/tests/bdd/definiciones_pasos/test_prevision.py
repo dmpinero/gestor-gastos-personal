@@ -94,6 +94,24 @@ def asocio_categoria_resumen_con_categoria_movimiento(cliente: TestClient, conte
         },
     )
     assert respuesta.status_code == 201
+    contexto["asociacion_id"] = respuesta.json()["id"]
+
+
+@when(
+    parsers.parse(
+        "edito la asociación del resumen anual para usar la categoría "
+        '"{nombre_movimiento}" de movimientos'
+    )
+)
+def edito_asociacion_para_usar_categoria_movimiento(cliente: TestClient, contexto: dict) -> None:
+    respuesta = cliente.put(
+        f"/api/v1/previsiones/asociaciones/{contexto['asociacion_id']}",
+        json={
+            "categoria_resumen_id": contexto["categoria_id"],
+            "categoria_movimiento_id": contexto["categoria_movimiento_id"],
+        },
+    )
+    assert respuesta.status_code == 200
 
 
 @given(

@@ -407,6 +407,10 @@ class RepositorioAsociacionesFalso:
                 return a
         return None
 
+    def actualizar(self, asociacion: AsociacionConcepto) -> AsociacionConcepto:
+        self._asociaciones[asociacion.id] = asociacion
+        return asociacion
+
     def eliminar(self, id_asociacion: int) -> None:
         self._asociaciones.pop(id_asociacion, None)
 
@@ -462,6 +466,10 @@ class RepositorioAsociacionesDescripcionFalso:
 
     def obtener_por_descripcion(self, descripcion: str) -> AsociacionDescripcion | None:
         return next((a for a in self._asociaciones.values() if a.descripcion == descripcion), None)
+
+    def actualizar(self, asociacion: AsociacionDescripcion) -> AsociacionDescripcion:
+        self._asociaciones[asociacion.id] = asociacion
+        return asociacion
 
     def eliminar(self, id_asociacion: int) -> None:
         self._asociaciones.pop(id_asociacion, None)

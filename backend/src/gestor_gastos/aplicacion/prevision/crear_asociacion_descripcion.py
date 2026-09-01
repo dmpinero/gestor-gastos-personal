@@ -1,3 +1,6 @@
+from gestor_gastos.aplicacion.prevision.normalizar_descripcion_asociacion import (
+    normalizar_descripcion_asociacion,
+)
 from gestor_gastos.aplicacion.prevision.validar_categoria_y_subcategoria import (
     validar_categoria_y_subcategoria,
 )
@@ -26,7 +29,7 @@ class CrearAsociacionDescripcion:
             categoria_resumen_id, subcategoria_resumen_id, self._repositorio_categorias
         )
 
-        descripcion_normalizada = descripcion.strip()
+        descripcion_normalizada = normalizar_descripcion_asociacion(descripcion)
 
         if self._repositorio.obtener_por_descripcion(descripcion_normalizada) is not None:
             raise AsociacionDuplicadaError(

@@ -133,6 +133,16 @@ function saldoAnual(fila: FilaResumenAnual): string {
   return fila.valores.reduce((suma, valor) => suma + Number(valor.importe), 0).toFixed(2)
 }
 
+// A diferencia de saldoAnual (que incluye los meses sin datos rellenados con
+// el importe previsto), este solo suma los meses con un valor realmente
+// introducido: movimientos reales cargados o ajustes manuales.
+function saldoActual(fila: FilaResumenAnual): string {
+  return fila.valores
+    .filter((valor) => valor.origen !== 'previsto')
+    .reduce((suma, valor) => suma + Number(valor.importe), 0)
+    .toFixed(2)
+}
+
 // Solo "Concepto" es un campo realmente ordenable en este listado: los
 // meses son columnas fijas en su orden natural (Ene-Dic), no campos por los
 // que tenga sentido reordenar filas.
@@ -210,16 +220,24 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
           <TableBody>
             <TableRow v-for="fila in filasOrdenadas" :key="fila.concepto_id">
               <TableCell>
-                <div class="flex items-center gap-2">
-                  <span>{{ fila.nombre }}</span>
-                  <Badge :class="COLOR_PERIODICIDAD[fila.periodicidad]" variant="outline">
-                    {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
-                  </Badge>
+                <div class="flex flex-col gap-0.5">
+                  <div class="flex items-center gap-2">
+                    <span>{{ fila.nombre }}</span>
+                    <Badge :class="COLOR_PERIODICIDAD[fila.periodicidad]" variant="outline">
+                      {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
+                    </Badge>
+                  </div>
                   <span
                     class="text-xs tabular-nums whitespace-nowrap"
                     :class="claseColorImporte(saldoAnual(fila)) || 'text-muted-foreground'"
                   >
-                    Saldo año {{ anio }}: {{ formatearImporte(saldoAnual(fila)) }}
+                    Saldo año {{ anio }} (previsto): {{ formatearImporte(saldoAnual(fila)) }}
+                  </span>
+                  <span
+                    class="text-xs tabular-nums whitespace-nowrap"
+                    :class="claseColorImporte(saldoActual(fila)) || 'text-muted-foreground'"
+                  >
+                    Saldo año {{ anio }} (actual): {{ formatearImporte(saldoActual(fila)) }}
                   </span>
                 </div>
               </TableCell>

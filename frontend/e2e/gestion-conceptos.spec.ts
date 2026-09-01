@@ -197,23 +197,27 @@ test('editar una asociación ya creada cambia la categoría real que usa el Resu
   await page.goto('/resumen-anual')
   await expect(celdaMarzo).toContainText('-150,00 €')
 
-  // Editar la asociación para que apunte a la categoría "nueva": el
-  // formulario se prellena y el botón pasa a "Guardar cambios".
+  // Editar la asociación abre un panel modal (para no tener que desplazarse
+  // hasta el formulario de creación, que está al principio de la página),
+  // ya prellenado y con su propio botón "Guardar cambios".
   await page.goto('/administracion/gestion-conceptos')
   await filaAsociacion.getByRole('button', { name: 'Editar' }).click()
-  await expect(page.getByLabel('Categoría real de Movimientos', { exact: true })).toHaveValue(
-    nombreCategoriaOriginal,
-  )
-  await expect(page.getByRole('button', { name: 'Guardar cambios' })).toBeVisible()
+  const panelEdicion = page.getByRole('dialog')
+  await expect(
+    panelEdicion.getByRole('heading', { name: 'Editar asociación por categoría' }),
+  ).toBeVisible()
+  await expect(
+    panelEdicion.getByLabel('Categoría real de Movimientos', { exact: true }),
+  ).toHaveValue(nombreCategoriaOriginal)
   await elegirOpcionBuscador(
     page,
-    page.getByLabel('Categoría real de Movimientos', { exact: true }),
+    panelEdicion.getByLabel('Categoría real de Movimientos', { exact: true }),
     nombreCategoriaNueva,
   )
-  await page.getByRole('button', { name: 'Guardar cambios' }).click()
+  await panelEdicion.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(panelEdicion).toBeHidden()
 
   await expect(filaAsociacion).toContainText(nombreCategoriaNueva)
-  await expect(page.getByRole('button', { name: 'Crear asociación' })).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/gestion-conceptos-03-asociacion-editada.png' })
 
   // El Resumen anual ahora usa el importe de la categoría nueva.

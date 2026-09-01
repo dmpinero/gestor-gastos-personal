@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FilaResumenAnual, Movimiento } from '@/api/tipos'
+import { formatearImporte } from '@/lib/formato'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
 import TablaResumenAnual from '../TablaResumenAnual.vue'
 
@@ -167,6 +168,19 @@ describe('TablaResumenAnual', () => {
 
     const celdasTotal = wrapper.findAll('tbody tr')[1]?.findAll('td') ?? []
     expect(celdasTotal[1]?.classes()).toContain('text-destructive')
+  })
+
+  it('muestra por separado el saldo previsto (todos los meses) y el actual (solo meses con dato real o ajustado)', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+
+    // crearFila(): 10 meses a -9,99 previsto, mes 3 a -4,99 real, mes 5 a -1,00 ajustado.
+    expect(wrapper.text()).toContain(`Saldo año 2026 (previsto): ${formatearImporte('-105.89')}`)
+    expect(wrapper.text()).toContain(`Saldo año 2026 (actual): ${formatearImporte('-5.99')}`)
   })
 
   it('muestra el número de conceptos, en singular si solo hay uno', () => {

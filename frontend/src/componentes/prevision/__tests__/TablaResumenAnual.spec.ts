@@ -320,24 +320,27 @@ describe('TablaResumenAnual', () => {
     wrapper.unmount()
   })
 
-  it('no muestra ningún tooltip si el movimiento no tiene comentario', async () => {
+  it('muestra la descripción del movimiento si no tiene comentario', async () => {
     const wrapper = montar(
       { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
       { attachTo: document.body },
     )
     const tienda = useTiendaPrevisiones()
-    vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([crearMovimiento()])
+    vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([
+      crearMovimiento({ descripcion: 'Amazon Prime', comentario: null }),
+    ])
     const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
 
     await celdas[3]!.get('button').trigger('focus')
     await esperarMicrotareas()
     await wrapper.vm.$nextTick()
 
-    expect(document.body.querySelector('[data-slot="tooltip-content"]')).toBeNull()
+    expect(document.body.querySelector('[data-slot="tooltip-content"]')).not.toBeNull()
+    expect(document.body.textContent).toContain('Amazon Prime')
     wrapper.unmount()
   })
 
-  it('con varios movimientos, el tooltip solo lista los que tienen comentario, con su descripción', async () => {
+  it('con varios movimientos, el tooltip lista todos con su descripción, y el comentario si lo tienen', async () => {
     const wrapper = montar(
       { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
       { attachTo: document.body },
@@ -354,7 +357,7 @@ describe('TablaResumenAnual', () => {
     await wrapper.vm.$nextTick()
 
     expect(document.body.textContent).toContain('Supermercado: Compra semanal')
-    expect(document.body.textContent).not.toContain('Bizum a Juan')
+    expect(document.body.textContent).toContain('Bizum a Juan')
     wrapper.unmount()
   })
 })

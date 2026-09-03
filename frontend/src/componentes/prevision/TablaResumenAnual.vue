@@ -117,16 +117,18 @@ function alPasarElRatonPorImporte(
   abrirDetalleMes(conceptoId, mes)
 }
 
-// Con un único movimiento se muestra su comentario tal cual (caso más
-// habitual); con varios, solo los que tengan comentario, cada uno con su
-// descripción por delante para no generar ambigüedad sobre a cuál pertenece.
+// Con un único movimiento se muestra su comentario, o su descripción si no
+// tiene comentario (así el tooltip siempre informa de algo útil en vez de
+// quedarse vacío). Con varios movimientos, cada línea lleva su descripción
+// por delante para no generar ambigüedad sobre a cuál pertenece, seguida del
+// comentario solo si lo tiene.
 function comentarioCelda(conceptoId: number, mes: number): string {
   const movimientos = detalleMovimientos.value[claveDetalle(conceptoId, mes)]
-  if (!movimientos) return ''
-  const conComentario = movimientos.filter((m) => m.comentario)
-  if (conComentario.length === 0) return ''
-  if (movimientos.length === 1) return conComentario[0]!.comentario!
-  return conComentario.map((m) => `${m.descripcion}: ${m.comentario}`).join('\n')
+  if (!movimientos || movimientos.length === 0) return ''
+  if (movimientos.length === 1) return movimientos[0]!.comentario || movimientos[0]!.descripcion
+  return movimientos
+    .map((m) => (m.comentario ? `${m.descripcion}: ${m.comentario}` : m.descripcion))
+    .join('\n')
 }
 
 function saldoAnual(fila: FilaResumenAnual): string {

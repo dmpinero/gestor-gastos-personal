@@ -248,6 +248,26 @@ describe('TablaResumenAnual', () => {
     expect(espia).toHaveBeenCalledWith(1, 2026, 3)
   })
 
+  it('al cambiar de año, vuelve a pedir el detalle en vez de reutilizar el del año anterior', async () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const tienda = useTiendaPrevisiones()
+    const espia = vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    await celdas[3]!.get('button[aria-label^="Ver movimientos"]').trigger('click')
+    await wrapper.setProps({ anio: 2027 })
+    await celdas[3]!.get('button[aria-label^="Ver movimientos"]').trigger('click')
+
+    expect(espia).toHaveBeenCalledTimes(2)
+    expect(espia).toHaveBeenNthCalledWith(1, 1, 2026, 3)
+    expect(espia).toHaveBeenNthCalledWith(2, 1, 2027, 3)
+  })
+
   it('el botón de cargar acumulado pide confirmación antes de emitir cargar-acumulado-real', async () => {
     const wrapper = montar(
       { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },

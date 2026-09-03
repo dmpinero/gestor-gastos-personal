@@ -83,7 +83,7 @@ const tiendaPrevisiones = useTiendaPrevisiones()
 const detalleMovimientos = ref<Record<string, Movimiento[]>>({})
 
 function claveDetalle(conceptoId: number, mes: number): string {
-  return `${conceptoId}-${mes}`
+  return `${props.anio}-${conceptoId}-${mes}`
 }
 
 async function abrirDetalleMes(conceptoId: number, mes: number): Promise<void> {

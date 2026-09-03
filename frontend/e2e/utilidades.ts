@@ -74,9 +74,17 @@ export async function elegirCuentaDelFormulario(
  * Movimientos: ya no son un Select de una sola opción, sino un Popover con
  * una casilla por elemento (todos marcados por defecto). Deja marcados
  * única y exclusivamente los elementos indicados, sea cual sea el estado
- * previo del popover (no basta con alternar la casilla "Seleccionar
- * todas", que no es idempotente: su efecto depende de si ya estaba en
- * todo/nada/una selección parcial).
+ * previo del popover.
+ *
+ * Parte siempre de "ninguno marcado" usando la casilla "Seleccionar todas"
+ * en vez de desmarcar elemento a elemento: con muchas cuentas/categorías
+ * acumuladas (habitual en un run de CI que ejecuta toda la suite), desmarcar
+ * una a una es lento y puede superar el timeout del test. La casilla
+ * "Seleccionar todas" no es idempotente (su efecto depende de si ya estaba
+ * en todo/nada/una selección parcial), así que se fuerza el estado con como
+ * máximo dos clics: si ya estaba en "todas marcadas" un clic basta; si no,
+ * el primer clic marca todas y el segundo las desmarca. En ambos casos son
+ * muchos menos clics que iterar todos los elementos.
  */
 export async function seleccionarElementosFiltro(
   page: Page,
@@ -84,16 +92,30 @@ export async function seleccionarElementosFiltro(
   textos: string[],
 ): Promise<void> {
   await page.getByRole('button', { name: etiquetaBoton }).click()
-  const filas = page.locator('[data-slot="popover-content"] li')
+  const contenedor = page.locator('[data-slot="popover-content"]')
+  const casillaTodas = contenedor.getByRole('checkbox').first()
+  if (await casillaTodas.isChecked()) {
+    await casillaTodas.click()
+  } else {
+    await casillaTodas.click()
+    await casillaTodas.click()
+  }
+
+  const filas = contenedor.locator('li')
   const total = await filas.count()
   for (let indice = 0; indice < total; indice++) {
     const fila = filas.nth(indice)
     const texto = (await fila.textContent())?.trim()
-    const casilla = fila.getByRole('checkbox')
     if (texto !== undefined && textos.includes(texto)) {
-      await casilla.check()
-    } else {
-      await casilla.uncheck()
+      const casilla = fila.getByRole('checkbox')
+      // La lista tiene su propio scroll interno (max-h-64 overflow-y-auto) y
+      // el popover se reposiciona sobre su elemento ancla; un clic de ratón
+      // necesita que el elemento esté visible y estable en coordenadas de
+      // pantalla, lo que aquí no siempre converge. Activarla por teclado
+      // (foco + Espacio) evita esa comprobación de viewport por completo:
+      // solo hace falta que el elemento esté en el DOM y habilitado.
+      await casilla.focus()
+      await casilla.press(' ')
     }
   }
   await page.keyboard.press('Escape')

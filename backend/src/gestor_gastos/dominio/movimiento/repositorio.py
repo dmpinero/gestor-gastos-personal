@@ -63,20 +63,28 @@ class RepositorioMovimientos(Protocol):
         self, anio: int
     ) -> dict[tuple[int, int | None, int], Decimal]: ...
 
-    def sumar_movimientos_por_descripcion_y_mes(
+    def listar_ids_e_importes_por_descripcion_y_mes(
         self,
         anio: int,
         fragmento_descripcion: str,
         categoria_excluida: int,
         subcategoria_excluida: int | None,
-    ) -> dict[int, Decimal]:
-        """Suma, mes a mes, los movimientos de ese año cuya descripción
+    ) -> dict[int, dict[int, Decimal]]:
+        """Agrupa por mes los movimientos de ese año cuya descripción
         contiene `fragmento_descripcion` (sin distinguir mayúsculas/
         minúsculas), EXCLUYENDO los que ya pertenecen a
         categoria_excluida/subcategoria_excluida: quien llama combina este
         resultado con el de esa categoría/subcategoría (ver
         sumar_movimientos_por_mes), y sin esta exclusión un movimiento que
-        coincidiera con ambos criterios se contaría dos veces."""
+        coincidiera con ambos criterios se contaría dos veces.
+
+        Devuelve, por mes, un diccionario {id_movimiento: importe} en vez de
+        la suma ya hecha: un concepto puede tener varias asociaciones por
+        descripción cuyo texto se solape (p.ej. una genérica y otra más
+        específica que coincida con los mismos movimientos), y quien llama
+        necesita poder unir los resultados de varias asociaciones por id de
+        movimiento antes de sumar, para no contar el mismo movimiento dos
+        veces."""
         ...
 
     def listar_por_categoria_y_mes(
@@ -89,6 +97,7 @@ class RepositorioMovimientos(Protocol):
     def listar_por_descripcion_y_mes(
         self, fragmento_descripcion: str, anio: int, mes: int
     ) -> list[Movimiento]:
-        """Mismo filtro que `sumar_movimientos_por_descripcion_y_mes`, pero
-        devolviendo los movimientos en vez de su suma."""
+        """Mismo filtro que `listar_ids_e_importes_por_descripcion_y_mes`,
+        pero devolviendo los movimientos completos de un único mes en vez de
+        agrupados por mes."""
         ...

@@ -153,6 +153,24 @@ describe('TablaResumenAnual', () => {
     expect(celdas[5]?.classes()).toContain('border-dashed') // mes 5 = ajustado
   })
 
+  it('resalta con fondo los meses previstos que todavía no han llegado (cargo a futuro)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-15'))
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    // mes 1 = previsto pero ya pasado (no es un cargo a futuro).
+    expect(celdas[1]?.classes()).not.toContain('bg-blue-50')
+    // mes 8 = previsto y todavía no ha llegado.
+    expect(celdas[8]?.classes()).toContain('bg-blue-50')
+    vi.useRealTimers()
+  })
+
   it('colorea en rojo los importes negativos confirmados o ajustados, pero no los previstos', () => {
     const wrapper = montar({
       titulo: 'Gastos',

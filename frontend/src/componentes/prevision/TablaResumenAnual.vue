@@ -179,11 +179,26 @@ function cancelarEdicion(): void {
   celdaEditando.value = null
 }
 
+const hoy = new Date()
+const anioActual = hoy.getFullYear()
+const mesActual = hoy.getMonth() + 1
+
+// Un mes "previsto" cuya fecha todavía no ha llegado es un cargo a futuro
+// (distinto de un mes previsto ya pasado, que simplemente no se ha
+// conciliado con movimientos reales): se resalta con un fondo propio para
+// que se distinga de un vistazo en el resumen anual.
+function esMesFuturo(anio: number, mes: number): boolean {
+  return anio > anioActual || (anio === anioActual && mes > mesActual)
+}
+
 // Los valores "previsto" se muestran atenuados a propósito para distinguirlos
 // de los confirmados; no se colorean en verde/rojo para no perder ese matiz.
-function claseCelda(origen: OrigenValorMensual, importe: string): string {
+function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): string {
   const base = 'p-0 text-right tabular-nums'
-  if (origen === 'previsto') return `${base} text-muted-foreground italic`
+  if (origen === 'previsto') {
+    const fondoFuturo = esMesFuturo(props.anio, mes) ? ' bg-blue-50 dark:bg-blue-950/40' : ''
+    return `${base} text-muted-foreground italic${fondoFuturo}`
+  }
   if (origen === 'ajustado') {
     return `${base} border-b-2 border-dashed border-amber-500 ${claseColorImporte(importe)}`
   }
@@ -246,7 +261,7 @@ function claseCelda(origen: OrigenValorMensual, importe: string): string {
               <TableCell
                 v-for="valor in fila.valores"
                 :key="valor.mes"
-                :class="claseCelda(valor.origen, valor.importe)"
+                :class="claseCelda(valor.origen, valor.importe, valor.mes)"
               >
                 <input
                   v-if="estaEditando(fila.concepto_id, valor.mes)"

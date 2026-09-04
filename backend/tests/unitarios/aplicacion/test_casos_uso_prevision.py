@@ -360,6 +360,61 @@ def test_resumen_anual_con_asociacion_descripcion_suma_el_real_al_de_la_categori
     assert valor_marzo.origen == "real"
 
 
+def test_resumen_anual_no_duplica_un_movimiento_que_coincide_con_dos_asociaciones_por_descripcion_del_mismo_concepto() -> (  # noqa: E501
+    None
+):
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, ropa = (
+        _preparar()
+    )
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    otra_categoria = CrearCategoria(repo_categorias).ejecutar("Varios")
+    CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=ropa.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-100.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=otra_categoria.id,
+        fecha_valor=datetime.date(2026, 3, 10),
+        descripcion="Pago en PAYPAL *PAGO 3 PLAZOS",
+        importe=Decimal("-40.00"),
+        saldo=Decimal("60.00"),
+    )
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionFalso()
+    # Dos asociaciones del mismo concepto cuyo texto se solapa: cualquier
+    # movimiento que case con la específica también casa con la genérica.
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=ropa.id,
+            subcategoria_resumen_id=None,
+            descripcion="pago en paypal",
+        )
+    )
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=ropa.id,
+            subcategoria_resumen_id=None,
+            descripcion="Pago en PAYPAL *PAGO 3 PLAZOS",
+        )
+    )
+
+    resumen = ObtenerResumenAnual(
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        repo_asociaciones_descripcion,
+    ).ejecutar(2026)
+
+    fila = resumen.filas_gastos[0]
+    valor_marzo = next(v for v in fila.valores if v.mes == 3)
+    assert valor_marzo.importe == Decimal("-40.00")
+    assert valor_marzo.origen == "real"
+
+
 def test_resumen_anual_no_duplica_un_movimiento_que_coincide_por_categoria_y_por_descripcion() -> (
     None
 ):
@@ -914,6 +969,57 @@ def test_cargar_acumulado_real_no_duplica_un_movimiento_que_coincide_por_categor
     assert ajustes[0].importe == Decimal("-50.00")
 
 
+def test_cargar_acumulado_real_no_duplica_un_movimiento_que_coincide_con_dos_asociaciones_por_descripcion_del_mismo_concepto() -> (  # noqa: E501
+    None
+):
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, ropa = (
+        _preparar()
+    )
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    otra_categoria = CrearCategoria(repo_categorias).ejecutar("Varios")
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=ropa.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-100.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=otra_categoria.id,
+        fecha_valor=datetime.date(2026, 3, 10),
+        descripcion="Pago en PAYPAL *PAGO 3 PLAZOS",
+        importe=Decimal("-40.00"),
+        saldo=Decimal("60.00"),
+    )
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionFalso()
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=ropa.id,
+            subcategoria_resumen_id=None,
+            descripcion="pago en paypal",
+        )
+    )
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=ropa.id,
+            subcategoria_resumen_id=None,
+            descripcion="Pago en PAYPAL *PAGO 3 PLAZOS",
+        )
+    )
+
+    CargarAcumuladoReal(
+        repo_previsiones,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        repo_asociaciones_descripcion,
+    ).ejecutar(concepto.id, 2026)
+
+    ajustes = repo_ajustes.listar_por_anio(2026)
+    assert len(ajustes) == 1
+    assert ajustes[0].importe == Decimal("-40.00")
+
+
 def test_cargar_acumulado_real_con_concepto_inexistente_falla() -> None:
     repo_previsiones, _, repo_movimientos, _, repo_ajustes, _ = _preparar()
 
@@ -1188,6 +1294,59 @@ def test_cargar_acumulado_real_todos_usa_asociacion_por_categoria_y_por_descripc
     ajustes = repo_ajustes.listar_por_anio(2026)
     assert ajustes[0].concepto_id == concepto.id
     assert ajustes[0].importe == Decimal("-175.00")
+
+
+def test_cargar_acumulado_real_todos_no_duplica_un_movimiento_que_coincide_con_dos_asociaciones_por_descripcion_del_mismo_concepto() -> (  # noqa: E501
+    None
+):
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, ropa = (
+        _preparar()
+    )
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    otra_categoria = CrearCategoria(repo_categorias).ejecutar("Varios")
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=ropa.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-100.00"),
+    )
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=otra_categoria.id,
+        fecha_valor=datetime.date(2026, 3, 10),
+        descripcion="Pago en PAYPAL *PAGO 3 PLAZOS",
+        importe=Decimal("-40.00"),
+        saldo=Decimal("60.00"),
+    )
+    repo_asociaciones_descripcion = RepositorioAsociacionesDescripcionFalso()
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=ropa.id,
+            subcategoria_resumen_id=None,
+            descripcion="pago en paypal",
+        )
+    )
+    repo_asociaciones_descripcion.crear(
+        AsociacionDescripcion(
+            categoria_resumen_id=ropa.id,
+            subcategoria_resumen_id=None,
+            descripcion="Pago en PAYPAL *PAGO 3 PLAZOS",
+        )
+    )
+
+    conceptos_actualizados, meses_actualizados = CargarAcumuladoRealTodos(
+        repo_previsiones,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        repo_asociaciones_descripcion,
+    ).ejecutar(2026)
+
+    assert conceptos_actualizados == 1
+    assert meses_actualizados == 1
+    ajustes = repo_ajustes.listar_por_anio(2026)
+    assert ajustes[0].concepto_id == concepto.id
+    assert ajustes[0].importe == Decimal("-40.00")
 
 
 def test_cargar_acumulado_real_todos_sin_conceptos_no_falla() -> None:

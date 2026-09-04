@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcion, elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 async function crearMovimiento(
   page: Page,
@@ -289,4 +289,122 @@ test('el Historial se ve agrupado por categoría/subcategoría por defecto, y se
   // Y se puede volver a la vista agrupada.
   await page.getByRole('button', { name: 'Agrupar por categoría' }).click()
   await expect(page.locator('button[aria-expanded]', { hasText: nombreCategoria })).toBeVisible()
+})
+
+test('una subcategoría con una asociación por descripción muestra en el historial los movimientos guardados bajo otra categoría real ("Amazon Prime")', async ({
+  page,
+}) => {
+  const sufijo = Date.now()
+  const numeroCuenta = `ES00 HIST-DESC ${sufijo}`
+  const nombreCategoriaResumen = `Categoria HIST-SUSCRIP ${sufijo}`
+  const nombreSubcategoriaResumen = `Amazon Prime HIST ${sufijo}`
+  const nombreCategoriaMovimiento = `Categoria HIST-OTRA ${sufijo}`
+  const descripcionMovimiento = `Pago en Amazon Prime ${sufijo}`
+  const fragmentoDescripcion = `Amazon Prime ${sufijo}`
+
+  await page.goto('/gestion/cuentas')
+  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  const panelCuenta = page.getByRole('dialog')
+  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
+  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+
+  await page.goto('/gestion/categorias')
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoriaResumen = page.getByRole('dialog')
+  await panelCategoriaResumen.getByPlaceholder('Nueva categoría').fill(nombreCategoriaResumen)
+  await panelCategoriaResumen.getByRole('button', { name: 'Crear categoría' }).click()
+  const tarjetaCategoriaResumen = page.locator('[data-slot="card"]', {
+    hasText: nombreCategoriaResumen,
+  })
+  await expect(tarjetaCategoriaResumen).toBeVisible()
+  await tarjetaCategoriaResumen
+    .getByPlaceholder('Nueva subcategoría')
+    .fill(nombreSubcategoriaResumen)
+  await tarjetaCategoriaResumen.getByRole('button', { name: 'Añadir' }).click()
+  await expect(
+    tarjetaCategoriaResumen.locator('li', { hasText: nombreSubcategoriaResumen }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: 'Crear categoría' }).click()
+  const panelCategoriaMovimiento = page.getByRole('dialog')
+  await panelCategoriaMovimiento.getByPlaceholder('Nueva categoría').fill(nombreCategoriaMovimiento)
+  await panelCategoriaMovimiento.getByRole('button', { name: 'Crear categoría' }).click()
+  await expect(
+    page.locator('[data-slot="card"]', { hasText: nombreCategoriaMovimiento }),
+  ).toBeVisible()
+
+  // El movimiento real se guarda bajo otra categoría (sin subcategoría),
+  // como ocurre con los cargos de Amazon Prime en el banco: no comparte
+  // categoría con la subcategoría del resumen, solo la descripción.
+  await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuenta)
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panelMovimiento = page.getByRole('dialog')
+  await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
+  await elegirOpcion(
+    page,
+    panelMovimiento.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaMovimiento,
+  )
+  await panelMovimiento.getByPlaceholder('Descripción').fill(descripcionMovimiento)
+  await panelMovimiento.getByPlaceholder('Importe').fill('-9.99')
+  await panelMovimiento.getByPlaceholder('Saldo').fill('1000.00')
+  await panelMovimiento.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: descripcionMovimiento })).toBeVisible()
+
+  // Sin asociación, la subcategoría del Historial no encuentra el movimiento
+  // (misma raíz del bug real: navegar por categoría/subcategoría literal no
+  // tiene en cuenta las asociaciones por descripción).
+  // Los nodos de subcategoría de cada categoría solo se ven en el menú
+  // lateral una vez esa categoría está activa (o se navega a ella): hay que
+  // entrar primero en la categoría antes de poder pulsar su subcategoría.
+  await page.getByRole('button', { name: 'Expandir Historial' }).click()
+  await page.getByRole('link', { name: nombreCategoriaResumen, exact: true }).click()
+  await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
+  await page.getByRole('link', { name: nombreSubcategoriaResumen }).click()
+  await expect(page).toHaveURL(/\/historial\/subcategoria\/\d+/)
+  await expect(
+    page.getByText(
+      `No hay movimientos registrados para ${nombreCategoriaResumen} → ${nombreSubcategoriaResumen}.`,
+    ),
+  ).toBeVisible()
+
+  // Crear la asociación por descripción, apuntando a la subcategoría del
+  // resumen (no solo a la categoría).
+  await page.goto('/administracion/gestion-conceptos')
+  await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible()
+  await page.getByPlaceholder('p. ej. Ayuntamiento Las Rozas').fill(fragmentoDescripcion)
+  await elegirOpcionBuscador(
+    page,
+    page.getByLabel('Categoría del Resumen anual (para esta descripción)', { exact: true }),
+    nombreCategoriaResumen,
+  )
+  await elegirOpcionBuscador(
+    page,
+    page.getByLabel('Subcategoría del Resumen anual (para esta descripción)', { exact: true }),
+    nombreSubcategoriaResumen,
+  )
+  await page.getByRole('button', { name: 'Crear asociación' }).click()
+  await expect(
+    page
+      .locator('tbody tr', { hasText: nombreSubcategoriaResumen })
+      .filter({ hasText: fragmentoDescripcion }),
+  ).toBeVisible()
+
+  // Ahora la subcategoría del Historial encuentra el movimiento, aunque esté
+  // guardado bajo otra categoría real. Al haber navegado fuera del
+  // Historial, el menú lateral vuelve a mostrar esa sección contraída: hay
+  // que expandirla y entrar en la categoría de nuevo antes de llegar a la
+  // subcategoría.
+  await page.getByRole('button', { name: 'Expandir Historial' }).click()
+  await page.getByRole('link', { name: nombreCategoriaResumen, exact: true }).click()
+  await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
+  await page.getByRole('link', { name: nombreSubcategoriaResumen }).click()
+  await expect(page).toHaveURL(/\/historial\/subcategoria\/\d+/)
+  await page.getByRole('button', { name: 'Ver todos los movimientos' }).click()
+  await expect(page.locator('tbody tr', { hasText: descripcionMovimiento })).toBeVisible()
+  await expect(page.locator('tbody tr', { hasText: descripcionMovimiento })).toContainText(
+    nombreCategoriaMovimiento,
+  )
 })

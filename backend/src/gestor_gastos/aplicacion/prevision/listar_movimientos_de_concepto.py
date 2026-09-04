@@ -35,7 +35,7 @@ class ListarMovimientosDeConcepto:
             raise EntidadNoEncontradaError(f"No existe el concepto previsto con id {id_concepto}")
 
         categoria_real, subcategoria_real = resolver_categoria_movimiento_real(
-            concepto, self._repositorio_asociaciones
+            concepto.categoria_id, concepto.subcategoria_id, self._repositorio_asociaciones
         )
         movimientos = self._repositorio_movimientos.listar_por_categoria_y_mes(
             categoria_real, subcategoria_real, anio, mes

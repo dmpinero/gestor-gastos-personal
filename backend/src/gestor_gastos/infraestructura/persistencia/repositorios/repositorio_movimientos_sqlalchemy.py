@@ -270,3 +270,11 @@ class RepositorioMovimientosSqlAlchemy:
             .order_by(MovimientoModelo.fecha_valor.desc())
         ).all()
         return [_a_entidad(m) for m in modelos]
+
+    def listar_por_descripcion(self, fragmento_descripcion: str) -> list[Movimiento]:
+        modelos = self._sesion.scalars(
+            select(MovimientoModelo)
+            .where(MovimientoModelo.descripcion.icontains(fragmento_descripcion))
+            .order_by(MovimientoModelo.fecha_valor.desc())
+        ).all()
+        return [_a_entidad(m) for m in modelos]

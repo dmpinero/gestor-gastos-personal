@@ -66,12 +66,21 @@ export const useTiendaMovimientos = defineStore('movimientos', () => {
   // Sin solo_gastos: una categoría/subcategoría puede tener tanto gastos
   // como ingresos (p. ej. "Nómina y otras prestaciones"), y el Historial
   // debe poder mostrar ambos.
+  //
+  // Usa /previsiones/movimientos-por-categoria en vez de /movimientos: ese
+  // endpoint también encuentra los movimientos que un concepto del resumen
+  // anual localiza a través de una AsociacionConcepto o AsociacionDescripcion
+  // (p.ej. "Amazon Prime" agrupa movimientos guardados bajo otra categoría
+  // real), que de otro modo no aparecerían en el Historial aunque sí
+  // cuenten en el Resumen anual.
   async function cargarPorCategoria(categoriaId: number): Promise<void> {
-    await cargarConFiltro(`/movimientos?categoria_id=${categoriaId}`)
+    await cargarConFiltro(`/previsiones/movimientos-por-categoria?categoria_id=${categoriaId}`)
   }
 
-  async function cargarPorSubcategoria(subcategoriaId: number): Promise<void> {
-    await cargarConFiltro(`/movimientos?subcategoria_id=${subcategoriaId}`)
+  async function cargarPorSubcategoria(categoriaId: number, subcategoriaId: number): Promise<void> {
+    await cargarConFiltro(
+      `/previsiones/movimientos-por-categoria?categoria_id=${categoriaId}&subcategoria_id=${subcategoriaId}`,
+    )
   }
 
   async function crear(datos: DatosMovimiento): Promise<Movimiento> {

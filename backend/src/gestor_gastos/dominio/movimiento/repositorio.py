@@ -101,3 +101,10 @@ class RepositorioMovimientos(Protocol):
         pero devolviendo los movimientos completos de un único mes en vez de
         agrupados por mes."""
         ...
+
+    def listar_por_descripcion(self, fragmento_descripcion: str) -> list[Movimiento]:
+        """Como `listar_por_descripcion_y_mes`, pero de cualquier fecha (sin
+        restringir a un año/mes concreto): lo usa Historial, que muestra
+        todos los movimientos de una categoría/subcategoría sin acotar a un
+        periodo."""
+        ...

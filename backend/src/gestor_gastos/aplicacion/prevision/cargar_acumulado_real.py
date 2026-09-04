@@ -40,7 +40,7 @@ class CargarAcumuladoReal:
             raise EntidadNoEncontradaError(f"No existe el concepto previsto con id {id_concepto}")
 
         categoria_real, subcategoria_real = resolver_categoria_movimiento_real(
-            concepto, self._repositorio_asociaciones
+            concepto.categoria_id, concepto.subcategoria_id, self._repositorio_asociaciones
         )
         sumas_reales = self._repositorio_movimientos.sumar_movimientos_por_mes(anio)
         asociaciones_descripcion_concepto = [

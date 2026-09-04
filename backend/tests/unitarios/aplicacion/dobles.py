@@ -308,6 +308,14 @@ class RepositorioMovimientosFalso:
         ]
         return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
 
+    def listar_por_descripcion(self, fragmento_descripcion: str) -> list[Movimiento]:
+        movimientos = [
+            m
+            for m in self._movimientos.values()
+            if fragmento_descripcion.lower() in m.descripcion.lower()
+        ]
+        return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
+
 
 class RepositorioPrevisionesFalso:
     """Doble de RepositorioPrevisiones en memoria."""

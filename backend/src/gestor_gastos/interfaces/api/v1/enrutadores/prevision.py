@@ -48,6 +48,9 @@ from gestor_gastos.aplicacion.prevision.listar_conceptos_previstos import (
 from gestor_gastos.aplicacion.prevision.listar_movimientos_de_concepto import (
     ListarMovimientosDeConcepto,
 )
+from gestor_gastos.aplicacion.prevision.listar_movimientos_por_categoria_resumen import (
+    ListarMovimientosPorCategoriaResumen,
+)
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
@@ -343,6 +346,23 @@ def movimientos_de_concepto(
         RepositorioAsociacionesSqlAlchemy(sesion),
         RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
     ).ejecutar(id_concepto, anio, mes)
+    return [MovimientoSalidaEsquema(**asdict(m)) for m in movimientos]
+
+
+@enrutador.get(
+    "/movimientos-por-categoria",
+    response_model=list[MovimientoSalidaEsquema],
+)
+def movimientos_por_categoria_resumen(
+    categoria_id: int = Query(...),
+    subcategoria_id: int | None = Query(None),
+    sesion: Session = Depends(obtener_sesion),
+) -> list[MovimientoSalidaEsquema]:
+    movimientos = ListarMovimientosPorCategoriaResumen(
+        RepositorioMovimientosSqlAlchemy(sesion),
+        RepositorioAsociacionesSqlAlchemy(sesion),
+        RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+    ).ejecutar(categoria_id, subcategoria_id)
     return [MovimientoSalidaEsquema(**asdict(m)) for m in movimientos]
 
 

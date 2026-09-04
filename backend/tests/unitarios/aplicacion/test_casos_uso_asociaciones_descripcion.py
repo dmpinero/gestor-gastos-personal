@@ -54,6 +54,18 @@ def test_crear_asociacion_descripcion_recorta_espacios() -> None:
     assert asociacion.descripcion == "Recibo Ayuntamiento Las Rozas"
 
 
+def test_crear_asociacion_descripcion_colapsa_espacios_multiples() -> None:
+    repo_asociaciones, repo_categorias, resumen = _preparar()
+
+    asociacion = CrearAsociacionDescripcion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        descripcion="Recibo SANITAS S A  DE SEGUROS",
+    )
+
+    assert asociacion.descripcion == "Recibo SANITAS S A DE SEGUROS"
+
+
 def test_crear_asociacion_descripcion_con_subcategoria() -> None:
     repo_asociaciones, repo_categorias, resumen = _preparar()
     subcategoria = CrearSubcategoria(repo_categorias).ejecutar(resumen.id, "IBI")
@@ -151,6 +163,24 @@ def test_actualizar_asociacion_descripcion_cambia_la_descripcion_y_recorta_espac
 
     assert actualizada.descripcion == "Recibo Diputación OPAEF"
     assert repo_asociaciones.obtener_por_id(asociacion.id).descripcion == "Recibo Diputación OPAEF"
+
+
+def test_actualizar_asociacion_descripcion_colapsa_espacios_multiples() -> None:
+    repo_asociaciones, repo_categorias, resumen = _preparar()
+    asociacion = CrearAsociacionDescripcion(repo_asociaciones, repo_categorias).ejecutar(
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        descripcion="Recibo Ayuntamiento Las Rozas",
+    )
+
+    actualizada = ActualizarAsociacionDescripcion(repo_asociaciones, repo_categorias).ejecutar(
+        asociacion.id,
+        categoria_resumen_id=resumen.id,
+        subcategoria_resumen_id=None,
+        descripcion="Recibo SANITAS S A  DE SEGUROS",
+    )
+
+    assert actualizada.descripcion == "Recibo SANITAS S A DE SEGUROS"
 
 
 def test_actualizar_asociacion_descripcion_sin_cambiarla_no_falla_por_duplicado_consigo_misma() -> (

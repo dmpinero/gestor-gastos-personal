@@ -266,6 +266,39 @@ def test_obtener_ultimo_saldo(sesion_bd) -> None:
     assert repositorio.obtener_ultimo_saldo(cuenta.id) == Decimal("95.00")
 
 
+def test_obtener_ultimo_saldo_con_varios_movimientos_en_la_misma_fecha_gana_el_de_menor_id(
+    sesion_bd,
+) -> None:
+    # El extracto del banco no trae hora, solo fecha, y lista los movimientos
+    # de un mismo día del más reciente al más antiguo; al importarlos en ese
+    # orden, el más reciente de ese día recibe el id más bajo del grupo.
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 10),
+            descripcion="El más reciente del día (primero en el Excel)",
+            importe=Decimal("-30.00"),
+            saldo=Decimal("70.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 10),
+            descripcion="El más antiguo del día (segundo en el Excel)",
+            importe=Decimal("-20.00"),
+            saldo=Decimal("50.00"),
+        )
+    )
+
+    assert repositorio.obtener_ultimo_saldo(cuenta.id) == Decimal("70.00")
+
+
 def test_sumar_gastos_e_ingresos_por_categoria(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     otra_categoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_categoria(

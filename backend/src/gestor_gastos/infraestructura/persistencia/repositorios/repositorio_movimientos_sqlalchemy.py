@@ -169,10 +169,16 @@ class RepositorioMovimientosSqlAlchemy:
         self._sesion.commit()
 
     def obtener_ultimo_saldo(self, id_cuenta: int) -> Decimal | None:
+        # Cuando varios movimientos comparten fecha_valor (habitual: el
+        # extracto del banco no trae hora, solo día), no se puede saber cuál
+        # es realmente el último por la fecha. El Excel del banco los lista
+        # del más reciente al más antiguo, así que al importarlos en ese
+        # mismo orden el más reciente de ese día recibe el id MÁS BAJO del
+        # grupo: por eso se desempata por id ascendente, no descendente.
         return self._sesion.scalar(
             select(MovimientoModelo.saldo)
             .where(MovimientoModelo.cuenta_id == id_cuenta)
-            .order_by(MovimientoModelo.fecha_valor.desc(), MovimientoModelo.id.desc())
+            .order_by(MovimientoModelo.fecha_valor.desc(), MovimientoModelo.id.asc())
             .limit(1)
         )
 

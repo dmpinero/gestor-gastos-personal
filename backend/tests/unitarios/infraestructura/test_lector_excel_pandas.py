@@ -9,7 +9,10 @@ from gestor_gastos.dominio.importacion.excepciones import (
     ExtensionNoSoportadaError,
     FicheroSinMovimientosError,
 )
-from gestor_gastos.infraestructura.importacion.lector_excel_pandas import LectorExcelPandas
+from gestor_gastos.infraestructura.importacion.lector_excel_pandas import (
+    LectorExcelPandas,
+    _a_texto_o_none,
+)
 
 RUTA_FIXTURE = Path(__file__).parent.parent.parent / "fixtures" / "movimientos_ejemplo.xlsx"
 
@@ -56,6 +59,14 @@ def test_fila_con_importe_positivo_se_lee_igual() -> None:
 
     ingreso = next(f for f in datos.filas if f.categoria == "Otros ingresos")
     assert ingreso.importe == Decimal("1200.00")
+
+
+def test_a_texto_o_none_colapsa_espacios_multiples() -> None:
+    assert _a_texto_o_none("Recibo SANITAS S A  DE SEGUROS") == "Recibo SANITAS S A DE SEGUROS"
+
+
+def test_a_texto_o_none_recorta_espacios_en_los_extremos() -> None:
+    assert _a_texto_o_none("  Recibo Ayuntamiento  ") == "Recibo Ayuntamiento"
 
 
 def test_extension_no_soportada_lanza_error() -> None:

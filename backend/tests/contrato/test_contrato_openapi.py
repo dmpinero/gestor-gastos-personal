@@ -34,6 +34,11 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     # anio_hasta < anio_desde es válido por esquema (cada uno cumple su rango
     # individualmente) pero se rechaza por regla de negocio (FiltroDeListadoInvalidoError).
     "/api/v1/previsiones/resumen-anual/exportar",
+    # subcategoria_id: int | None = Query(None): mismo motivo que
+    # /api/v1/movimientos (OpenAPI lo marca "nullable", pero FastAPI no
+    # acepta la cadena literal "null" como valor de un query param entero,
+    # solo un entero válido o la ausencia del parámetro).
+    "/api/v1/previsiones/movimientos-por-categoria",
 }
 
 # FastAPI/Starlette no rechazan un parámetro de query escalar (p.ej.

@@ -256,14 +256,14 @@ class RepositorioMovimientosFalso:
             totales[clave] = totales.get(clave, Decimal("0")) + movimiento.importe
         return totales
 
-    def sumar_movimientos_por_descripcion_y_mes(
+    def listar_ids_e_importes_por_descripcion_y_mes(
         self,
         anio: int,
         fragmento_descripcion: str,
         categoria_excluida: int,
         subcategoria_excluida: int | None,
-    ) -> dict[int, Decimal]:
-        totales: dict[int, Decimal] = {}
+    ) -> dict[int, dict[int, Decimal]]:
+        resultado: dict[int, dict[int, Decimal]] = {}
         for movimiento in self._movimientos.values():
             if movimiento.fecha_valor.year != anio:
                 continue
@@ -275,8 +275,8 @@ class RepositorioMovimientosFalso:
             ):
                 continue
             mes = movimiento.fecha_valor.month
-            totales[mes] = totales.get(mes, Decimal("0")) + movimiento.importe
-        return totales
+            resultado.setdefault(mes, {})[movimiento.id] = movimiento.importe
+        return resultado
 
     def listar_por_categoria_y_mes(
         self, id_categoria: int, id_subcategoria: int | None, anio: int, mes: int

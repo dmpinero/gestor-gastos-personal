@@ -196,7 +196,9 @@ def test_sumar_movimientos_por_mes(sesion_bd) -> None:
     assert (categoria.id, None, 3) not in totales
 
 
-def test_sumar_movimientos_por_descripcion_y_mes_excluye_la_categoria_indicada(sesion_bd) -> None:
+def test_listar_ids_e_importes_por_descripcion_y_mes_excluye_la_categoria_indicada(
+    sesion_bd,
+) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     otra_categoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_categoria(
         Categoria(nombre="Varios")
@@ -216,7 +218,7 @@ def test_sumar_movimientos_por_descripcion_y_mes_excluye_la_categoria_indicada(s
         )
     )
     # Coincide por descripción y está en otra categoría: sí debe sumarse.
-    repositorio.crear(
+    incluido = repositorio.crear(
         Movimiento(
             cuenta_id=cuenta.id,
             categoria_id=otra_categoria.id,
@@ -227,11 +229,11 @@ def test_sumar_movimientos_por_descripcion_y_mes_excluye_la_categoria_indicada(s
         )
     )
 
-    totales = repositorio.sumar_movimientos_por_descripcion_y_mes(
+    resultado = repositorio.listar_ids_e_importes_por_descripcion_y_mes(
         2026, "Bizum enviado", categoria.id, None
     )
 
-    assert totales == {3: Decimal("-30.00")}
+    assert resultado == {3: {incluido.id: Decimal("-30.00")}}
 
 
 def test_obtener_ultimo_saldo(sesion_bd) -> None:

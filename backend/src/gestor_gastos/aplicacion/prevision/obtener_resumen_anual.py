@@ -63,15 +63,20 @@ class ObtenerResumenAnual:
         # concepto, y cuya descripción TAMBIÉN coincide con una de sus
         # AsociacionDescripcion, no debe sumarse dos veces: se excluye aquí
         # de la suma por descripción (la suma por categoría ya lo cuenta).
-        sumas_por_descripcion: dict[str, dict[int, Decimal]] = {}
+        # Tampoco debe sumarse dos veces si dos asociaciones por descripción
+        # del mismo concepto se solapan entre sí (una genérica y otra más
+        # específica que coincida con los mismos movimientos); por eso se
+        # guardan los ids de movimiento en vez de una suma ya hecha, para
+        # poder unirlos más abajo antes de sumar.
+        movimientos_por_descripcion: dict[str, dict[int, dict[int, Decimal]]] = {}
         for asociaciones_del_concepto in asociaciones_descripcion.values():
             for a in asociaciones_del_concepto:
                 categoria_real_asoc, subcategoria_real_asoc = asociaciones.get(
                     (a.categoria_resumen_id, a.subcategoria_resumen_id),
                     (a.categoria_resumen_id, a.subcategoria_resumen_id),
                 )
-                sumas_por_descripcion[a.descripcion] = (
-                    self._repositorio_movimientos.sumar_movimientos_por_descripcion_y_mes(
+                movimientos_por_descripcion[a.descripcion] = (
+                    self._repositorio_movimientos.listar_ids_e_importes_por_descripcion_y_mes(
                         anio, a.descripcion, categoria_real_asoc, subcategoria_real_asoc
                     )
                 )
@@ -97,11 +102,14 @@ class ObtenerResumenAnual:
                 real_categoria = sumas_reales.get(clave)
                 real_total = real_categoria if real_categoria is not None else Decimal("0")
                 hay_real = real_categoria is not None
+                movimientos_del_mes: dict[int, Decimal] = {}
                 for a in asociaciones_descripcion_concepto:
-                    real_descripcion = sumas_por_descripcion[a.descripcion].get(mes)
-                    if real_descripcion is not None:
-                        real_total += real_descripcion
-                        hay_real = True
+                    movimientos_del_mes.update(
+                        movimientos_por_descripcion[a.descripcion].get(mes, {})
+                    )
+                if movimientos_del_mes:
+                    real_total += sum(movimientos_del_mes.values())
+                    hay_real = True
                 if ajuste is not None:
                     valores.append(ValorMensual(mes=mes, importe=ajuste, origen="ajustado"))
                 elif hay_real:

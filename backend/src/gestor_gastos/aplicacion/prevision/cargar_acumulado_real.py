@@ -51,24 +51,29 @@ class CargarAcumuladoReal:
         ]
         # Un movimiento cuya categoría/subcategoría ya es categoria_real, y
         # cuya descripción TAMBIÉN coincide con una AsociacionDescripcion, no
-        # debe sumarse dos veces (la suma por categoría ya lo cuenta).
-        sumas_por_descripcion = {
-            a.descripcion: self._repositorio_movimientos.sumar_movimientos_por_descripcion_y_mes(
+        # debe sumarse dos veces (la suma por categoría ya lo cuenta). Del
+        # mismo modo, si dos asociaciones por descripción del mismo concepto
+        # se solapan (una genérica y otra más específica), un movimiento que
+        # coincida con ambas tampoco debe contarse dos veces: se unen por id
+        # de movimiento antes de sumar.
+        movimientos_por_descripcion_y_mes = [
+            self._repositorio_movimientos.listar_ids_e_importes_por_descripcion_y_mes(
                 anio, a.descripcion, categoria_real, subcategoria_real
             )
             for a in asociaciones_descripcion_concepto
-        }
+        ]
 
         meses_actualizados = 0
         for mes in range(1, 13):
             real_categoria = sumas_reales.get((categoria_real, subcategoria_real, mes))
             real_total = real_categoria if real_categoria is not None else Decimal("0")
             hay_real = real_categoria is not None
-            for a in asociaciones_descripcion_concepto:
-                real_descripcion = sumas_por_descripcion[a.descripcion].get(mes)
-                if real_descripcion is not None:
-                    real_total += real_descripcion
-                    hay_real = True
+            movimientos_del_mes: dict[int, Decimal] = {}
+            for movimientos_por_mes in movimientos_por_descripcion_y_mes:
+                movimientos_del_mes.update(movimientos_por_mes.get(mes, {}))
+            if movimientos_del_mes:
+                real_total += sum(movimientos_del_mes.values())
+                hay_real = True
 
             if hay_real:
                 self._repositorio_ajustes.guardar(

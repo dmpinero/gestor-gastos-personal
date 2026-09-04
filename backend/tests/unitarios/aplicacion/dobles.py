@@ -222,10 +222,15 @@ class RepositorioMovimientosFalso:
             self._movimientos.pop(id_movimiento, None)
 
     def obtener_ultimo_saldo(self, id_cuenta: int) -> Decimal | None:
+        # Ver el comentario en RepositorioMovimientosSqlAlchemy.obtener_ultimo_saldo:
+        # con fecha_valor empatada, gana el id más bajo (el banco lista cada
+        # día del más reciente al más antiguo).
         movimientos = [m for m in self._movimientos.values() if m.cuenta_id == id_cuenta]
         if not movimientos:
             return None
-        ultimo = max(movimientos, key=lambda m: (m.fecha_valor, m.id))
+        fecha_maxima = max(m.fecha_valor for m in movimientos)
+        candidatos = [m for m in movimientos if m.fecha_valor == fecha_maxima]
+        ultimo = min(candidatos, key=lambda m: m.id)
         return ultimo.saldo
 
     def sumar_gastos_por_categoria(self) -> dict[int, Decimal]:

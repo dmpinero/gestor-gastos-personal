@@ -107,13 +107,25 @@ const agrupadoPorCategoria = ref(true)
 
 watch(
   () => ruta.fullPath,
-  () => {
+  async () => {
     desde.value = ''
     hasta.value = ''
     if (ruta.name === 'historial-categoria') {
       tiendaMovimientos.cargarPorCategoria(Number(ruta.params.id))
     } else if (ruta.name === 'historial-subcategoria') {
-      tiendaMovimientos.cargarPorSubcategoria(Number(ruta.params.id))
+      const idSubcategoria = Number(ruta.params.id)
+      // El watcher es inmediato y puede dispararse antes de que
+      // onMounted haya pedido las categorías: sin ellas no se puede
+      // resolver a qué categoría pertenece esta subcategoría.
+      if (tiendaCategorias.categorias.length === 0) {
+        await tiendaCategorias.cargar()
+      }
+      const categoria = tiendaCategorias.categorias.find((c) =>
+        c.subcategorias.some((s) => s.id === idSubcategoria),
+      )
+      if (categoria) {
+        tiendaMovimientos.cargarPorSubcategoria(categoria.categoria.id, idSubcategoria)
+      }
     } else {
       tiendaMovimientos.limpiar()
     }

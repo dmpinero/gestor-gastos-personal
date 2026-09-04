@@ -41,6 +41,30 @@ describe('useTiendaMovimientos', () => {
     expect(tienda.movimientos).toEqual([movimientoEjemplo])
   })
 
+  it('carga los movimientos de una categoría usando el endpoint que también tiene en cuenta las asociaciones', async () => {
+    vi.mocked(clienteApi.obtener).mockResolvedValue([movimientoEjemplo])
+
+    const tienda = useTiendaMovimientos()
+    await tienda.cargarPorCategoria(5)
+
+    expect(clienteApi.obtener).toHaveBeenCalledWith(
+      '/previsiones/movimientos-por-categoria?categoria_id=5',
+    )
+    expect(tienda.movimientos).toEqual([movimientoEjemplo])
+  })
+
+  it('carga los movimientos de una subcategoría incluyendo la categoría en la petición', async () => {
+    vi.mocked(clienteApi.obtener).mockResolvedValue([movimientoEjemplo])
+
+    const tienda = useTiendaMovimientos()
+    await tienda.cargarPorSubcategoria(5, 42)
+
+    expect(clienteApi.obtener).toHaveBeenCalledWith(
+      '/previsiones/movimientos-por-categoria?categoria_id=5&subcategoria_id=42',
+    )
+    expect(tienda.movimientos).toEqual([movimientoEjemplo])
+  })
+
   it('añade el movimiento nuevo al principio de la lista', async () => {
     vi.mocked(clienteApi.crear).mockResolvedValue(movimientoEjemplo)
 

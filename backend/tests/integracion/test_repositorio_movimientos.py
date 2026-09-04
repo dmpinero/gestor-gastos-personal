@@ -527,3 +527,42 @@ def test_listar_por_descripcion_y_mes_filtra_por_fragmento_anio_y_mes(sesion_bd)
     movimientos = repositorio.listar_por_descripcion_y_mes("ayuntamiento las rozas", 2026, 3)
 
     assert [m.id for m in movimientos] == [encaja.id]
+
+
+def test_listar_por_descripcion_filtra_por_fragmento_sin_restringir_la_fecha(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    encaja_2026 = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 5),
+            descripcion="Recibo Ayuntamiento Las Rozas",
+            importe=Decimal("-40.00"),
+            saldo=Decimal("60.00"),
+        )
+    )
+    encaja_2018 = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2018, 1, 10),
+            descripcion="Recibo Ayuntamiento Las Rozas",
+            importe=Decimal("-35.00"),
+            saldo=Decimal("500.00"),
+        )
+    )
+    repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 3, 6),
+            descripcion="Otra descripción",
+            importe=Decimal("-1.00"),
+            saldo=Decimal("59.00"),
+        )
+    )
+
+    movimientos = repositorio.listar_por_descripcion("ayuntamiento las rozas")
+
+    assert {m.id for m in movimientos} == {encaja_2026.id, encaja_2018.id}

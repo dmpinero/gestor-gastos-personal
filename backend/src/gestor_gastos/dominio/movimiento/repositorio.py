@@ -35,7 +35,13 @@ class RepositorioMovimientos(Protocol):
         importe: Decimal,
         saldo: Decimal,
         descripcion: str,
-    ) -> Movimiento | None: ...
+    ) -> Movimiento | None:
+        """Compara `descripcion` con espacios internos colapsados: dos
+        exportaciones del mismo extracto bancario en momentos distintos
+        pueden formatear el espaciado de forma distinta (p.ej. "C.P. C
+        CASTILLA REAL" frente a "C.P. C  CASTILLA REAL"), y sin esto no se
+        detectarían como el mismo movimiento."""
+        ...
 
     def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int: ...
 

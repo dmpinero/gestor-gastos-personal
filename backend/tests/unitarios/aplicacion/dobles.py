@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
-from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos
+from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos, DatosPdfLeidos
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
@@ -520,6 +520,20 @@ class LectorExcelFalso:
         self._error = error
 
     def leer(self, contenido: bytes, nombre_fichero: str) -> DatosExcelLeidos:
+        if self._error is not None:
+            raise self._error
+        assert self._datos is not None
+        return self._datos
+
+
+class LectorPdfFalso:
+    """Doble de LectorPdf que devuelve unos datos fijos o lanza un error dado."""
+
+    def __init__(self, datos: DatosPdfLeidos | None = None, error: Exception | None = None) -> None:
+        self._datos = datos
+        self._error = error
+
+    def leer(self, contenido: bytes, nombre_fichero: str) -> DatosPdfLeidos:
         if self._error is not None:
             raise self._error
         assert self._datos is not None

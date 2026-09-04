@@ -9,7 +9,11 @@ const RUTA_FICHERO = path.resolve(
   __dirname,
   '../../backend/tests/fixtures/movimientos_ejemplo.xlsx',
 )
-const NOMBRE_BOTON_ZONA = 'Seleccionar o soltar uno o varios archivos Excel'
+const RUTA_FICHERO_PDF = path.resolve(
+  __dirname,
+  '../../backend/tests/fixtures/movimientos_ejemplo.pdf',
+)
+const NOMBRE_BOTON_ZONA = 'Seleccionar o soltar uno o varios archivos Excel o PDF'
 const NOMBRE_BOTON_ZONA_CONCEPTOS =
   'Seleccionar o soltar uno o varios archivos Excel de conceptos previstos'
 
@@ -98,6 +102,35 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA EJEMPLO')
   await expect(page.locator('tbody tr').first()).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-10-ver-movimientos-importados.png' })
+})
+
+test('importar un PDF (certificado de movimientos) crea la cuenta y sus movimientos, dejándolos "Sin categorizar" sin asociación previa', async ({
+  page,
+}) => {
+  // El PDF no trae columnas de categoría/subcategoría (a diferencia del
+  // Excel): la resolución por asociación de descripción, y su fallback a
+  // "Sin categorizar" cuando ninguna coincide, ya se prueban a fondo en
+  // ImportarMovimientosPdf (backend, unitario); aquí se verifica el flujo
+  // completo de extremo a extremo (subida, parseo real del PDF, alta en la
+  // cuenta y reflejo en Movimientos).
+  await page.goto('/importar')
+  const zona = page.getByRole('button', { name: NOMBRE_BOTON_ZONA, exact: true })
+  const formulario = zona.locator('xpath=ancestor::form')
+  await zona.locator('..').locator('input[type="file"]').setInputFiles(RUTA_FICHERO_PDF)
+  await formulario.getByRole('button', { name: 'Importar' }).click()
+
+  const resumen = page.locator('[data-test="resumen-importacion"]')
+  await expect(resumen).toBeVisible()
+  await expect(resumen).toContainText('Movimientos importados: 3')
+  await expect(resumen).toContainText('Sin categorizar')
+  await page.screenshot({ path: 'e2e/capturas/importar-pdf-01-resumen.png' })
+
+  await resumen.getByRole('button', { name: 'Ver movimientos importados' }).click()
+  await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
+  await expect(page.getByLabel('Cuenta')).toContainText('PERSONA PDF EJEMPLO')
+  await expect(page.locator('tbody tr', { hasText: 'Pago en Comercio Desconocido' })).toContainText(
+    'Sin categorizar',
+  )
 })
 
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {

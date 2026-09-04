@@ -58,7 +58,10 @@ def _a_decimal(valor: Any) -> Decimal:
 def _a_texto_o_none(valor: Any) -> str | None:
     if _es_vacio(valor):
         return None
-    texto = str(valor).strip()
+    # Algunos extractos bancarios cuelan espacios dobles entre palabras (p.ej.
+    # "SANITAS S A  DE SEGUROS"); se colapsan aquí para que la descripción
+    # coincida de forma fiable con las asociaciones por descripción.
+    texto = " ".join(str(valor).split())
     return texto or None
 
 

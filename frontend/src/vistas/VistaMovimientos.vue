@@ -40,6 +40,7 @@ import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import DialogoCambiarCategoriaMasivo from '@/componentes/compartido/DialogoCambiarCategoriaMasivo.vue'
 import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
@@ -887,9 +888,12 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                   nombreCuenta(movimiento.cuenta_id)
                 }}</TableCell>
                 <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-                <TableCell class="truncate" :title="movimiento.descripcion">{{
-                  movimiento.descripcion
-                }}</TableCell>
+                <TableCell class="truncate" :title="movimiento.descripcion">
+                  <div class="flex items-center gap-1.5">
+                    <IconoOrigenPdf :origen="movimiento.origen" />
+                    <span class="truncate">{{ movimiento.descripcion }}</span>
+                  </div>
+                </TableCell>
                 <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
                   nombreCategoria(movimiento.categoria_id)
                 }}</TableCell>

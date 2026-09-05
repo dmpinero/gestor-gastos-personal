@@ -9,8 +9,13 @@ from sqlalchemy.orm import Session
 from gestor_gastos.aplicacion.importacion.importar_movimientos_excel import (
     ImportarMovimientosExcel,
 )
+from gestor_gastos.aplicacion.importacion.importar_movimientos_pdf import ImportarMovimientosPdf
 from gestor_gastos.dominio.importacion.valores import EventoProgreso
 from gestor_gastos.infraestructura.importacion.lector_excel_pandas import LectorExcelPandas
+from gestor_gastos.infraestructura.importacion.lector_pdf_ing import LectorPdfIng
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
+    RepositorioAsociacionesDescripcionSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
@@ -45,12 +50,23 @@ async def importar(
     fichero: UploadFile, sesion: Session = Depends(obtener_sesion)
 ) -> StreamingResponse:
     contenido = await fichero.read()
-    caso_de_uso = ImportarMovimientosExcel(
-        RepositorioCuentasSqlAlchemy(sesion),
-        RepositorioCategoriasSqlAlchemy(sesion),
-        RepositorioMovimientosSqlAlchemy(sesion),
-        LectorExcelPandas(),
-    )
+    nombre_fichero = fichero.filename or ""
+    caso_de_uso: ImportarMovimientosExcel | ImportarMovimientosPdf
+    if nombre_fichero.lower().endswith(".pdf"):
+        caso_de_uso = ImportarMovimientosPdf(
+            RepositorioCuentasSqlAlchemy(sesion),
+            RepositorioCategoriasSqlAlchemy(sesion),
+            RepositorioMovimientosSqlAlchemy(sesion),
+            RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+            LectorPdfIng(),
+        )
+    else:
+        caso_de_uso = ImportarMovimientosExcel(
+            RepositorioCuentasSqlAlchemy(sesion),
+            RepositorioCategoriasSqlAlchemy(sesion),
+            RepositorioMovimientosSqlAlchemy(sesion),
+            LectorExcelPandas(),
+        )
     # Se parsea el fichero ANTES de empezar a streamear la respuesta: así, si
     # el fichero está mal formado, el error de validación se traduce en un
     # 422 normal (ver manejadores_errores.py) en vez de cortar a media

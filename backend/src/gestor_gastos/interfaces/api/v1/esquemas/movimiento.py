@@ -29,3 +29,4 @@ class MovimientoSalidaEsquema(BaseModel):
     comentario: str | None
     importe: Decimal
     saldo: Decimal
+    origen: str | None

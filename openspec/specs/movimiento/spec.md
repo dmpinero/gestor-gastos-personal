@@ -77,6 +77,24 @@ marca de origen.
 - Cuando se edita su categoría
 - Entonces el movimiento sigue mostrando el indicador de origen PDF
 
+### Requisito: Filtrar movimientos por origen PDF
+
+En la vista de gestión de movimientos, el sistema DEBE ofrecer un filtro que,
+al activarse, DEBE restringir el listado a los movimientos con origen "pdf".
+El filtro DEBE combinarse con el resto de filtros avanzados activos (fecha,
+importe, saldo, categoría, subcategoría, texto libre) y DEBE resetearse al
+pulsar "Limpiar filtros".
+
+#### Escenario: Activar el filtro oculta los movimientos sin origen PDF
+- Dado una cuenta con movimientos creados a mano y movimientos importados desde PDF
+- Cuando se marca la casilla "Solo importados desde PDF"
+- Entonces el listado muestra únicamente los movimientos con origen PDF, y los creados a mano dejan de aparecer
+
+#### Escenario: Limpiar filtros restaura el listado completo
+- Dado que el filtro "Solo importados desde PDF" está activo y oculta movimientos
+- Cuando se pulsa "Limpiar filtros"
+- Entonces vuelven a aparecer todos los movimientos de la cuenta, con origen PDF o sin él
+
 ### Requisito: Listado de movimientos
 
 El sistema DEBE permitir consultar los movimientos de una cuenta, ordenados

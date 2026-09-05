@@ -41,6 +41,7 @@ export interface Movimiento {
   comentario: string | null
   importe: string
   saldo: string
+  origen?: string | null
 }
 
 export interface DatosMovimiento {

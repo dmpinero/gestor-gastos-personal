@@ -22,6 +22,7 @@ from gestor_gastos.dominio.prevision.entidades import AsociacionDescripcion
 from gestor_gastos.dominio.prevision.repositorio import RepositorioAsociacionesDescripcion
 
 NOMBRE_CATEGORIA_SIN_CATEGORIZAR = "Sin categorizar"
+ORIGEN_PDF = "pdf"
 
 _AsociacionConFragmento = tuple[str, AsociacionDescripcion]
 
@@ -98,6 +99,7 @@ class ImportarMovimientosPdf:
                         descripcion=fila.descripcion,
                         importe=fila.importe,
                         saldo=fila.saldo,
+                        origen=ORIGEN_PDF,
                     )
                 )
                 resumen.movimientos_importados += 1

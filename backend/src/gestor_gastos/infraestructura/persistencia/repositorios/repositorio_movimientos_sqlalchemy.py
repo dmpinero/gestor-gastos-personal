@@ -22,6 +22,7 @@ def _a_entidad(modelo: MovimientoModelo) -> Movimiento:
         comentario=modelo.comentario,
         importe=modelo.importe,
         saldo=modelo.saldo,
+        origen=modelo.origen,
     )
 
 
@@ -39,6 +40,7 @@ class RepositorioMovimientosSqlAlchemy:
             comentario=movimiento.comentario,
             importe=movimiento.importe,
             saldo=movimiento.saldo,
+            origen=movimiento.origen,
         )
         self._sesion.add(modelo)
         self._sesion.commit()
@@ -85,6 +87,9 @@ class RepositorioMovimientosSqlAlchemy:
         return [_a_entidad(m) for m in modelos]
 
     def actualizar(self, movimiento: Movimiento) -> Movimiento:
+        # `origen` no se toca deliberadamente: es de solo lectura tras crear el
+        # movimiento (ActualizarMovimiento ni siquiera lo conoce), así que
+        # editarlo no debe borrar la marca de que vino de un PDF.
         modelo = self._sesion.get(MovimientoModelo, movimiento.id)
         modelo.cuenta_id = movimiento.cuenta_id
         modelo.categoria_id = movimiento.categoria_id

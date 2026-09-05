@@ -101,6 +101,10 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
   // vez del número de cuenta en bruto, cuando la cuenta tiene alias.
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA EJEMPLO')
   await expect(page.locator('tbody tr').first()).toBeVisible()
+  // Un movimiento importado de Excel no lleva el icono de origen PDF.
+  await expect(
+    page.locator('tbody').getByRole('img', { name: 'Importado desde un PDF' }),
+  ).toHaveCount(0)
   await page.screenshot({ path: 'e2e/capturas/importar-10-ver-movimientos-importados.png' })
 })
 
@@ -128,9 +132,14 @@ test('importar un PDF (certificado de movimientos) crea la cuenta y sus movimien
   await resumen.getByRole('button', { name: 'Ver movimientos importados' }).click()
   await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA PDF EJEMPLO')
-  await expect(page.locator('tbody tr', { hasText: 'Pago en Comercio Desconocido' })).toContainText(
-    'Sin categorizar',
-  )
+  const filaSinCategorizar = page.locator('tbody tr', { hasText: 'Pago en Comercio Desconocido' })
+  await expect(filaSinCategorizar).toContainText('Sin categorizar')
+  // Un movimiento importado de PDF se distingue con un icono, para poder
+  // localizarlos y revisar la categoría que se les asignó automáticamente.
+  await expect(
+    filaSinCategorizar.getByRole('img', { name: 'Importado desde un PDF' }),
+  ).toBeVisible()
+  await page.screenshot({ path: 'e2e/capturas/importar-pdf-02-icono-origen.png' })
 })
 
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {

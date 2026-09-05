@@ -78,6 +78,23 @@ def test_importa_crea_cuenta_nueva_y_movimientos() -> None:
     assert len(repo_movimientos.listar_por_cuenta(cuenta.id)) == 1
 
 
+def test_los_movimientos_creados_quedan_marcados_con_origen_pdf() -> None:
+    datos = DatosPdfLeidos(
+        cabecera=CabeceraExcel(numero_cuenta="ES00 1234", titular=None),
+        filas=[_fila(datetime.date(2026, 1, 1))],
+    )
+    caso_de_uso, repo_cuentas, _, repo_movimientos, _ = _construir_caso_de_uso(
+        LectorPdfFalso(datos=datos)
+    )
+
+    _importar(caso_de_uso)
+
+    cuenta = repo_cuentas.obtener_por_numero_cuenta("ES00 1234")
+    assert cuenta is not None
+    movimiento = repo_movimientos.listar_por_cuenta(cuenta.id)[0]
+    assert movimiento.origen == "pdf"
+
+
 def test_reconoce_una_cuenta_ya_existente_aunque_el_espaciado_del_numero_difiera() -> None:
     # El Excel y el PDF del banco pueden agrupar los espacios del número de
     # cuenta de forma distinta para el mismo CCC: "1465 0100 9617 05727894"

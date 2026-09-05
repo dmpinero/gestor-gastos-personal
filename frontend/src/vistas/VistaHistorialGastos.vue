@@ -27,6 +27,7 @@ import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
 import TablaMovimientosAgrupada from '@/componentes/compartido/TablaMovimientosAgrupada.vue'
@@ -490,9 +491,12 @@ const filasTablaParaExportar = computed(() =>
                     :title="nombreSubcategoria(movimiento.subcategoria_id)"
                     >{{ nombreSubcategoria(movimiento.subcategoria_id) }}</TableCell
                   >
-                  <TableCell class="truncate" :title="movimiento.descripcion">{{
-                    movimiento.descripcion
-                  }}</TableCell>
+                  <TableCell class="truncate" :title="movimiento.descripcion">
+                    <div class="flex items-center gap-1.5">
+                      <IconoOrigenPdf :origen="movimiento.origen" />
+                      <span class="truncate">{{ movimiento.descripcion }}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>
                   <TableCell>{{ formatearImporte(movimiento.saldo) }}</TableCell>
                   <TableCell class="text-right">

@@ -49,3 +49,10 @@
 - [x] 7.5 Playwright contra pila aislada (`-p gestor-gastos-e2e`) en verde (61/62; el único fallo es el flake ya documentado de `seleccionarElementosFiltro`, confirmado no relacionado)
 - [x] 7.6 `sdd-verify`
 - [x] 7.7 `sdd-archive`
+
+## Phase 8: Refinamiento tras la vista previa (feedback del usuario)
+
+- [x] 8.1 El paso genérico "Gráficos" de Movimientos se desglosa en 5 pasos: Saldo, Evolución de gastos, Evolución de ingresos, Evolución de gastos vs ingresos (comparativo), Top 10 categorías. Los popover de evolución/comparativo mencionan los 4 tipos de gráfico disponibles (barras/líneas/área/circular) y, en el comparativo, la posibilidad de pulsar la leyenda para aislar gasto/ingreso/saldo.
+- [x] 8.2 Hallazgo real durante la implementación: forzar el filtro de fechas al mes EN CURSO (para revelar "Mes anterior/siguiente") podía vaciar toda la sección de Gráficos si los movimientos reales no eran de ese mes (`movimientosGastados`/`Ingresos` se calculan sobre el listado ya filtrado por fecha) — se corrigió derivando el mes forzado del movimiento más reciente en vez de la fecha de hoy.
+- [x] 8.3 Tests actualizados: `VistaMovimientos.spec.ts` (nuevos pasos), `manual-usuario-paginas.spec.ts` (recorre los pasos de gráficos con datos reales de gasto e ingreso)
+- [x] 8.4 Re-verificación completa (`vue-tsc`, `lint`, `vitest`, `build`, Playwright contra pila aislada) en verde

@@ -486,8 +486,13 @@ function antesDeIniciarTour(): void {
   if (primera) alternarSeleccion([primera.id], true)
 
   filtrosFechaAntesDelTour = { desde: fechaDesde.value, hasta: fechaHasta.value }
+  // Se usa el mes del movimiento más reciente, no el mes en curso: si los
+  // movimientos reales no son de este mes, forzar el mes en curso vaciaría
+  // la sección de Gráficos durante el tour (movimientosGastados/Ingresos se
+  // calculan sobre el listado ya filtrado por fecha).
   const hoy = new Date()
-  const rango = rangoDelMes(hoy.getFullYear(), hoy.getMonth() + 1)
+  const [anio, mes] = (tiendaMovimientos.movimientos[0]?.fecha_valor ?? '').split('-').map(Number)
+  const rango = rangoDelMes(anio || hoy.getFullYear(), mes || hoy.getMonth() + 1)
   fechaDesde.value = rango.desde
   fechaHasta.value = rango.hasta
 }
@@ -509,11 +514,41 @@ function pasosTour(): DriveStep[] {
       popover: { title: 'Crear movimiento', description: 'Da de alta un movimiento a mano.' },
     },
     {
-      element: '[data-tour="movimientos-graficos"]',
+      element: '[data-tour="movimientos-saldo"]',
       popover: {
-        title: 'Gráficos',
+        title: 'Saldo',
         description:
-          'Saldo, totales y evolución de gastos e ingresos de los movimientos filtrados.',
+          'Saldo de los movimientos filtrados. A continuación, sus totales y su evolución.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-evolucion-gastos"]',
+      popover: {
+        title: 'Evolución de gastos',
+        description:
+          'Arriba a la derecha puedes cambiar el tipo de gráfico: barras, líneas, área o circular.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-evolucion-ingresos"]',
+      popover: {
+        title: 'Evolución de ingresos',
+        description: 'Mismo gráfico que el de gastos, con los mismos tipos disponibles.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-comparativo"]',
+      popover: {
+        title: 'Evolución de gastos vs ingresos',
+        description:
+          'También admite los 4 tipos de gráfico. En líneas o área, pulsa "Gastos"/"Ingresos"/"Saldo" en la leyenda para mostrar solo esa serie.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-top-categorias"]',
+      popover: {
+        title: 'Top 10 categorías',
+        description: 'Las categorías con mayor importe acumulado, de gastos y de ingresos.',
       },
     },
     {
@@ -670,7 +705,6 @@ useRegistrarTourPagina({
     <div
       v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
-      data-tour="movimientos-graficos"
     >
       <Collapsible v-model:open="graficosAbiertos">
         <CollapsibleTrigger
@@ -684,7 +718,7 @@ useRegistrarTourPagina({
           Gráficos
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Card class="lg:col-span-2">
+          <Card class="lg:col-span-2" data-tour="movimientos-saldo">
             <CardHeader>
               <CardTitle class="text-muted-foreground text-sm font-medium">Saldo</CardTitle>
             </CardHeader>
@@ -693,7 +727,7 @@ useRegistrarTourPagina({
             </CardContent>
           </Card>
 
-          <div v-if="movimientosGastados.length > 0">
+          <div v-if="movimientosGastados.length > 0" data-tour="movimientos-evolucion-gastos">
             <div class="grid grid-cols-2 gap-4">
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between">
@@ -724,7 +758,7 @@ useRegistrarTourPagina({
             <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
           </div>
 
-          <div v-if="movimientosIngresados.length > 0">
+          <div v-if="movimientosIngresados.length > 0" data-tour="movimientos-evolucion-ingresos">
             <div class="grid grid-cols-2 gap-4">
               <Card>
                 <CardHeader class="flex flex-row items-center justify-between">
@@ -759,16 +793,21 @@ useRegistrarTourPagina({
             v-if="movimientosGastados.length > 0 && movimientosIngresados.length > 0"
             class="lg:col-span-2"
           >
-            <h3 class="text-muted-foreground text-sm font-medium">
-              Evolución de gastos vs ingresos
-            </h3>
-            <GraficoComparativoEvolucion
-              :items-gastos="datosGraficoGastos"
-              :items-ingresos="datosGraficoIngresos"
-              class="mt-3"
-            />
+            <div data-tour="movimientos-comparativo">
+              <h3 class="text-muted-foreground text-sm font-medium">
+                Evolución de gastos vs ingresos
+              </h3>
+              <GraficoComparativoEvolucion
+                :items-gastos="datosGraficoGastos"
+                :items-ingresos="datosGraficoIngresos"
+                class="mt-3"
+              />
+            </div>
 
-            <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div
+              class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2"
+              data-tour="movimientos-top-categorias"
+            >
               <ListaTotalesCategoria
                 titulo="Top 10 gastos por categoría"
                 :items="topCategoriasGastos"

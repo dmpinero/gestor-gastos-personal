@@ -83,7 +83,8 @@ test('Movimientos: "Mes anterior/siguiente" se resaltan durante el tour, y el fi
   const sufijo = Date.now()
   const numeroCuenta = `ES00 TOUR-MOVIMIENTOS ${sufijo}`
   const nombreCategoria = `Categoria TOUR-MOVIMIENTOS ${sufijo}`
-  const descripcionMovimiento = `Movimiento tour ${sufijo}`
+  const descripcionGasto = `Movimiento tour gasto ${sufijo}`
+  const descripcionIngreso = `Movimiento tour ingreso ${sufijo}`
 
   await page.goto('/gestion/cuentas')
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
@@ -101,25 +102,37 @@ test('Movimientos: "Mes anterior/siguiente" se resaltan durante el tour, y el fi
 
   await page.goto('/gestion/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
-  await page.getByRole('button', { name: 'Crear movimiento' }).click()
-  const panelMovimiento = page.getByRole('dialog')
-  await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
-    page,
-    panelMovimiento.getByLabel('Categoría', { exact: true }),
-    nombreCategoria,
-  )
-  await panelMovimiento.getByPlaceholder('Descripción').fill(descripcionMovimiento)
-  await panelMovimiento.getByPlaceholder('Importe').fill('-15.00')
-  await panelMovimiento.getByPlaceholder('Saldo').fill('985.00')
-  await panelMovimiento.getByRole('button', { name: 'Crear movimiento' }).click()
-  await expect(page.locator('tr', { hasText: descripcionMovimiento })).toBeVisible()
+  for (const [descripcion, importe, saldo] of [
+    [descripcionGasto, '-15.00', '985.00'],
+    [descripcionIngreso, '20.00', '1005.00'],
+  ]) {
+    await page.getByRole('button', { name: 'Crear movimiento' }).click()
+    const panelMovimiento = page.getByRole('dialog')
+    await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
+    await elegirOpcion(
+      page,
+      panelMovimiento.getByLabel('Categoría', { exact: true }),
+      nombreCategoria,
+    )
+    await panelMovimiento.getByPlaceholder('Descripción').fill(descripcion)
+    await panelMovimiento.getByPlaceholder('Importe').fill(importe)
+    await panelMovimiento.getByPlaceholder('Saldo').fill(saldo)
+    await panelMovimiento.getByRole('button', { name: 'Crear movimiento' }).click()
+    await expect(page.locator('tr', { hasText: descripcion })).toBeVisible()
+  }
 
   await expect(page.getByLabel('Fecha desde')).toHaveValue('')
   await expect(page.getByRole('button', { name: 'Mes anterior' })).toHaveCount(0)
 
   await page.getByRole('button', { name: BOTON_AYUDA }).click()
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Gestión')
+
+  await avanzarHastaTitulo(page, 'Evolución de gastos')
+  await expect(page.getByRole('button', { name: 'Ver como circular' }).first()).toBeVisible()
+  await avanzarHastaTitulo(page, 'Evolución de ingresos')
+  await avanzarHastaTitulo(page, 'Evolución de gastos vs ingresos')
+  await page.screenshot({ path: 'e2e/capturas/manual-usuario-movimientos-comparativo.png' })
+  await avanzarHastaTitulo(page, 'Top 10 categorías')
 
   await avanzarHastaTitulo(page, 'Mes anterior / Mes siguiente')
   await expect(page.getByRole('button', { name: 'Mes anterior' })).toBeVisible()

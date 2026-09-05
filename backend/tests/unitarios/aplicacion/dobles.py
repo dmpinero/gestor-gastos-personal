@@ -2,6 +2,9 @@ import datetime
 from collections.abc import Callable
 from decimal import Decimal
 
+from gestor_gastos.aplicacion.prevision.normalizar_descripcion_asociacion import (
+    normalizar_descripcion_asociacion,
+)
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos, DatosPdfLeidos
@@ -184,6 +187,7 @@ class RepositorioMovimientosFalso:
         saldo: Decimal,
         descripcion: str,
     ) -> Movimiento | None:
+        descripcion_normalizada = normalizar_descripcion_asociacion(descripcion)
         return next(
             (
                 m
@@ -192,7 +196,7 @@ class RepositorioMovimientosFalso:
                 and m.fecha_valor == fecha_valor
                 and m.importe == importe
                 and m.saldo == saldo
-                and m.descripcion == descripcion
+                and normalizar_descripcion_asociacion(m.descripcion) == descripcion_normalizada
             ),
             None,
         )

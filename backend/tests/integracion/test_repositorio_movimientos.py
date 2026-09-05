@@ -80,6 +80,32 @@ def test_buscar_duplicado(sesion_bd) -> None:
     )
 
 
+def test_buscar_duplicado_ignora_diferencias_de_espaciado_en_la_descripcion(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    creado = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Recibo C.P. C  CASTILLA REAL",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    duplicado = repositorio.buscar_duplicado(
+        cuenta.id,
+        datetime.date(2026, 1, 1),
+        Decimal("-10.00"),
+        Decimal("100.00"),
+        "Recibo C.P. C CASTILLA REAL",
+    )
+
+    assert duplicado is not None
+    assert duplicado.id == creado.id
+
+
 def test_contar_movimientos_por_cuenta_categoria_y_subcategoria(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)

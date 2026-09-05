@@ -4,6 +4,9 @@ from decimal import Decimal
 from sqlalchemy import and_, delete, func, not_, select, update
 from sqlalchemy.orm import Session
 
+from gestor_gastos.aplicacion.prevision.normalizar_descripcion_asociacion import (
+    normalizar_descripcion_asociacion,
+)
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.infraestructura.persistencia.modelos import MovimientoModelo
 
@@ -108,16 +111,19 @@ class RepositorioMovimientosSqlAlchemy:
         saldo: Decimal,
         descripcion: str,
     ) -> Movimiento | None:
-        modelo = self._sesion.scalar(
+        descripcion_normalizada = normalizar_descripcion_asociacion(descripcion)
+        candidatos = self._sesion.scalars(
             select(MovimientoModelo).where(
                 MovimientoModelo.cuenta_id == id_cuenta,
                 MovimientoModelo.fecha_valor == fecha_valor,
                 MovimientoModelo.importe == importe,
                 MovimientoModelo.saldo == saldo,
-                MovimientoModelo.descripcion == descripcion,
             )
         )
-        return _a_entidad(modelo) if modelo is not None else None
+        for modelo in candidatos:
+            if normalizar_descripcion_asociacion(modelo.descripcion) == descripcion_normalizada:
+                return _a_entidad(modelo)
+        return None
 
     def contar_movimientos_por_cuenta(self, id_cuenta: int) -> int:
         return self._sesion.scalar(

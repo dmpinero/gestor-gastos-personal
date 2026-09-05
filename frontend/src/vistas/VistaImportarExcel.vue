@@ -191,12 +191,14 @@ function verResumenAnual(): void {
   <section>
     <h2 class="text-xl font-semibold">Importar movimientos</h2>
     <p class="text-muted-foreground mt-2">
-      Sube uno o varios extractos de tu banco en formato .xls o .xlsx.
+      Sube uno o varios extractos de tu banco en formato .xls, .xlsx o .pdf.
     </p>
 
     <form class="mt-4 flex flex-col items-start gap-3" @submit.prevent="importar">
       <ZonaSoltarFichero
         :ficheros-seleccionados="ficherosSeleccionados"
+        etiqueta="archivos Excel o PDF"
+        accept=".xls,.xlsx,.pdf"
         class="w-full"
         @ficheros-elegidos="onFicherosElegidos"
       />

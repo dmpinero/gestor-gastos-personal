@@ -12,6 +12,7 @@ import { agruparMovimientosParaTabla } from '@/lib/movimientosPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import BotonCopiarImporte from '@/componentes/compartido/BotonCopiarImporte.vue'
+import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Table,
@@ -175,9 +176,12 @@ function alternarSubcategoria(clave: string): void {
                 <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
                   nombreCuenta(movimiento.cuenta_id)
                 }}</TableCell>
-                <TableCell class="truncate" :title="movimiento.descripcion">{{
-                  movimiento.descripcion
-                }}</TableCell>
+                <TableCell class="truncate" :title="movimiento.descripcion">
+                  <div class="flex items-center gap-1.5">
+                    <IconoOrigenPdf :origen="movimiento.origen" />
+                    <span class="truncate">{{ movimiento.descripcion }}</span>
+                  </div>
+                </TableCell>
                 <TableCell
                   class="text-right tabular-nums"
                   :class="claseColorImporte(movimiento.importe)"

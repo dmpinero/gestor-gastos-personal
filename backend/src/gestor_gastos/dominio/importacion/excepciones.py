@@ -1,5 +1,5 @@
 class ExtensionNoSoportadaError(Exception):
-    """Se lanza cuando el fichero subido no es .xls ni .xlsx."""
+    """Se lanza cuando el fichero subido no es .xls, .xlsx ni .pdf."""
 
 
 class CabeceraNoReconocidaError(Exception):

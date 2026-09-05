@@ -64,6 +64,7 @@ class MovimientoModelo(Base):
     comentario: Mapped[str | None] = mapped_column(String(500))
     importe: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     saldo: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    origen: Mapped[str | None] = mapped_column(String(20))
 
     cuenta: Mapped[CuentaBancariaModelo] = relationship(back_populates="movimientos")
     categoria: Mapped[CategoriaModelo] = relationship(back_populates="movimientos")

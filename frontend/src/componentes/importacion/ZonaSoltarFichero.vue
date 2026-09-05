@@ -52,7 +52,7 @@ function manejarSoltar(evento: DragEvent): void {
     >
       <Upload class="size-6 text-muted-foreground" />
       <p class="text-sm text-muted-foreground">
-        Arrastra uno o varios ficheros Excel aquí o haz click para seleccionarlos
+        Arrastra uno o varios {{ props.etiqueta }} aquí o haz click para seleccionarlos
       </p>
       <ul v-if="ficherosSeleccionados.length > 0" class="mt-2 text-sm">
         <li v-for="fichero in ficherosSeleccionados" :key="fichero.name">{{ fichero.name }}</li>

@@ -1,3 +1,4 @@
+import datetime
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends, Path, Query, UploadFile, status
@@ -107,6 +108,15 @@ from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
 
 enrutador = APIRouter(prefix="/previsiones", tags=["Previsiones"])
 
+# Rango de años razonable para exportar: la app no tiene datos anteriores, y
+# como mucho tiene sentido planificar el año siguiente al actual. Sin este
+# límite, ExportarResumenAnualExcel.ejecutar() itera un año por cada valor
+# del rango (anio_desde..anio_hasta) haciendo una consulta por año: un rango
+# de miles de años (válido según el esquema anterior, ge=1/le=9999) tardaba
+# minutos en responder.
+_ANIO_MINIMO_EXPORTACION_RESUMEN_ANUAL = 2018
+_ANIO_MAXIMO_EXPORTACION_RESUMEN_ANUAL = datetime.date.today().year + 1
+
 
 def _construir_obtener_resumen_anual(sesion: Session) -> ObtenerResumenAnual:
     return ObtenerResumenAnual(
@@ -197,8 +207,12 @@ def resumen_anual(
     },
 )
 def exportar_resumen_anual(
-    anio_desde: int = Query(ge=1, le=9999),
-    anio_hasta: int = Query(ge=1, le=9999),
+    anio_desde: int = Query(
+        ge=_ANIO_MINIMO_EXPORTACION_RESUMEN_ANUAL, le=_ANIO_MAXIMO_EXPORTACION_RESUMEN_ANUAL
+    ),
+    anio_hasta: int = Query(
+        ge=_ANIO_MINIMO_EXPORTACION_RESUMEN_ANUAL, le=_ANIO_MAXIMO_EXPORTACION_RESUMEN_ANUAL
+    ),
     sesion: Session = Depends(obtener_sesion),
 ) -> Response:
     contenido = ExportarResumenAnualExcel(

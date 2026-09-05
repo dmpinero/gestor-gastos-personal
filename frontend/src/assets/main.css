@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import 'driver.js/dist/driver.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -107,4 +108,43 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Manual de usuario interactivo (driver.js): el CSS por defecto de la
+   librería es claro fijo; se sustituyen sus colores por las variables ya
+   definidas arriba, que cambian solas con :root/.dark, en vez de duplicar
+   reglas para cada tema. */
+.driver-popover {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.driver-popover-title,
+.driver-popover-description {
+  color: var(--popover-foreground);
+}
+.driver-popover-close-btn {
+  color: var(--muted-foreground);
+}
+.driver-popover-close-btn:hover,
+.driver-popover-close-btn:focus {
+  color: var(--popover-foreground);
+}
+.driver-popover-progress-text {
+  color: var(--muted-foreground);
+}
+.driver-popover-footer-btn {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.driver-popover-footer-btn:hover,
+.driver-popover-footer-btn:focus {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+.driver-popover-arrow {
+  border-color: var(--popover);
 }

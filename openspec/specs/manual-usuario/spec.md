@@ -32,10 +32,23 @@ primer uso, ni al navegar, ni al recargar la página); DEBE iniciarse
 
 ### Requisito: Recorrido de las secciones principales
 
-El tour DEBE recorrer, en este orden, un paso por cada uno de los siguientes
-elementos, mostrando una explicación breve de su propósito: las 6 secciones
-del panel lateral (Dashboard, Gestión, Importar, Historial, Resumen anual,
-Administración), el conmutador de tema, y el propio icono de ayuda.
+Al lanzarse desde una página, el tour DEBE empezar con un único paso de
+orientación que resalta, en el menú lateral, la sección a la que pertenece
+esa página, mostrando una explicación breve de su propósito. A continuación
+DEBE recorrer los pasos específicos de la funcionalidad de esa página (si
+la página tiene tour registrado). El tour NO DEBE recorrer las secciones del
+menú distintas de la activa. El tour SIEMPRE DEBE terminar con un paso para
+el conmutador de tema y un paso para el propio icono de ayuda.
+
+#### Escenario: Lanzar el tour desde Movimientos recorre Movimientos, no las demás secciones
+- Dado que la persona usuaria está en Gestión → Movimientos
+- Cuando pulsa el icono de ayuda
+- Entonces el primer paso resalta la sección "Gestión" del menú lateral, los siguientes pasos recorren la funcionalidad propia de Movimientos, ningún paso resalta las demás secciones, y el tour termina con el conmutador de tema y el icono de ayuda
+
+#### Escenario: Lanzar el tour desde el Dashboard recorre sus tarjetas y bloques
+- Dado que la persona usuaria está en el Dashboard
+- Cuando pulsa el icono de ayuda
+- Entonces los pasos recorren el saldo global, las tarjetas por cuenta, y los bloques de gastos e ingresos por categoría
 
 #### Escenario: Avanzar por los pasos del tour
 - Dado que el tour está activo en su primer paso
@@ -46,6 +59,39 @@ Administración), el conmutador de tema, y el propio icono de ayuda.
 - Dado que el tour está en un paso posterior al primero
 - Cuando la persona usuaria pulsa "Anterior"
 - Entonces el tour vuelve a resaltar el elemento del paso previo
+
+### Requisito: Elementos condicionales forzados temporalmente durante el tour
+
+Cuando un paso del tour corresponde a un control que solo es visible bajo
+cierto estado local y reversible de la página (un filtro concreto, un modo
+de vista, una fila seleccionada), el sistema DEBE ajustar ese estado antes
+de mostrar el paso para que el control se resalte realmente, y DEBE
+restaurar el estado que había antes de iniciar el tour al cerrarse este,
+sea cual sea el motivo del cierre (botón cerrar, tecla Escape, o llegar al
+último paso).
+
+#### Escenario: "Mes anterior"/"Mes siguiente" se muestran durante el tour de Movimientos
+- Dado que la persona usuaria está en Movimientos con el filtro de fechas vacío
+- Cuando el tour llega al paso de "Mes anterior"/"Mes siguiente"
+- Entonces esos botones son visibles y quedan resaltados, y al cerrar el tour el filtro de fechas vuelve a estar vacío como antes de iniciarlo
+
+#### Escenario: La barra de selección múltiple se muestra durante el tour
+- Dado que la persona usuaria está en Cuentas, Categorías o Movimientos sin ninguna fila seleccionada
+- Cuando el tour llega al paso de la selección múltiple
+- Entonces la primera fila aparece marcada y la barra de acciones en bloque es visible, y al cerrar el tour ninguna fila queda seleccionada
+
+### Requisito: Elementos condicionales no simulados durante el tour
+
+El tour NO DEBE abrir diálogos o paneles que estén cerrados, NO DEBE
+disparar peticiones al servidor, y NO DEBE navegar a datos reales de la
+persona usuaria únicamente para revelar un paso. Para ese contenido, el
+tour DEBE explicarlo en el texto del paso más cercano ya visible, sin
+resaltarlo directamente, o DEBE omitir el paso si el elemento no existe.
+
+#### Escenario: Un elemento que depende de datos aún no cargados no rompe el tour
+- Dado que una página cuyos datos todavía se están cargando cuando se pulsa el icono de ayuda
+- Cuando el tour intenta mostrar un paso cuyo elemento aún no existe
+- Entonces el tour omite ese paso en vez de fallar o quedarse bloqueado
 
 ### Requisito: Cerrar el tour en cualquier momento
 

@@ -15,12 +15,14 @@ import {
 } from '@lucide/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import type { DriveStep } from 'driver.js'
 
 import type { DatosMovimiento, Movimiento, TotalCategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { useProgresoTareas } from '@/composables/useProgresoTareas'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import {
   claseColorImporte,
   claseFondoImporte,
@@ -466,13 +468,159 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
   }
   seleccionados.value = nuevaSeleccion
 }
+
+// Estado forzado temporalmente por el tour guiado, para poder mostrar
+// resaltados de verdad "Mes anterior"/"Mes siguiente" (solo visibles con un
+// rango de fechas de mes completo) y la barra de acciones en bloque (solo
+// visible con algo seleccionado); se restaura tal cual estaba al cerrar el
+// tour, sea cual sea el motivo del cierre.
+let filtrosFechaAntesDelTour: { desde: string; hasta: string } | null = null
+let seleccionadosAntesDelTour: Set<number> | null = null
+
+function antesDeIniciarTour(): void {
+  // La selección se fuerza ANTES de tocar el filtro de fechas: si se hiciera
+  // después, la fila recién marcada podría quedar fuera del rango de fechas
+  // forzado (el mes actual) y desaparecer de la tabla antes de mostrarse.
+  seleccionadosAntesDelTour = new Set(seleccionados.value)
+  const primera = filasOrdenadas.value[0]
+  if (primera) alternarSeleccion([primera.id], true)
+
+  filtrosFechaAntesDelTour = { desde: fechaDesde.value, hasta: fechaHasta.value }
+  const hoy = new Date()
+  const rango = rangoDelMes(hoy.getFullYear(), hoy.getMonth() + 1)
+  fechaDesde.value = rango.desde
+  fechaHasta.value = rango.hasta
+}
+
+function alFinalizarTour(): void {
+  if (filtrosFechaAntesDelTour) {
+    fechaDesde.value = filtrosFechaAntesDelTour.desde
+    fechaHasta.value = filtrosFechaAntesDelTour.hasta
+  }
+  filtrosFechaAntesDelTour = null
+  if (seleccionadosAntesDelTour) seleccionados.value = seleccionadosAntesDelTour
+  seleccionadosAntesDelTour = null
+}
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="movimientos-crear"]',
+      popover: { title: 'Crear movimiento', description: 'Da de alta un movimiento a mano.' },
+    },
+    {
+      element: '[data-tour="movimientos-graficos"]',
+      popover: {
+        title: 'Gráficos',
+        description:
+          'Saldo, totales y evolución de gastos e ingresos de los movimientos filtrados.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-filtro-cuenta"]',
+      popover: { title: 'Filtrar por cuenta', description: 'Elige una o varias cuentas a la vez.' },
+    },
+    {
+      element: '[data-tour="movimientos-filtro-fecha"]',
+      popover: {
+        title: 'Filtrar por fecha',
+        description: 'Restringe el listado a un rango de fechas concreto.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-mes-atajos"]',
+      popover: {
+        title: 'Mes anterior / Mes siguiente',
+        description:
+          'Cuando el rango de fechas cubre un mes completo, aparecen estos atajos para desplazarte al mes anterior o siguiente sin rellenar las fechas a mano.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-filtro-categoria"]',
+      popover: {
+        title: 'Filtrar por categoría y subcategoría',
+        description: 'Ambos filtros admiten selección múltiple.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-filtro-importe"]',
+      popover: {
+        title: 'Filtrar por importe y saldo',
+        description: 'Indica un mínimo, un máximo, o ambos.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-filtro-origen-pdf"]',
+      popover: {
+        title: 'Solo importados desde PDF',
+        description:
+          'Localiza los movimientos importados desde un certificado en PDF, para revisar la categoría que se les asignó automáticamente.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-limpiar-filtros"]',
+      popover: { title: 'Limpiar filtros', description: 'Restablece todos los filtros a la vez.' },
+    },
+    {
+      element: '[data-tour="movimientos-agrupar"]',
+      popover: {
+        title: 'Agrupar por categoría',
+        description:
+          'Alterna entre la tabla plana y una vista agrupada por categoría/subcategoría.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-exportar"]',
+      popover: { title: 'Exportar', description: 'Descarga la tabla en Excel o PDF.' },
+    },
+    {
+      element: '[data-tour="movimientos-seleccion"]',
+      popover: {
+        title: 'Selección múltiple',
+        description:
+          'Marca varios movimientos para cambiarles la categoría o eliminarlos en bloque.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-barra-seleccion"]',
+      popover: {
+        title: 'Acciones en bloque',
+        description: 'Con al menos un movimiento marcado, aparece esta barra.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-tabla"]',
+      popover: {
+        title: 'Tabla de movimientos',
+        description:
+          'Ordena por columnas, edita o elimina cada movimiento. El icono junto a la descripción indica que se importó desde PDF.',
+      },
+    },
+    {
+      element: '[data-tour="movimientos-paginacion"]',
+      popover: {
+        title: 'Paginación',
+        description: 'Navega entre páginas si hay muchos resultados.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({
+  pasos: pasosTour,
+  antesDeIniciar: antesDeIniciarTour,
+  alFinalizar: alFinalizarTour,
+})
 </script>
 
 <template>
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Movimientos</h2>
-      <Button variant="success" @click="panelEdicion?.abrirParaCrear(cuentasSeleccionadas[0])"
+      <Button
+        variant="success"
+        data-tour="movimientos-crear"
+        @click="panelEdicion?.abrirParaCrear(cuentasSeleccionadas[0])"
         >Crear movimiento</Button
       >
     </div>
@@ -504,6 +652,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
     <div
       v-if="seleccionados.size > 0"
       class="mt-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
+      data-tour="movimientos-barra-seleccion"
     >
       <span>{{ seleccionados.size }} seleccionados</span>
       <DialogoCambiarCategoriaMasivo
@@ -521,6 +670,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
     <div
       v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
+      data-tour="movimientos-graficos"
     >
       <Collapsible v-model:open="graficosAbiertos">
         <CollapsibleTrigger
@@ -652,7 +802,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
           Filtros
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" data-tour="movimientos-filtro-cuenta">
             <Label>Cuenta</Label>
             <FiltroMultiple
               v-model="cuentasSeleccionadas"
@@ -679,22 +829,22 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
             </div>
           </div>
 
-          <div class="flex flex-col gap-1.5">
-            <Label for="filtro-fecha-desde">Fecha desde</Label>
-            <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
+          <div class="flex flex-wrap items-end gap-4" data-tour="movimientos-filtro-fecha">
+            <div class="flex flex-col gap-1.5">
+              <Label for="filtro-fecha-desde">Fecha desde</Label>
+              <Input id="filtro-fecha-desde" v-model="fechaDesde" type="date" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <Label for="filtro-fecha-hasta">Fecha hasta</Label>
+              <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
+            </div>
           </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="filtro-fecha-hasta">Fecha hasta</Label>
-            <Input id="filtro-fecha-hasta" v-model="fechaHasta" type="date" />
+          <div v-if="mesCompleto" class="flex gap-2" data-tour="movimientos-mes-atajos">
+            <Button type="button" variant="outline" @click="mesAnterior">Mes anterior</Button>
+            <Button type="button" variant="outline" @click="mesSiguiente">Mes siguiente</Button>
           </div>
-          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesAnterior"
-            >Mes anterior</Button
-          >
-          <Button v-if="mesCompleto" type="button" variant="outline" @click="mesSiguiente"
-            >Mes siguiente</Button
-          >
 
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" data-tour="movimientos-filtro-categoria">
             <Label>Filtrar por categoría</Label>
             <FiltroMultiple
               v-model="categoriasFiltro"
@@ -721,6 +871,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
           <FiltroRangoNumero
             label="Importe"
             id-base="filtro-importe"
+            data-tour="movimientos-filtro-importe"
             v-model:min="importeMin"
             v-model:max="importeMax"
           />
@@ -731,7 +882,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
             v-model:max="saldoMax"
           />
 
-          <div class="flex items-center gap-2 pb-2">
+          <div class="flex items-center gap-2 pb-2" data-tour="movimientos-filtro-origen-pdf">
             <Checkbox
               id="filtro-solo-origen-pdf"
               :model-value="soloOrigenPdf"
@@ -746,6 +897,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
             type="button"
             variant="outline"
             class="border-blue-600 bg-blue-600 text-white hover:bg-blue-600/90"
+            data-tour="movimientos-limpiar-filtros"
             @click="limpiarFiltros"
             >Limpiar filtros</Button
           >
@@ -782,12 +934,14 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
                 type="button"
                 variant="outline"
                 size="sm"
+                data-tour="movimientos-agrupar"
                 @click="agrupadoPorCategoria = !agrupadoPorCategoria"
               >
                 <Layers class="size-4" />
                 {{ agrupadoPorCategoria ? 'Ver todos los movimientos' : 'Agrupar por categoría' }}
               </Button>
               <BotonesExportarTabla
+                data-tour="movimientos-exportar"
                 nombre-fichero="Movimientos"
                 titulo="Movimientos"
                 :columnas="COLUMNAS_TABLA"
@@ -805,10 +959,10 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
             @alternar-seleccion="alternarSeleccion"
           />
 
-          <Table v-else class="mt-4 table-fixed">
+          <Table v-else class="mt-4 table-fixed" data-tour="movimientos-tabla">
             <TableHeader>
               <TableRow>
-                <TableHead class="w-9">
+                <TableHead class="w-9" data-tour="movimientos-seleccion">
                   <Checkbox
                     :model-value="todosSeleccionados"
                     aria-label="Seleccionar todos los movimientos"
@@ -959,6 +1113,7 @@ function alternarSeleccion(ids: number[], marcado: boolean): void {
 
           <BarraPaginacion
             v-if="!agrupadoPorCategoria && totalPaginas > 1"
+            data-tour="movimientos-paginacion"
             :pagina-actual="paginaActual"
             :total-paginas="totalPaginas"
             @anterior="paginaAnterior"

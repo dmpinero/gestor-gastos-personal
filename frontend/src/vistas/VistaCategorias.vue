@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ChevronRight, Pencil, Search, X } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
+import type { DriveStep } from 'driver.js'
 
 import { clienteApi } from '@/api/cliente'
 import type { Categoria, Movimiento, Subcategoria } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useProgresoTareas } from '@/composables/useProgresoTareas'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
@@ -327,6 +329,64 @@ function alternarSeleccion(id: number, marcado: boolean): void {
   seleccionadas.value = nuevaSeleccion
 }
 
+// Estado forzado temporalmente por el tour guiado, para poder mostrar
+// resaltada la barra de acciones en bloque (solo visible con algo
+// seleccionado); se restaura la selección exacta previa al cerrar el tour.
+let seleccionadasAntesDelTour: Set<number> | null = null
+
+function antesDeIniciarTour(): void {
+  seleccionadasAntesDelTour = new Set(seleccionadas.value)
+  const primera = filasFiltradas.value[0]
+  if (primera) alternarSeleccion(primera.categoria.id, true)
+}
+
+function alFinalizarTour(): void {
+  if (seleccionadasAntesDelTour) seleccionadas.value = seleccionadasAntesDelTour
+  seleccionadasAntesDelTour = null
+}
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="categorias-crear"]',
+      popover: { title: 'Crear categoría', description: 'Da de alta una categoría nueva.' },
+    },
+    {
+      element: '[data-tour="categorias-filtros"]',
+      popover: { title: 'Buscar', description: 'Filtra por nombre de categoría o subcategoría.' },
+    },
+    {
+      element: '[data-tour="categorias-seleccion"]',
+      popover: {
+        title: 'Selección múltiple',
+        description: 'Marca varias categorías a la vez para eliminarlas en bloque.',
+      },
+    },
+    {
+      element: '[data-tour="categorias-barra-seleccion"]',
+      popover: {
+        title: 'Acciones en bloque',
+        description:
+          'Con al menos una categoría marcada, aparece esta barra para eliminarlas juntas.',
+      },
+    },
+    {
+      element: '[data-tour="categorias-tarjeta"]',
+      popover: {
+        title: 'Categoría y subcategorías',
+        description:
+          'Cada tarjeta se puede editar o eliminar, y añadir subcategorías nuevas desde el formulario de abajo.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({
+  pasos: pasosTour,
+  antesDeIniciar: antesDeIniciarTour,
+  alFinalizar: alFinalizarTour,
+})
+
 async function crearSubcategoria(idCategoria: number): Promise<void> {
   error.value = null
   const nombre = subcategoriaNuevaPorCategoria.value[idCategoria]
@@ -383,7 +443,9 @@ async function guardarSubcategoria(): Promise<void> {
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Categorías</h2>
-      <Button variant="success" @click="abrirParaCrear">Crear categoría</Button>
+      <Button variant="success" data-tour="categorias-crear" @click="abrirParaCrear"
+        >Crear categoría</Button
+      >
     </div>
 
     <ModalProgresoBloqueante
@@ -435,7 +497,7 @@ async function guardarSubcategoria(): Promise<void> {
 
     <p v-if="error" class="mt-2 text-sm text-destructive" role="alert">{{ error }}</p>
 
-    <div class="mt-6 flex items-center gap-2 text-sm">
+    <div class="mt-6 flex items-center gap-2 text-sm" data-tour="categorias-seleccion">
       <Checkbox
         :model-value="todasSeleccionadas"
         aria-label="Seleccionar todas las categorías"
@@ -447,6 +509,7 @@ async function guardarSubcategoria(): Promise<void> {
     <div
       v-if="seleccionadas.size > 0"
       class="mt-2 flex items-center gap-3 rounded-lg border p-2 text-sm"
+      data-tour="categorias-barra-seleccion"
     >
       <span>{{ seleccionadas.size }} seleccionados</span>
       <DialogoConfirmarEliminacion
@@ -473,7 +536,10 @@ async function guardarSubcategoria(): Promise<void> {
           />
           Filtros
         </CollapsibleTrigger>
-        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
+        <CollapsibleContent
+          class="mt-4 flex flex-wrap items-end gap-4"
+          data-tour="categorias-filtros"
+        >
           <div class="flex max-w-xs flex-col gap-1.5">
             <Label for="buscar-categorias">Buscar</Label>
             <div class="relative">
@@ -493,7 +559,7 @@ async function guardarSubcategoria(): Promise<void> {
     </div>
 
     <div class="mt-4 space-y-4">
-      <Card v-for="item in filasFiltradas" :key="item.categoria.id">
+      <Card v-for="item in filasFiltradas" :key="item.categoria.id" data-tour="categorias-tarjeta">
         <Collapsible
           :open="categoriaAbierta(item.categoria.id)"
           @update:open="(abierta) => alternarCategoria(item.categoria.id, abierta)"

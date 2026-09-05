@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import type { DriveStep } from 'driver.js'
 import ListaTotalesCategoria from '@/componentes/dashboard/ListaTotalesCategoria.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { formatearImporte } from '@/lib/formato'
 import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
@@ -46,6 +48,50 @@ const movimientosPorCategoriaIngresos = computed(() =>
     nombreSubcategoria,
   ),
 )
+
+function pasosTour(): DriveStep[] {
+  if (!tienda.resumen) {
+    return [
+      {
+        popover: {
+          title: 'Dashboard',
+          description: 'Tus datos se están cargando; vuelve a abrir el manual en un momento.',
+        },
+      },
+    ]
+  }
+  return [
+    {
+      element: '[data-tour="dashboard-saldo-global"]',
+      popover: { title: 'Saldo global', description: 'La suma del saldo de todas tus cuentas.' },
+    },
+    {
+      element: '[data-tour="dashboard-saldos-cuenta"]',
+      popover: {
+        title: 'Saldo por cuenta',
+        description: 'El saldo actual de cada una de tus cuentas, por separado.',
+      },
+    },
+    {
+      element: '[data-tour="dashboard-gastos-categoria"]',
+      popover: {
+        title: 'Gastos por categoría',
+        description:
+          'Total gastado en cada categoría este periodo. Pulsa "Detalles" para ver los movimientos.',
+      },
+    },
+    {
+      element: '[data-tour="dashboard-ingresos-categoria"]',
+      popover: {
+        title: 'Ingresos por categoría',
+        description:
+          'Total ingresado en cada categoría este periodo. Pulsa "Detalles" para ver los movimientos.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({ pasos: pasosTour })
 </script>
 
 <template>
@@ -58,7 +104,7 @@ const movimientosPorCategoriaIngresos = computed(() =>
 
     <template v-else-if="tienda.resumen">
       <div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card>
+        <Card data-tour="dashboard-saldo-global">
           <CardHeader>
             <CardTitle class="text-muted-foreground text-sm font-medium">Saldo global</CardTitle>
           </CardHeader>
@@ -66,7 +112,11 @@ const movimientosPorCategoriaIngresos = computed(() =>
             {{ formatearImporte(tienda.resumen.saldo_global) }}
           </CardContent>
         </Card>
-        <Card v-for="cuenta in tienda.resumen.saldos_por_cuenta" :key="cuenta.cuenta_id">
+        <Card
+          v-for="cuenta in tienda.resumen.saldos_por_cuenta"
+          :key="cuenta.cuenta_id"
+          data-tour="dashboard-saldos-cuenta"
+        >
           <CardHeader>
             <CardTitle class="text-muted-foreground truncate text-sm font-medium">
               {{ cuenta.alias ?? cuenta.numero_cuenta }}
@@ -78,7 +128,7 @@ const movimientosPorCategoriaIngresos = computed(() =>
         </Card>
       </div>
 
-      <Card class="mt-6">
+      <Card class="mt-6" data-tour="dashboard-gastos-categoria">
         <CardContent>
           <ListaTotalesCategoria
             titulo="Gastos por categoría"
@@ -90,7 +140,7 @@ const movimientosPorCategoriaIngresos = computed(() =>
         </CardContent>
       </Card>
 
-      <Card class="mt-6">
+      <Card class="mt-6" data-tour="dashboard-ingresos-categoria">
         <CardContent>
           <ListaTotalesCategoria
             titulo="Ingresos por categoría"

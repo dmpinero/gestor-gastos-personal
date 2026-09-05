@@ -140,6 +140,11 @@ test('importar un PDF (certificado de movimientos) crea la cuenta y sus movimien
     filaSinCategorizar.getByRole('img', { name: 'Importado desde un PDF' }),
   ).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-pdf-02-icono-origen.png' })
+
+  // El filtro "Solo importados desde PDF" deja ver los 3 movimientos
+  // importados (todos vienen del mismo PDF).
+  await page.getByLabel('Solo importados desde PDF').check()
+  await expect(page.getByText('Mostrando 1–3 de 3 movimientos')).toBeVisible()
 })
 
 test('subir un fichero con extensión no soportada muestra un error', async ({ page }) => {

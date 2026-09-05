@@ -102,6 +102,7 @@ const importeMin = ref('')
 const importeMax = ref('')
 const saldoMin = ref('')
 const saldoMax = ref('')
+const soloOrigenPdf = ref(false)
 
 // Filtro de categoría/subcategoría con selección múltiple (mismo patrón que
 // el filtro de Cuenta): todas marcadas por defecto, sin selección = 0
@@ -188,6 +189,7 @@ const filasConFiltrosAvanzados = computed(() =>
     if (importeMax.value !== '' && Number(m.importe) > Number(importeMax.value)) return false
     if (saldoMin.value !== '' && Number(m.saldo) < Number(saldoMin.value)) return false
     if (saldoMax.value !== '' && Number(m.saldo) > Number(saldoMax.value)) return false
+    if (soloOrigenPdf.value && m.origen !== 'pdf') return false
     return true
   }),
 )
@@ -212,6 +214,7 @@ function limpiarFiltros(): void {
   importeMax.value = ''
   saldoMin.value = ''
   saldoMax.value = ''
+  soloOrigenPdf.value = false
 }
 
 const filtrosAbiertos = ref(true)
@@ -349,6 +352,7 @@ watch(
     importeMax,
     saldoMin,
     saldoMax,
+    soloOrigenPdf,
   ],
   () => {
     paginaActual.value = 1
@@ -724,6 +728,17 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             v-model:min="saldoMin"
             v-model:max="saldoMax"
           />
+
+          <div class="flex items-center gap-2 pb-2">
+            <Checkbox
+              id="filtro-solo-origen-pdf"
+              :model-value="soloOrigenPdf"
+              @update:model-value="(valor) => (soloOrigenPdf = valor === true)"
+            />
+            <Label for="filtro-solo-origen-pdf" class="font-normal"
+              >Solo importados desde PDF</Label
+            >
+          </div>
 
           <Button
             type="button"

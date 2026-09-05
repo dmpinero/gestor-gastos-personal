@@ -487,6 +487,14 @@ test('los filtros de fecha, importe, categoría y subcategoría se combinan entr
   await expect(page.locator('tr', { hasText: descripcionFueraImporte })).toHaveCount(0)
   await expect(page.locator('tr', { hasText: descripcionFueraFecha })).toHaveCount(0)
 
+  // Ninguno de los movimientos creados a mano viene de un PDF: marcar "Solo
+  // importados desde PDF" los oculta a todos, aunque cumplan el resto de
+  // filtros ya aplicados.
+  await page.getByLabel('Solo importados desde PDF').check()
+  await expect(page.locator('tr', { hasText: descripcionObjetivo })).toHaveCount(0)
+  await page.getByLabel('Solo importados desde PDF').uncheck()
+  await expect(page.locator('tr', { hasText: descripcionObjetivo })).toBeVisible()
+
   await page.getByRole('button', { name: 'Limpiar filtros' }).click()
   await expect(page.locator('tr', { hasText: descripcionObjetivo })).toBeVisible()
   await expect(page.locator('tr', { hasText: descripcionFueraImporte })).toBeVisible()

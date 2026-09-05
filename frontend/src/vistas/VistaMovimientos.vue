@@ -458,10 +458,12 @@ function alternarSeleccionTodos(marcado: boolean): void {
   seleccionados.value = marcado ? new Set(filasOrdenadas.value.map((m) => m.id)) : new Set()
 }
 
-function alternarSeleccion(id: number, marcado: boolean): void {
+function alternarSeleccion(ids: number[], marcado: boolean): void {
   const nuevaSeleccion = new Set(seleccionados.value)
-  if (marcado) nuevaSeleccion.add(id)
-  else nuevaSeleccion.delete(id)
+  for (const id of ids) {
+    if (marcado) nuevaSeleccion.add(id)
+    else nuevaSeleccion.delete(id)
+  }
   seleccionados.value = nuevaSeleccion
 }
 </script>
@@ -797,8 +799,10 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           <TablaMovimientosAgrupada
             v-if="agrupadoPorCategoria"
             :movimientos="filasFiltradas"
+            :seleccionados="seleccionados"
             class="mt-4"
             @editar="panelEdicion?.abrirParaEditar"
+            @alternar-seleccion="alternarSeleccion"
           />
 
           <Table v-else class="mt-4 table-fixed">
@@ -895,7 +899,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                     :model-value="seleccionados.has(movimiento.id)"
                     :aria-label="`Seleccionar el movimiento ${movimiento.descripcion}`"
                     @update:model-value="
-                      (valor) => alternarSeleccion(movimiento.id, valor === true)
+                      (valor) => alternarSeleccion([movimiento.id], valor === true)
                     "
                   />
                 </TableCell>

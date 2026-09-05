@@ -17,6 +17,7 @@ const etiqueta = computed(() => (esOscuro.value ? 'Cambiar a modo claro' : 'Camb
     role="switch"
     :aria-checked="esOscuro"
     :aria-label="etiqueta"
+    data-tour="conmutador-tema"
     @click="alternar"
   >
     <Sun v-if="esOscuro" class="size-4" />

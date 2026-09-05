@@ -41,3 +41,22 @@ for (const ruta of RUTAS) {
     expect(resultado.violations).toEqual([])
   })
 }
+
+test('el manual de usuario interactivo no tiene violaciones de accesibilidad en modo claro (WCAG 2.1 AA)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  const resultado = await auditarPagina(page)
+  expect(resultado.violations).toEqual([])
+})
+
+test('el manual de usuario interactivo no tiene violaciones de accesibilidad en modo oscuro (WCAG 2.1 AA)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('switch').click()
+  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  const resultado = await auditarPagina(page)
+  expect(resultado.violations).toEqual([])
+})

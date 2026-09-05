@@ -157,7 +157,11 @@ watch(
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton as-child :is-active="ruta.path === '/'" tooltip="Dashboard">
-                <RouterLink to="/" :aria-current="ruta.path === '/' ? 'page' : undefined">
+                <RouterLink
+                  to="/"
+                  data-tour="nav-dashboard"
+                  :aria-current="ruta.path === '/' ? 'page' : undefined"
+                >
                   <LayoutDashboard class="text-blue-500" />
                   <span>Dashboard</span>
                 </RouterLink>
@@ -169,6 +173,7 @@ watch(
                 <SidebarMenuButton as-child :is-active="gestionActiva(ruta.path)" tooltip="Gestión">
                   <RouterLink
                     to="/gestion"
+                    data-tour="nav-gestion"
                     :aria-current="gestionActiva(ruta.path) ? 'page' : undefined"
                   >
                     <Settings2 class="text-violet-500" />
@@ -207,6 +212,7 @@ watch(
               <SidebarMenuButton as-child :is-active="ruta.path === '/importar'" tooltip="Importar">
                 <RouterLink
                   to="/importar"
+                  data-tour="nav-importar"
                   :aria-current="ruta.path === '/importar' ? 'page' : undefined"
                 >
                   <Upload class="text-indigo-500" />
@@ -224,6 +230,7 @@ watch(
                 >
                   <RouterLink
                     to="/historial"
+                    data-tour="nav-historial"
                     :aria-current="historialActivo(ruta.path) ? 'page' : undefined"
                   >
                     <History class="text-cyan-500" />
@@ -316,6 +323,7 @@ watch(
               >
                 <RouterLink
                   to="/resumen-anual"
+                  data-tour="nav-resumen-anual"
                   :aria-current="ruta.path === '/resumen-anual' ? 'page' : undefined"
                 >
                   <CalendarRange class="text-fuchsia-500" />
@@ -333,6 +341,7 @@ watch(
                 >
                   <RouterLink
                     to="/administracion"
+                    data-tour="nav-administracion"
                     :aria-current="administracionActiva(ruta.path) ? 'page' : undefined"
                   >
                     <Database class="text-orange-500" />

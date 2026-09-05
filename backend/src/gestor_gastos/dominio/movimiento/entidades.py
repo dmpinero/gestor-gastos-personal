@@ -14,3 +14,8 @@ class Movimiento:
     id: int | None = None
     subcategoria_id: int | None = None
     comentario: str | None = None
+    # None cuando el movimiento se creó a mano o se importó de un Excel; "pdf"
+    # cuando vino de un certificado de movimientos en PDF (sin categoría en el
+    # fichero de origen, así que interesa poder identificarlos en la interfaz
+    # para revisar la categoría/subcategoría que se les asignó automáticamente).
+    origen: str | None = None

@@ -52,6 +52,43 @@ def test_crear_y_listar_por_cuenta_ordenado(sesion_bd) -> None:
     assert [m.descripcion for m in movimientos] == ["Reciente", "Antiguo"]
 
 
+def test_crear_persiste_el_origen_y_actualizar_no_lo_borra(sesion_bd) -> None:
+    cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
+    repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)
+    creado = repositorio.crear(
+        Movimiento(
+            cuenta_id=cuenta.id,
+            categoria_id=categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Pago en Amazon Prime",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+            origen="pdf",
+        )
+    )
+    assert creado.origen == "pdf"
+
+    otra_categoria = RepositorioCategoriasSqlAlchemy(sesion_bd).crear_categoria(
+        Categoria(nombre="Suscripciones")
+    )
+    actualizado = repositorio.actualizar(
+        Movimiento(
+            id=creado.id,
+            cuenta_id=cuenta.id,
+            categoria_id=otra_categoria.id,
+            fecha_valor=datetime.date(2026, 1, 1),
+            descripcion="Pago en Amazon Prime",
+            importe=Decimal("-10.00"),
+            saldo=Decimal("100.00"),
+        )
+    )
+
+    # ActualizarMovimiento no conoce el origen: se ignora deliberadamente al
+    # actualizar, para que editar el movimiento no borre la marca de PDF.
+    assert actualizado.categoria_id == otra_categoria.id
+    assert actualizado.origen == "pdf"
+
+
 def test_buscar_duplicado(sesion_bd) -> None:
     cuenta, categoria = _preparar_cuenta_y_categoria(sesion_bd)
     repositorio = RepositorioMovimientosSqlAlchemy(sesion_bd)

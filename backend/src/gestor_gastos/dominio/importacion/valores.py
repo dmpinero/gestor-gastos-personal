@@ -29,6 +29,24 @@ class DatosExcelLeidos:
 
 
 @dataclass(frozen=True)
+class FilaMovimientoPdf:
+    """Como FilaMovimientoExcel, pero sin categoria/subcategoria/comentario:
+    el certificado de movimientos en PDF no trae esas columnas, así que se
+    resuelven aparte (por asociación de descripción) al importar."""
+
+    fecha_valor: datetime.date
+    descripcion: str
+    importe: Decimal
+    saldo: Decimal
+
+
+@dataclass(frozen=True)
+class DatosPdfLeidos:
+    cabecera: CabeceraExcel
+    filas: list[FilaMovimientoPdf]
+
+
+@dataclass(frozen=True)
 class DuplicadoDetectado:
     """Una fila del Excel que se omitió por coincidir con un movimiento ya
     existente, junto con ese movimiento, para poder comparar ambos."""

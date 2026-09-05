@@ -14,6 +14,7 @@ import { useTiendaCuentas } from '@/stores/cuentas'
 import BotonCopiarImporte from '@/componentes/compartido/BotonCopiarImporte.vue'
 import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import { Button } from '@/componentes/ui/button'
+import { Checkbox } from '@/componentes/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -23,8 +24,11 @@ import {
   TableRow,
 } from '@/componentes/ui/table'
 
-const props = defineProps<{ movimientos: Movimiento[] }>()
-const emit = defineEmits<{ editar: [movimiento: Movimiento] }>()
+const props = defineProps<{ movimientos: Movimiento[]; seleccionados?: Set<number> }>()
+const emit = defineEmits<{
+  editar: [movimiento: Movimiento]
+  alternarSeleccion: [ids: number[], marcado: boolean]
+}>()
 
 const tiendaCategorias = useTiendaCategorias()
 const tiendaCuentas = useTiendaCuentas()
@@ -78,6 +82,10 @@ function alternarSubcategoria(clave: string): void {
   if (nuevo.has(clave)) nuevo.delete(clave)
   else nuevo.add(clave)
   subcategoriasAbiertas.value = nuevo
+}
+
+function todosSeleccionadosEnSubcategoria(movimientos: Movimiento[]): boolean {
+  return movimientos.length > 0 && movimientos.every((m) => props.seleccionados?.has(m.id))
 }
 </script>
 
@@ -158,9 +166,23 @@ function alternarSubcategoria(clave: string): void {
           >
             <TableHeader>
               <TableRow>
-                <TableHead class="w-[13%] whitespace-normal">Fecha</TableHead>
-                <TableHead class="w-[15%] whitespace-normal">Cuenta</TableHead>
-                <TableHead class="w-[37%] whitespace-normal">Descripción</TableHead>
+                <TableHead v-if="seleccionados" class="w-9">
+                  <Checkbox
+                    :model-value="todosSeleccionadosEnSubcategoria(sub.movimientos)"
+                    aria-label="Seleccionar todos los movimientos de esta subcategoría"
+                    @update:model-value="
+                      (valor) =>
+                        emit(
+                          'alternarSeleccion',
+                          sub.movimientos.map((m) => m.id),
+                          valor === true,
+                        )
+                    "
+                  />
+                </TableHead>
+                <TableHead class="w-[12%] whitespace-normal">Fecha</TableHead>
+                <TableHead class="w-[14%] whitespace-normal">Cuenta</TableHead>
+                <TableHead class="w-[34%] whitespace-normal">Descripción</TableHead>
                 <TableHead class="w-[15%] text-right whitespace-normal">Importe</TableHead>
                 <TableHead class="w-[13%] text-right whitespace-normal">Saldo</TableHead>
                 <TableHead class="w-9"></TableHead>
@@ -172,6 +194,15 @@ function alternarSubcategoria(clave: string): void {
                 :key="movimiento.id"
                 :class="claseFondoImporte(movimiento.importe)"
               >
+                <TableCell v-if="seleccionados">
+                  <Checkbox
+                    :model-value="seleccionados.has(movimiento.id)"
+                    :aria-label="`Seleccionar el movimiento ${movimiento.descripcion}`"
+                    @update:model-value="
+                      (valor) => emit('alternarSeleccion', [movimiento.id], valor === true)
+                    "
+                  />
+                </TableCell>
                 <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
                 <TableCell class="truncate" :title="nombreCuenta(movimiento.cuenta_id)">{{
                   nombreCuenta(movimiento.cuenta_id)

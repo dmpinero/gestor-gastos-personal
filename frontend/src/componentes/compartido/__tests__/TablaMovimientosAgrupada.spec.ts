@@ -43,7 +43,7 @@ const movimientos: Movimiento[] = [
   },
 ]
 
-function montar(props: { movimientos: Movimiento[] }) {
+function montar(props: { movimientos: Movimiento[]; seleccionados?: Set<number> }) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const tiendaCuentas = useTiendaCuentas()
@@ -143,5 +143,63 @@ describe('TablaMovimientosAgrupada', () => {
     const filaCategoria = wrapper.get('button[aria-expanded]')
     expect(filaCategoria.findAll('.tabular-nums')).toHaveLength(1)
     expect(filaCategoria.text()).toContain(formatearImporte(1500))
+  })
+
+  async function expandirAlimentacionSupermercado(wrapper: ReturnType<typeof montar>) {
+    await wrapper.get('button[aria-expanded]').trigger('click') // Alimentación
+    const botonSubcategoria = wrapper
+      .findAll('button[aria-expanded]')
+      .find((b) => b.text().includes('Supermercado'))!
+    await botonSubcategoria.trigger('click')
+  }
+
+  it('sin la prop "seleccionados", no muestra ninguna casilla de selección', async () => {
+    const wrapper = montar({ movimientos })
+    await expandirAlimentacionSupermercado(wrapper)
+
+    expect(wrapper.find('table').findAll('[role="checkbox"]')).toHaveLength(0)
+  })
+
+  it('con la prop "seleccionados", muestra una casilla por movimiento y una de "seleccionar todos"', async () => {
+    const wrapper = montar({ movimientos, seleccionados: new Set() })
+    await expandirAlimentacionSupermercado(wrapper)
+
+    // Solo hay un movimiento en Alimentación > Supermercado: 1 casilla de
+    // cabecera ("seleccionar todos" de esa subcategoría) + 1 de fila.
+    expect(wrapper.find('table').findAll('[role="checkbox"]')).toHaveLength(2)
+  })
+
+  it('marcar la casilla de un movimiento emite "alternarSeleccion" con su id', async () => {
+    const wrapper = montar({ movimientos, seleccionados: new Set() })
+    await expandirAlimentacionSupermercado(wrapper)
+
+    const casillas = wrapper.find('table').findAll('[role="checkbox"]')
+    await casillas[1]!.trigger('click') // la de cabecera es la [0]
+
+    expect(wrapper.emitted('alternarSeleccion')).toHaveLength(1)
+    expect(wrapper.emitted('alternarSeleccion')?.[0]).toEqual([[1], true])
+  })
+
+  it('marcar "seleccionar todos" de una subcategoría emite "alternarSeleccion" con los ids de todos sus movimientos', async () => {
+    const dosEnLaMismaSubcategoria: Movimiento[] = [
+      movimientos[0]!,
+      { ...movimientos[0]!, id: 4, descripcion: 'Otra compra en Mercadona' },
+    ]
+    const wrapper = montar({ movimientos: dosEnLaMismaSubcategoria, seleccionados: new Set() })
+    await expandirAlimentacionSupermercado(wrapper)
+
+    const casillaTodas = wrapper.find('table').findAll('[role="checkbox"]')[0]!
+    await casillaTodas.trigger('click')
+
+    expect(wrapper.emitted('alternarSeleccion')).toHaveLength(1)
+    expect(wrapper.emitted('alternarSeleccion')?.[0]).toEqual([[1, 4], true])
+  })
+
+  it('la casilla "seleccionar todos" aparece marcada cuando todos los movimientos de la subcategoría ya están seleccionados', async () => {
+    const wrapper = montar({ movimientos, seleccionados: new Set([1]) })
+    await expandirAlimentacionSupermercado(wrapper)
+
+    const casillaTodas = wrapper.find('table').findAll('[role="checkbox"]')[0]!
+    expect(casillaTodas.attributes('aria-checked')).toBe('true')
   })
 })

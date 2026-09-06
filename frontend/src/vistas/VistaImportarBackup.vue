@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import type { DriveStep } from 'driver.js'
 import type { ResumenImportacionDatosCompletos } from '@/api/tipos'
 import { useTiendaExportacion } from '@/stores/exportacion'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import {
@@ -46,34 +48,54 @@ function irAlDashboard(): void {
   // obsoleto el estado de todas las tiendas Pinia (categorías, dashboard...).
   window.location.href = '/'
 }
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="importar-backup-accion"]',
+      popover: {
+        title: 'Importar backup',
+        description:
+          'Acción destructiva: sustituye TODA la información actual (cuentas, categorías, movimientos, conceptos previstos, ajustes y asociaciones) por la del fichero. Pide confirmación antes de aplicarse y, tras importar con éxito, aparece aquí mismo un resumen con un botón para ir al Dashboard.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({ pasos: pasosTour })
 </script>
 
 <template>
   <section>
-    <h2 class="text-xl font-semibold">Importar backup</h2>
-    <p class="text-muted-foreground mt-2 max-w-prose">
-      Sube un backup exportado previamente desde "Realizar backup".
-      <strong>Se borrará toda la información actual</strong> (cuentas, categorías, subcategorías,
-      movimientos, conceptos previstos, ajustes mensuales y asociaciones de conceptos, por categoría
-      y por descripción) y se sustituirá por la del fichero.
-    </p>
+    <div data-tour="importar-backup-accion">
+      <h2 class="text-xl font-semibold">Importar backup</h2>
+      <p class="text-muted-foreground mt-2 max-w-prose">
+        Sube un backup exportado previamente desde "Realizar backup".
+        <strong>Se borrará toda la información actual</strong> (cuentas, categorías, subcategorías,
+        movimientos, conceptos previstos, ajustes mensuales y asociaciones de conceptos, por
+        categoría y por descripción) y se sustituirá por la del fichero.
+      </p>
 
-    <form class="mt-4 flex flex-col items-start gap-3" @submit.prevent="confirmacionAbierta = true">
-      <ZonaSoltarFichero
-        :ficheros-seleccionados="ficherosSeleccionados"
-        etiqueta="fichero de backup"
-        accept=".xlsx"
-        class="w-full"
-        @ficheros-elegidos="onFicherosElegidos"
-      />
-      <Button
-        type="submit"
-        variant="destructive"
-        :disabled="ficherosSeleccionados.length === 0 || importando"
+      <form
+        class="mt-4 flex flex-col items-start gap-3"
+        @submit.prevent="confirmacionAbierta = true"
       >
-        {{ importando ? 'Importando…' : 'Importar' }}
-      </Button>
-    </form>
+        <ZonaSoltarFichero
+          :ficheros-seleccionados="ficherosSeleccionados"
+          etiqueta="fichero de backup"
+          accept=".xlsx"
+          class="w-full"
+          @ficheros-elegidos="onFicherosElegidos"
+        />
+        <Button
+          type="submit"
+          variant="destructive"
+          :disabled="ficherosSeleccionados.length === 0 || importando"
+        >
+          {{ importando ? 'Importando…' : 'Importar' }}
+        </Button>
+      </form>
+    </div>
 
     <AlertDialog v-model:open="confirmacionAbierta">
       <AlertDialogContent>

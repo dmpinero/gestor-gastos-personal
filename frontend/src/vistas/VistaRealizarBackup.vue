@@ -37,7 +37,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
 <template>
   <section>
     <div data-tour="backup-accion">
-      <p class="text-muted-foreground max-w-prose text-sm">
+      <p class="text-muted-foreground text-sm">
         Descarga un Excel con toda la información almacenada actualmente en la aplicación: cuentas,
         categorías, subcategorías, movimientos, conceptos previstos, ajustes mensuales y
         asociaciones de conceptos (por categoría y por descripción).

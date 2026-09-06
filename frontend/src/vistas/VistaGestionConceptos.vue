@@ -381,7 +381,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
 
 <template>
   <section>
-    <p class="text-muted-foreground max-w-prose text-sm">
+    <p class="text-muted-foreground text-sm">
       Algunos conceptos del Resumen anual se nombran de forma distinta a la categoría real que usan
       los movimientos (por ejemplo, "Comida" en el resumen anual y "Alimentación" en movimientos).
       Crea aquí la correspondencia entre ambos para que el Resumen anual encuentre el importe real

@@ -69,7 +69,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
   <section>
     <div data-tour="importar-backup-accion">
       <h2 class="text-xl font-semibold">Importar backup</h2>
-      <p class="text-muted-foreground mt-2 max-w-prose">
+      <p class="text-muted-foreground mt-2">
         Sube un backup exportado previamente desde "Realizar backup".
         <strong>Se borrará toda la información actual</strong> (cuentas, categorías, subcategorías,
         movimientos, conceptos previstos, ajustes mensuales y asociaciones de conceptos, por

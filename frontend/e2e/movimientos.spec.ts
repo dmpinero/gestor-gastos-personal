@@ -592,6 +592,11 @@ test('los filtros de fecha, importe, categoría, subcategoría y cuenta se combi
   await expect(page.locator('tr', { hasText: descripcionObjetivo })).toBeVisible()
 
   await page.getByRole('button', { name: 'Limpiar filtros' }).click()
+  // Con la cuenta ya restablecida a "todas" (ver más abajo), la tabla puede
+  // acumular muchas filas de otros tests de esta misma ejecución; se busca
+  // por el sufijo propio de este test para no depender de en qué página cae
+  // cada fila.
+  await page.getByLabel('Buscar').fill(String(sufijo))
   await expect(page.locator('tr', { hasText: descripcionObjetivo })).toBeVisible()
   await expect(page.locator('tr', { hasText: descripcionFueraImporte })).toBeVisible()
   await expect(page.locator('tr', { hasText: descripcionFueraFecha })).toBeVisible()

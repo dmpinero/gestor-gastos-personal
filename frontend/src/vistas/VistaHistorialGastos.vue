@@ -14,11 +14,13 @@ import {
 } from '@lucide/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import type { DriveStep } from 'driver.js'
 
 import type { Movimiento } from '@/api/tipos'
 import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
@@ -238,6 +240,63 @@ const filasTablaParaExportar = computed(() =>
     formatearImporte(m.saldo),
   ]),
 )
+
+function pasosTour(): DriveStep[] {
+  if (!ruta.params.id) {
+    return [
+      {
+        popover: {
+          title: 'Historial',
+          description:
+            'Selecciona una categoría o subcategoría en el menú lateral para ver aquí su evolución de gastos e ingresos, filtros, resultados y la tabla de movimientos.',
+        },
+      },
+    ]
+  }
+  return [
+    {
+      element: '[data-tour="historial-evolucion-gastos"]',
+      popover: {
+        title: 'Evolución de gastos',
+        description:
+          'El total gastado y su número de movimientos, con un gráfico mensual. Puedes cambiar el tipo de gráfico con los botones de arriba: barras, líneas, área o circular.',
+      },
+    },
+    {
+      element: '[data-tour="historial-evolucion-ingresos"]',
+      popover: {
+        title: 'Evolución de ingresos',
+        description:
+          'Lo mismo que en gastos, pero con los ingresos de esta categoría o subcategoría.',
+      },
+    },
+    {
+      element: '[data-tour="historial-filtros"]',
+      popover: {
+        title: 'Filtros',
+        description:
+          'Acota el periodo con fecha desde/hasta. Al ver todos los movimientos sin agrupar aparece también un buscador.',
+      },
+    },
+    {
+      element: '[data-tour="historial-resultados"]',
+      popover: {
+        title: 'Resultados',
+        description:
+          'Cambia el tamaño de página, agrupa o desagrupa por categoría, y exporta esta tabla a Excel o PDF.',
+      },
+    },
+    {
+      element: '[data-tour="historial-tabla"]',
+      popover: {
+        title: 'Tabla de movimientos',
+        description: 'El detalle de cada movimiento. Pulsa el icono de lápiz para editarlo.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({ pasos: pasosTour })
 </script>
 
 <template>
@@ -256,7 +315,7 @@ const filasTablaParaExportar = computed(() =>
       <PanelEdicionMovimiento ref="panelEdicion" />
 
       <div class="mt-4 flex flex-col gap-6">
-        <div v-if="movimientosGastados.length > 0">
+        <div v-if="movimientosGastados.length > 0" data-tour="historial-evolucion-gastos">
           <div class="grid grid-cols-2 gap-4">
             <Card>
               <CardHeader>
@@ -281,7 +340,7 @@ const filasTablaParaExportar = computed(() =>
           <GraficoEvolucion :items="datosGraficoGastos" acento="gasto" class="mt-3" />
         </div>
 
-        <div v-if="movimientosIngresados.length > 0">
+        <div v-if="movimientosIngresados.length > 0" data-tour="historial-evolucion-ingresos">
           <div class="grid grid-cols-2 gap-4">
             <Card>
               <CardHeader>
@@ -307,7 +366,10 @@ const filasTablaParaExportar = computed(() =>
         </div>
       </div>
 
-      <div class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4">
+      <div
+        class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
+        data-tour="historial-filtros"
+      >
         <Collapsible v-model:open="filtrosAbiertos">
           <CollapsibleTrigger
             class="text-muted-foreground flex items-center gap-1 text-sm font-medium"
@@ -359,7 +421,10 @@ const filasTablaParaExportar = computed(() =>
             Resultados
           </CollapsibleTrigger>
           <CollapsibleContent class="mt-4">
-            <div class="flex flex-wrap items-end justify-between gap-4">
+            <div
+              class="flex flex-wrap items-end justify-between gap-4"
+              data-tour="historial-resultados"
+            >
               <div>
                 <SelectorTamanoPagina
                   v-if="!agrupadoPorCategoria"
@@ -394,10 +459,11 @@ const filasTablaParaExportar = computed(() =>
               v-if="agrupadoPorCategoria"
               :movimientos="filasFiltradas"
               class="mt-4"
+              data-tour="historial-tabla"
               @editar="panelEdicion?.abrirParaEditar"
             />
 
-            <Table v-else class="mt-4 table-fixed">
+            <Table v-else class="mt-4 table-fixed" data-tour="historial-tabla">
               <TableHeader>
                 <TableRow>
                   <TableHead class="w-[11%] whitespace-normal">

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Download, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import type { DriveStep } from 'driver.js'
 
 import type {
   DatosConceptoPrevisto,
@@ -12,6 +13,7 @@ import { sumarTotalesPorMes } from '@/lib/resumenAnualPorCategoria'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaDashboard } from '@/stores/dashboard'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import TablaResumenAnual from '@/componentes/prevision/TablaResumenAnual.vue'
@@ -369,6 +371,73 @@ const totalesIngresosMostrados = computed(() =>
 )
 
 const agrupadoPorCategoria = ref(false)
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="resumen-anual-importar"]',
+      popover: {
+        title: 'Importar Excel',
+        description:
+          'Sube un Excel exportado del resumen anual con importes cambiados: solo se actualizan las celdas que hayan cambiado.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-exportar"]',
+      popover: {
+        title: 'Exportar a Excel',
+        description: 'Exporta el resumen anual de uno o varios años a un fichero Excel.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-cargar-acumulado"]',
+      popover: {
+        title: 'Cargar acumulado real',
+        description:
+          'Sobrescribe con el importe real de los movimientos cualquier mes de este año que ya tengas ajustado a mano, en todos los conceptos. También puedes cargarlo concepto a concepto desde su fila.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-anadir-concepto"]',
+      popover: {
+        title: 'Añadir concepto',
+        description:
+          'Da de alta un concepto previsto: categoría, subcategoría, periodicidad, tipo e importe. Si eliges una periodicidad distinta de mensual, aparece también el campo "Mes de inicio".',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-anio"]',
+      popover: {
+        title: 'Año',
+        description: 'Cambia el año que se muestra en las tablas.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-buscar"]',
+      popover: {
+        title: 'Buscar',
+        description: 'Filtra los conceptos por nombre, categoría o subcategoría.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-agrupar"]',
+      popover: {
+        title: 'Agrupar por categoría',
+        description: 'Alterna entre ver los conceptos agrupados por categoría o todos juntos.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-tablas"]',
+      popover: {
+        title: 'Tablas de gastos e ingresos',
+        description:
+          'El detalle mes a mes de cada concepto previsto. Pulsa una celda para ajustarla a mano, o usa los botones de la fila para editar, eliminar o cargar su acumulado real.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({ pasos: pasosTour })
 </script>
 
 <template>
@@ -376,11 +445,11 @@ const agrupadoPorCategoria = ref(false)
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-xl font-semibold">Resumen anual</h2>
       <div class="flex gap-2">
-        <Button variant="outline" @click="abrirImportar">
+        <Button variant="outline" data-tour="resumen-anual-importar" @click="abrirImportar">
           <Upload class="size-4" />
           Importar Excel
         </Button>
-        <Button variant="outline" @click="abrirExportar">
+        <Button variant="outline" data-tour="resumen-anual-exportar" @click="abrirExportar">
           <Download class="size-4" />
           Exportar a Excel
         </Button>
@@ -390,6 +459,7 @@ const agrupadoPorCategoria = ref(false)
               variant="outline"
               size="icon"
               aria-label="Cargar acumulado real de todos los conceptos"
+              data-tour="resumen-anual-cargar-acumulado"
               :disabled="tienda.cargando"
             >
               <RefreshCw class="size-4" />
@@ -411,17 +481,19 @@ const agrupadoPorCategoria = ref(false)
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <Button variant="success" @click="abrirParaCrear">Añadir concepto</Button>
+        <Button variant="success" data-tour="resumen-anual-anadir-concepto" @click="abrirParaCrear"
+          >Añadir concepto</Button
+        >
       </div>
     </div>
 
     <div class="mt-4 flex flex-wrap items-end gap-3">
-      <div class="flex max-w-32 flex-col gap-1.5">
+      <div class="flex max-w-32 flex-col gap-1.5" data-tour="resumen-anual-anio">
         <Label for="anio-resumen">Año</Label>
         <Input id="anio-resumen" v-model.number="anio" type="number" />
       </div>
 
-      <div class="flex max-w-xs flex-1 flex-col gap-1.5">
+      <div class="flex max-w-xs flex-1 flex-col gap-1.5" data-tour="resumen-anual-buscar">
         <Label for="buscar-conceptos">Buscar</Label>
         <div class="relative">
           <Search
@@ -436,7 +508,12 @@ const agrupadoPorCategoria = ref(false)
         </div>
       </div>
 
-      <Button type="button" variant="outline" @click="agrupadoPorCategoria = !agrupadoPorCategoria">
+      <Button
+        type="button"
+        variant="outline"
+        data-tour="resumen-anual-agrupar"
+        @click="agrupadoPorCategoria = !agrupadoPorCategoria"
+      >
         {{ agrupadoPorCategoria ? 'Ver todos los conceptos' : 'Agrupar por categoría' }}
       </Button>
     </div>
@@ -735,7 +812,7 @@ const agrupadoPorCategoria = ref(false)
       {{ tienda.error }}
     </p>
 
-    <div v-if="tienda.resumenAnual" class="mt-6 space-y-8">
+    <div v-if="tienda.resumenAnual" class="mt-6 space-y-8" data-tour="resumen-anual-tablas">
       <template v-if="agrupadoPorCategoria">
         <TablaResumenAnualAgrupada
           titulo="Gastos"

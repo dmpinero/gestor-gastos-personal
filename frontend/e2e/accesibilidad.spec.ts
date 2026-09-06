@@ -93,3 +93,24 @@ test('el tour de Movimientos no tiene violaciones de accesibilidad en modo oscur
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])
 })
+
+test('el tour de Resumen anual no tiene violaciones de accesibilidad en modo claro (WCAG 2.1 AA)', async ({
+  page,
+}) => {
+  await page.goto('/resumen-anual')
+  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await esperarPopoverEstable(page)
+  const resultado = await auditarPagina(page)
+  expect(resultado.violations).toEqual([])
+})
+
+test('el tour de Resumen anual no tiene violaciones de accesibilidad en modo oscuro (WCAG 2.1 AA)', async ({
+  page,
+}) => {
+  await page.goto('/resumen-anual')
+  await page.getByRole('switch').click()
+  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await esperarPopoverEstable(page)
+  const resultado = await auditarPagina(page)
+  expect(resultado.violations).toEqual([])
+})

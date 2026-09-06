@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, Coins, Hash, Landmark, Pencil, Search, Tag, Trash2, User } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import type { DriveStep } from 'driver.js'
 
 import { clienteApi } from '@/api/cliente'
 import type { CuentaBancaria, DatosCuenta, Movimiento } from '@/api/tipos'
@@ -9,6 +10,7 @@ import { useBusquedaTabla } from '@/composables/useBusquedaTabla'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { useProgresoTareas } from '@/composables/useProgresoTareas'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
@@ -291,13 +293,85 @@ function alternarSeleccion(id: number, marcado: boolean): void {
   else nuevaSeleccion.delete(id)
   seleccionadas.value = nuevaSeleccion
 }
+
+// Estado forzado temporalmente por el tour guiado, para poder mostrar
+// resaltada la barra de acciones en bloque (solo visible con algo
+// seleccionado); se restaura la selección exacta previa al cerrar el tour.
+let seleccionadasAntesDelTour: Set<number> | null = null
+
+function antesDeIniciarTour(): void {
+  seleccionadasAntesDelTour = new Set(seleccionadas.value)
+  const primera = filasOrdenadas.value[0]
+  if (primera) alternarSeleccion(primera.id, true)
+}
+
+function alFinalizarTour(): void {
+  if (seleccionadasAntesDelTour) seleccionadas.value = seleccionadasAntesDelTour
+  seleccionadasAntesDelTour = null
+}
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="cuentas-crear"]',
+      popover: { title: 'Crear cuenta', description: 'Da de alta una cuenta bancaria nueva.' },
+    },
+    {
+      element: '[data-tour="cuentas-filtros"]',
+      popover: {
+        title: 'Buscar',
+        description: 'Filtra la tabla por número de cuenta, alias, entidad, moneda o titular.',
+      },
+    },
+    {
+      element: '[data-tour="cuentas-seleccion"]',
+      popover: {
+        title: 'Selección múltiple',
+        description: 'Marca varias cuentas a la vez para eliminarlas en bloque.',
+      },
+    },
+    {
+      element: '[data-tour="cuentas-barra-seleccion"]',
+      popover: {
+        title: 'Acciones en bloque',
+        description: 'Con al menos una cuenta marcada, aparece esta barra para eliminarlas juntas.',
+      },
+    },
+    {
+      element: '[data-tour="cuentas-exportar"]',
+      popover: { title: 'Exportar', description: 'Descarga la tabla en Excel o PDF.' },
+    },
+    {
+      element: '[data-tour="cuentas-tabla"]',
+      popover: {
+        title: 'Tabla de cuentas',
+        description: 'Edita o elimina cada cuenta desde los iconos de la derecha.',
+      },
+    },
+    {
+      element: '[data-tour="cuentas-paginacion"]',
+      popover: {
+        title: 'Paginación',
+        description: 'Navega entre páginas si tienes muchas cuentas.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({
+  pasos: pasosTour,
+  antesDeIniciar: antesDeIniciarTour,
+  alFinalizar: alFinalizarTour,
+})
 </script>
 
 <template>
   <section>
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Cuentas bancarias</h2>
-      <Button variant="success" @click="abrirParaCrear">Crear cuenta</Button>
+      <Button variant="success" data-tour="cuentas-crear" @click="abrirParaCrear"
+        >Crear cuenta</Button
+      >
     </div>
 
     <ModalProgresoBloqueante
@@ -372,6 +446,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
     <div
       v-if="seleccionadas.size > 0"
       class="mt-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
+      data-tour="cuentas-barra-seleccion"
     >
       <span>{{ seleccionadas.size }} seleccionados</span>
       <DialogoConfirmarEliminacion
@@ -398,7 +473,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
           />
           Filtros
         </CollapsibleTrigger>
-        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4">
+        <CollapsibleContent class="mt-4 flex flex-wrap items-end gap-4" data-tour="cuentas-filtros">
           <div class="flex max-w-xs flex-col gap-1.5">
             <Label for="buscar-cuentas">Buscar</Label>
             <div class="relative">
@@ -437,6 +512,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
                 Mostrando {{ primerIndice }}–{{ ultimoIndice }} de {{ totalRegistros }} cuentas
               </p>
               <BotonesExportarTabla
+                data-tour="cuentas-exportar"
                 nombre-fichero="Cuentas"
                 titulo="Cuentas bancarias"
                 :columnas="COLUMNAS_TABLA"
@@ -445,10 +521,10 @@ function alternarSeleccion(id: number, marcado: boolean): void {
             </div>
           </div>
 
-          <Table class="mt-4 table-fixed">
+          <Table class="mt-4 table-fixed" data-tour="cuentas-tabla">
             <TableHeader>
               <TableRow>
-                <TableHead class="w-9">
+                <TableHead class="w-9" data-tour="cuentas-seleccion">
                   <Checkbox
                     :model-value="todasSeleccionadas"
                     aria-label="Seleccionar todas las cuentas"
@@ -567,6 +643,7 @@ function alternarSeleccion(id: number, marcado: boolean): void {
 
           <BarraPaginacion
             v-if="totalPaginas > 1"
+            data-tour="cuentas-paginacion"
             :pagina-actual="paginaActual"
             :total-paginas="totalPaginas"
             @anterior="paginaAnterior"

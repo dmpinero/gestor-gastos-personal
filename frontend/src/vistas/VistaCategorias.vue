@@ -16,15 +16,16 @@ import { Button } from '@/componentes/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/componentes/ui/card'
 import { Checkbox } from '@/componentes/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/componentes/ui/collapsible'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from '@/componentes/ui/combobox'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/componentes/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 import DialogoConfirmarEliminacion, {
   type Dependencia,
@@ -420,6 +421,10 @@ function abrirParaEditarSubcategoria(idCategoria: number, sub: Subcategoria): vo
   panelSubcategoriaAbierto.value = true
 }
 
+function mostrarCategoria(valor: string): string {
+  return tienda.categorias.find((c) => c.categoria.id === Number(valor))?.categoria.nombre ?? ''
+}
+
 async function guardarSubcategoria(): Promise<void> {
   if (subcategoriaEnEdicion.value === null || categoriaDestinoFormulario.value === undefined) {
     return
@@ -696,23 +701,26 @@ async function guardarSubcategoria(): Promise<void> {
             <Label id="etiqueta-categoria-subcategoria" for="selector-categoria-subcategoria"
               >Categoría</Label
             >
-            <Select v-model="categoriaDestinoFormulario">
-              <SelectTrigger
-                id="selector-categoria-subcategoria"
-                aria-labelledby="etiqueta-categoria-subcategoria"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
+            <Combobox v-model="categoriaDestinoFormulario" open-on-click open-on-focus>
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-categoria-subcategoria"
+                  aria-labelledby="etiqueta-categoria-subcategoria"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarCategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
                   v-for="cat in tienda.categorias"
                   :key="cat.categoria.id"
                   :value="String(cat.categoria.id)"
                 >
                   {{ cat.categoria.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <p v-if="errorPanelSubcategoria" class="text-sm text-destructive" role="alert">

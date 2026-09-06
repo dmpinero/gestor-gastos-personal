@@ -188,8 +188,12 @@ describe('PanelEdicionMovimiento', () => {
     await enviarFormularioDe('nombre-nueva-categoria')
 
     expect(espia).toHaveBeenCalledWith('Salud')
-    expect(document.body.querySelector('#selector-categoria')?.textContent).toContain('Salud')
-    expect(document.body.querySelector('#selector-subcategoria')?.textContent).not.toContain('Cine')
+    expect(
+      (document.body.querySelector('#selector-categoria') as HTMLInputElement).value,
+    ).toContain('Salud')
+    expect(
+      (document.body.querySelector('#selector-subcategoria') as HTMLInputElement).value,
+    ).not.toContain('Cine')
     expect(
       document.body.querySelectorAll('[data-slot="sheet-content"][data-state="open"]'),
     ).toHaveLength(1)
@@ -219,7 +223,9 @@ describe('PanelEdicionMovimiento', () => {
     await enviarFormularioDe('nombre-nueva-subcategoria')
 
     expect(espia).toHaveBeenCalledWith(100, 'Teatro')
-    expect(document.body.querySelector('#selector-subcategoria')?.textContent).toContain('Teatro')
+    expect(
+      (document.body.querySelector('#selector-subcategoria') as HTMLInputElement).value,
+    ).toContain('Teatro')
     expect(
       document.body.querySelectorAll('[data-slot="sheet-content"][data-state="open"]'),
     ).toHaveLength(1)

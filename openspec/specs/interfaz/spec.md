@@ -149,3 +149,21 @@ con el contenido del changelog del proyecto.
 - Dado que la barra de estado es visible
 - Cuando el usuario pulsa el control de historial de cambios
 - Entonces se abre una modal mostrando el contenido del changelog del proyecto
+
+### Requisito: Selección de categoría y subcategoría con buscador por texto
+
+Todo selector de categoría o subcategoría de la aplicación (crear/editar
+movimiento, recategorizar en bloque, alta/edición de concepto previsto del
+Resumen anual, mover una subcategoría a otra categoría) DEBE permitir
+escribir para filtrar las opciones por texto, además de poder elegirse
+desplegando la lista completa.
+
+#### Escenario: Escribir filtra las opciones
+- Dado un selector de categoría con varias categorías disponibles
+- Cuando la persona usuaria escribe parte del nombre de una categoría
+- Entonces la lista desplegada se filtra a las categorías cuyo nombre coincide
+
+#### Escenario: El valor elegido se conserva visible fuera de edición
+- Dado un selector de categoría con una categoría ya elegida
+- Cuando el desplegable no está abierto
+- Entonces el nombre de la categoría elegida se ve en el campo

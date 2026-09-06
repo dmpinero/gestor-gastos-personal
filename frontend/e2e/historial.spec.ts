@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { elegirOpcion, elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 async function crearMovimiento(
   page: Page,
@@ -14,7 +14,7 @@ async function crearMovimiento(
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
   await seleccionarSubcategoriaSiAplica(page, panel, subcategoria)
   await panel.getByPlaceholder('Descripción').fill(descripcion)
   await panel.getByPlaceholder('Importe').fill(importe)
@@ -29,7 +29,7 @@ async function seleccionarSubcategoriaSiAplica(
   subcategoria: string | null,
 ): Promise<void> {
   if (!subcategoria) return
-  await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
+  await elegirOpcionBuscador(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
 }
 
 test('sin selección muestra un mensaje para elegir categoría o subcategoría', async ({ page }) => {
@@ -342,7 +342,7 @@ test('una subcategoría con una asociación por descripción muestra en el histo
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoriaMovimiento,

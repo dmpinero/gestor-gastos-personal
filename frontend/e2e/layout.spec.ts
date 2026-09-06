@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('el panel de navegación colapsa y expande, y resalta la sección activa', async ({ page }) => {
   await page.goto('/')
@@ -127,7 +127,11 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
     const panel = page.getByRole('dialog')
     await expect(panel).toBeVisible()
     await panel.locator('input[type="date"]').fill('2026-01-15')
-    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await elegirOpcionBuscador(
+      page,
+      panel.getByLabel('Categoría', { exact: true }),
+      nombreCategoria,
+    )
     await panel.getByPlaceholder('Descripción').fill(`Movimiento ${nombreCategoria}`)
     await panel.getByPlaceholder('Importe').fill(importe)
     await panel.getByPlaceholder('Saldo').fill('100.00')

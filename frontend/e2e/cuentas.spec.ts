@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('gestión completa de una cuenta bancaria: crear, editar y eliminar', async ({ page }) => {
   const numeroCuenta = `ES00 TEST ${Date.now()}`
@@ -228,7 +228,7 @@ test('eliminar una cuenta con movimientos asociados los borra en cascada al conf
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoria,

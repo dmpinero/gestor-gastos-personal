@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import type { DriveStep } from 'driver.js'
 
 import { clienteApi, ErrorApi } from '@/api/cliente'
 import type { ResumenImportacion, ResumenImportacionConceptosPrevistos } from '@/api/tipos'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { Button } from '@/componentes/ui/button'
 import ModalComparacionDuplicados from '@/componentes/importacion/ModalComparacionDuplicados.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
@@ -185,84 +187,118 @@ async function importarConceptos(): Promise<void> {
 function verResumenAnual(): void {
   router.push('/resumen-anual')
 }
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="importar-movimientos"]',
+      popover: {
+        title: 'Importar movimientos',
+        description:
+          'Sube uno o varios extractos bancarios en Excel o PDF. Tras importarlos con éxito, aquí mismo aparece un resumen con lo importado y lo omitido por duplicado.',
+      },
+    },
+    {
+      element: '[data-tour="importar-conceptos"]',
+      popover: {
+        title: 'Importar conceptos previstos',
+        description:
+          'Sube uno o varios Excel con las categorías, periodicidad e importe previsto de tu presupuesto anual, para darlos de alta en el Resumen anual de una vez.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({ pasos: pasosTour })
 </script>
 
 <template>
   <section>
-    <h2 class="text-xl font-semibold">Importar movimientos</h2>
-    <p class="text-muted-foreground mt-2">
-      Sube uno o varios extractos de tu banco en formato .xls, .xlsx o .pdf.
-    </p>
-
-    <form class="mt-4 flex flex-col items-start gap-3" @submit.prevent="importar">
-      <ZonaSoltarFichero
-        :ficheros-seleccionados="ficherosSeleccionados"
-        etiqueta="archivos Excel o PDF"
-        accept=".xls,.xlsx,.pdf"
-        class="w-full"
-        @ficheros-elegidos="onFicherosElegidos"
-      />
-      <Button
-        type="submit"
-        variant="success"
-        :disabled="ficherosSeleccionados.length === 0 || importando"
-      >
-        {{ importando ? 'Importando…' : 'Importar' }}
-      </Button>
-    </form>
-
-    <ModalProgresoBloqueante
-      v-if="importando && ficheroEnProceso"
-      :titulo="`Importando ${ficheroEnProceso}`"
-      etiqueta-unidad="filas"
-      :progreso="progreso"
-    />
-
-    <div v-if="ficherosConError.length > 0" class="mt-4 text-sm text-destructive" role="alert">
-      <p v-for="resultado in ficherosConError" :key="resultado.nombreFichero">
-        {{ resultado.nombreFichero }}: {{ resultado.error }}
-        <DialogoDetalleError :mensaje="resultado.error ?? ''" :traza="resultado.traza" />
+    <div data-tour="importar-movimientos">
+      <h2 class="text-xl font-semibold">Importar movimientos</h2>
+      <p class="text-muted-foreground mt-2">
+        Sube uno o varios extractos de tu banco en formato .xls, .xlsx o .pdf.
       </p>
+
+      <form class="mt-4 flex flex-col items-start gap-3" @submit.prevent="importar">
+        <ZonaSoltarFichero
+          :ficheros-seleccionados="ficherosSeleccionados"
+          etiqueta="archivos Excel o PDF"
+          accept=".xls,.xlsx,.pdf"
+          class="w-full"
+          @ficheros-elegidos="onFicherosElegidos"
+        />
+        <Button
+          type="submit"
+          variant="success"
+          :disabled="ficherosSeleccionados.length === 0 || importando"
+        >
+          {{ importando ? 'Importando…' : 'Importar' }}
+        </Button>
+      </form>
+
+      <ModalProgresoBloqueante
+        v-if="importando && ficheroEnProceso"
+        :titulo="`Importando ${ficheroEnProceso}`"
+        etiqueta-unidad="filas"
+        :progreso="progreso"
+      />
+
+      <div v-if="ficherosConError.length > 0" class="mt-4 text-sm text-destructive" role="alert">
+        <p v-for="resultado in ficherosConError" :key="resultado.nombreFichero">
+          {{ resultado.nombreFichero }}: {{ resultado.error }}
+          <DialogoDetalleError :mensaje="resultado.error ?? ''" :traza="resultado.traza" />
+        </p>
+      </div>
+
+      <div
+        v-if="resumenAgregado"
+        class="mt-6 rounded-lg border p-4"
+        data-test="resumen-importacion"
+      >
+        <h3 class="font-medium">Resumen de la importación</h3>
+        <ul class="mt-2 text-sm">
+          <li>Movimientos importados: {{ resumenAgregado.movimientos_importados }}</li>
+          <li class="flex items-center gap-2">
+            Movimientos omitidos por duplicado:
+            {{ resumenAgregado.movimientos_omitidos_por_duplicado }}
+            <ModalComparacionDuplicados
+              v-if="duplicadosAgregados.length > 0"
+              :nombre-fichero="
+                resultados.length === 1
+                  ? (resultados[0]?.nombreFichero ?? '')
+                  : 'Todos los ficheros'
+              "
+              :duplicados="duplicadosAgregados"
+            />
+          </li>
+          <li>
+            Categorías nuevas: {{ resumenAgregado.categorias_creadas.join(', ') || 'ninguna' }}
+          </li>
+          <li>
+            Subcategorías nuevas:
+            {{ resumenAgregado.subcategorias_creadas.join(', ') || 'ninguna' }}
+          </li>
+        </ul>
+
+        <ul v-if="resultados.length > 1" class="mt-4 space-y-1 border-t pt-2 text-sm">
+          <li v-for="resultado in resultados" :key="resultado.nombreFichero">
+            <template v-if="resultado.resumen">
+              {{ resultado.nombreFichero }}:
+              {{ resultado.resumen.movimientos_importados }} importados,
+              {{ resultado.resumen.movimientos_omitidos_por_duplicado }} omitidos
+            </template>
+            <template v-else>{{ resultado.nombreFichero }}: {{ resultado.error }}</template>
+          </li>
+        </ul>
+
+        <Button variant="outline" class="mt-4" @click="verMovimientosImportados">
+          Ver movimientos importados
+        </Button>
+      </div>
     </div>
 
-    <div v-if="resumenAgregado" class="mt-6 rounded-lg border p-4" data-test="resumen-importacion">
-      <h3 class="font-medium">Resumen de la importación</h3>
-      <ul class="mt-2 text-sm">
-        <li>Movimientos importados: {{ resumenAgregado.movimientos_importados }}</li>
-        <li class="flex items-center gap-2">
-          Movimientos omitidos por duplicado:
-          {{ resumenAgregado.movimientos_omitidos_por_duplicado }}
-          <ModalComparacionDuplicados
-            v-if="duplicadosAgregados.length > 0"
-            :nombre-fichero="
-              resultados.length === 1 ? (resultados[0]?.nombreFichero ?? '') : 'Todos los ficheros'
-            "
-            :duplicados="duplicadosAgregados"
-          />
-        </li>
-        <li>Categorías nuevas: {{ resumenAgregado.categorias_creadas.join(', ') || 'ninguna' }}</li>
-        <li>
-          Subcategorías nuevas: {{ resumenAgregado.subcategorias_creadas.join(', ') || 'ninguna' }}
-        </li>
-      </ul>
-
-      <ul v-if="resultados.length > 1" class="mt-4 space-y-1 border-t pt-2 text-sm">
-        <li v-for="resultado in resultados" :key="resultado.nombreFichero">
-          <template v-if="resultado.resumen">
-            {{ resultado.nombreFichero }}:
-            {{ resultado.resumen.movimientos_importados }} importados,
-            {{ resultado.resumen.movimientos_omitidos_por_duplicado }} omitidos
-          </template>
-          <template v-else>{{ resultado.nombreFichero }}: {{ resultado.error }}</template>
-        </li>
-      </ul>
-
-      <Button variant="outline" class="mt-4" @click="verMovimientosImportados">
-        Ver movimientos importados
-      </Button>
-    </div>
-
-    <section class="mt-10 border-t pt-8">
+    <section class="mt-10 border-t pt-8" data-tour="importar-conceptos">
       <h2 class="text-xl font-semibold">Importar conceptos previstos</h2>
       <p class="text-muted-foreground mt-2">
         Sube uno o varios Excel con columnas Categoría, Subcategoría, Periodicidad e Importe

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ArrowRight, ChevronRight, Link2, Pencil, Trash2 } from '@lucide/vue'
 import { computed, onMounted, reactive, ref } from 'vue'
+import type { DriveStep } from 'driver.js'
 import type { AsociacionConcepto, AsociacionDescripcion, ConceptoPrevisto } from '@/api/tipos'
 import { useTiendaAsociaciones } from '@/stores/asociaciones'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
+import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 import { Button } from '@/componentes/ui/button'
 import {
@@ -321,11 +323,65 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
   else nuevo.add(idCategoria)
   categoriasSinAsociarAbiertas.value = nuevo
 }
+
+function pasosTour(): DriveStep[] {
+  return [
+    {
+      element: '[data-tour="conceptos-form-categoria"]',
+      popover: {
+        title: 'Asociar por categoría',
+        description:
+          'Cuando un concepto del Resumen anual se llama distinto a su categoría real en Movimientos, crea aquí la correspondencia entre ambas.',
+      },
+    },
+    {
+      element: '[data-tour="conceptos-form-descripcion"]',
+      popover: {
+        title: 'Asociar por descripción',
+        description:
+          'Para movimientos sueltos que no comparten categoría con ningún otro, asócialos directamente por un fragmento de su descripción.',
+      },
+    },
+    {
+      element: '[data-tour="conceptos-boton-crear"]',
+      popover: {
+        title: 'Crear asociación',
+        description:
+          'Crea la asociación con el formulario que tengas relleno: por categoría o por descripción.',
+      },
+    },
+    {
+      element: '[data-tour="conceptos-sin-asociar"]',
+      popover: {
+        title: 'Conceptos sin asociar',
+        description:
+          'Conceptos del Resumen anual cuya categoría o subcategoría todavía no tiene una asociación creada. Pulsa uno para rellenar el formulario con sus datos.',
+      },
+    },
+    {
+      element: '[data-tour="conceptos-tabla-asociaciones"]',
+      popover: {
+        title: 'Asociaciones creadas',
+        description: 'Las asociaciones por categoría ya creadas, con opción de editar o eliminar.',
+      },
+    },
+    {
+      element: '[data-tour="conceptos-tabla-asociaciones-descripcion"]',
+      popover: {
+        title: 'Asociaciones por descripción creadas',
+        description:
+          'Las asociaciones por descripción ya creadas, con opción de editar o eliminar.',
+      },
+    },
+  ]
+}
+
+useRegistrarTourPagina({ pasos: pasosTour })
 </script>
 
 <template>
   <section>
-    <p class="text-muted-foreground max-w-prose text-sm">
+    <p class="text-muted-foreground text-sm">
       Algunos conceptos del Resumen anual se nombran de forma distinta a la categoría real que usan
       los movimientos (por ejemplo, "Comida" en el resumen anual y "Alimentación" en movimientos).
       Crea aquí la correspondencia entre ambos para que el Resumen anual encuentre el importe real
@@ -338,7 +394,10 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
       class="bg-muted/40 mt-4 flex flex-col gap-4 rounded-lg border p-4"
       @submit.prevent="crearAsociacion"
     >
-      <div class="flex flex-col gap-4 md:flex-row md:items-end">
+      <div
+        class="flex flex-col gap-4 md:flex-row md:items-end"
+        data-tour="conceptos-form-categoria"
+      >
         <div class="flex flex-1 flex-wrap gap-4">
           <div class="flex min-w-48 flex-1 flex-col gap-1.5">
             <Label id="etiqueta-categoria-movimiento" for="selector-categoria-movimiento"
@@ -451,7 +510,10 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
         </div>
       </div>
 
-      <div class="flex flex-col gap-4 border-t pt-4 md:flex-row md:items-end">
+      <div
+        class="flex flex-col gap-4 border-t pt-4 md:flex-row md:items-end"
+        data-tour="conceptos-form-descripcion"
+      >
         <div class="flex flex-1 flex-col gap-1.5">
           <Label id="etiqueta-descripcion-movimiento" for="input-descripcion-movimiento"
             >Descripción de Movimientos (contiene)</Label
@@ -534,7 +596,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
         </div>
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex justify-end" data-tour="conceptos-boton-crear">
         <Button type="submit" variant="success" :disabled="!formularioListo">
           <Link2 class="size-4" />
           Crear asociación
@@ -546,7 +608,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
       {{ errorFormulario }}
     </p>
 
-    <div v-if="conceptosSinAsociar.length > 0" class="mt-6">
+    <div v-if="conceptosSinAsociar.length > 0" class="mt-6" data-tour="conceptos-sin-asociar">
       <h3 class="text-muted-foreground text-sm font-medium">
         Conceptos del Resumen anual sin asociar
       </h3>
@@ -587,7 +649,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
       </div>
     </div>
 
-    <div class="mt-6">
+    <div class="mt-6" data-tour="conceptos-tabla-asociaciones">
       <h3 class="text-muted-foreground text-sm font-medium">Asociaciones creadas</h3>
       <p
         v-if="tiendaAsociaciones.asociaciones.length === 0"
@@ -653,7 +715,7 @@ function alternarCategoriaSinAsociar(idCategoria: number): void {
       </div>
     </div>
 
-    <div class="mt-6">
+    <div class="mt-6" data-tour="conceptos-tabla-asociaciones-descripcion">
       <h3 class="text-muted-foreground text-sm font-medium">
         Asociaciones por descripción creadas
       </h3>

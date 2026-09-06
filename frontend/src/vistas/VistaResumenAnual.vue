@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
+import { CircleAlert, Download, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { DriveStep } from 'driver.js'
 
@@ -33,6 +33,7 @@ import { Button } from '@/componentes/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -271,17 +272,25 @@ async function editarCelda(conceptoId: number, mes: number, importe: string | nu
   }
 }
 
+const avisoSinMovimientosAbierto = ref(false)
+const avisoSinMovimientosMensaje = ref('')
+
+function mostrarAvisoSinMovimientos(mensaje: string): void {
+  avisoSinMovimientosMensaje.value = mensaje
+  avisoSinMovimientosAbierto.value = true
+}
+
 async function cargarAcumuladoReal(conceptoId: number): Promise<void> {
   const mesesActualizados = await tienda.cargarAcumuladoReal(conceptoId, anio.value)
   if (mesesActualizados === 0) {
-    tienda.error = 'No hay movimientos asociados a este concepto en ese año.'
+    mostrarAvisoSinMovimientos('No hay movimientos asociados a este concepto en ese año.')
   }
 }
 
 async function cargarAcumuladoRealTodos(): Promise<void> {
   const resultado = await tienda.cargarAcumuladoRealTodos(anio.value)
   if (resultado && resultado.meses_actualizados === 0) {
-    tienda.error = 'No hay movimientos asociados a ningún concepto en ese año.'
+    mostrarAvisoSinMovimientos('No hay movimientos asociados a ningún concepto en ese año.')
   }
 }
 
@@ -688,6 +697,23 @@ useRegistrarTourPagina({ pasos: pasosTour })
 
         <DialogFooter>
           <Button type="button" variant="success" @click="exportar">Exportar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog v-model:open="avisoSinMovimientosAbierto">
+      <DialogContent class="max-w-md">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2">
+            <CircleAlert class="text-destructive size-5" />
+            Aviso
+          </DialogTitle>
+          <DialogDescription>{{ avisoSinMovimientosMensaje }}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" @click="avisoSinMovimientosAbierto = false"
+            >Cerrar</Button
+          >
         </DialogFooter>
       </DialogContent>
     </Dialog>

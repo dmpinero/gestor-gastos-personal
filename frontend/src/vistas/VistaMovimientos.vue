@@ -210,6 +210,7 @@ function limpiarFiltros(): void {
   busqueda.value = ''
   fechaDesde.value = ''
   fechaHasta.value = ''
+  cuentasSeleccionadas.value = itemsCuentasFiltro.value.map((i) => i.id)
   categoriasFiltro.value = itemsCategoriasFiltro.value.map((i) => i.id)
   subcategoriasFiltro.value = itemsSubcategoriasFiltro.value.map((i) => i.id)
   importeMin.value = ''
@@ -941,8 +942,7 @@ useRegistrarTourPagina({
 
           <Button
             type="button"
-            variant="outline"
-            class="border-blue-600 bg-blue-600 text-white hover:bg-blue-600/90"
+            variant="secondary"
             data-tour="movimientos-limpiar-filtros"
             @click="limpiarFiltros"
             >Limpiar filtros</Button

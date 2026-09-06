@@ -480,21 +480,28 @@ let seleccionadosAntesDelTour: Set<number> | null = null
 function antesDeIniciarTour(): void {
   // La selección se fuerza ANTES de tocar el filtro de fechas: si se hiciera
   // después, la fila recién marcada podría quedar fuera del rango de fechas
-  // forzado (el mes actual) y desaparecer de la tabla antes de mostrarse.
+  // forzado y desaparecer de la tabla antes de mostrarse.
   seleccionadosAntesDelTour = new Set(seleccionados.value)
   const primera = filasOrdenadas.value[0]
   if (primera) alternarSeleccion([primera.id], true)
 
+  // Se deriva el mes forzado de esa misma fila ya visible (garantizado que
+  // existe en este momento, sin depender de si la carga asíncrona de
+  // movimientos ya ha terminado), no del mes en curso: forzar "el mes en
+  // curso" podía vaciar toda la sección de Gráficos si los movimientos
+  // reales no son de ese mes (movimientosGastados/Ingresos se calculan
+  // sobre el listado ya filtrado por fecha). Sin ninguna fila visible, no
+  // se toca el filtro de fechas: el paso "Mes anterior/siguiente" se omite,
+  // igual que el resto de contenido sin datos que resaltar.
   filtrosFechaAntesDelTour = { desde: fechaDesde.value, hasta: fechaHasta.value }
-  // Se usa el mes del movimiento más reciente, no el mes en curso: si los
-  // movimientos reales no son de este mes, forzar el mes en curso vaciaría
-  // la sección de Gráficos durante el tour (movimientosGastados/Ingresos se
-  // calculan sobre el listado ya filtrado por fecha).
-  const hoy = new Date()
-  const [anio, mes] = (tiendaMovimientos.movimientos[0]?.fecha_valor ?? '').split('-').map(Number)
-  const rango = rangoDelMes(anio || hoy.getFullYear(), mes || hoy.getMonth() + 1)
-  fechaDesde.value = rango.desde
-  fechaHasta.value = rango.hasta
+  if (primera) {
+    const [anio, mes] = primera.fecha_valor.split('-').map(Number)
+    if (anio && mes) {
+      const rango = rangoDelMes(anio, mes)
+      fechaDesde.value = rango.desde
+      fechaHasta.value = rango.hasta
+    }
+  }
 }
 
 function alFinalizarTour(): void {

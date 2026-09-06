@@ -501,23 +501,27 @@ test('el selector de cuenta funciona dentro de la barra de filtros y recarga mov
   await expect(page.locator('tr', { hasText: descripcionB })).toHaveCount(0)
 })
 
-test('los filtros de fecha, importe, categoría y subcategoría se combinan entre sí y con el texto libre, y "Limpiar filtros" los resetea', async ({
+test('los filtros de fecha, importe, categoría, subcategoría y cuenta se combinan entre sí y con el texto libre, y "Limpiar filtros" los resetea', async ({
   page,
 }) => {
   const sufijo = Date.now()
   const numeroCuenta = `ES00 MOV-FILTROS ${sufijo}`
+  const numeroCuentaB = `ES00 MOV-FILTROS-B ${sufijo}`
   const nombreCategoria = `Categoria MOV-FILTROS ${sufijo}`
   const nombreSubcategoria = `Subcategoria MOV-FILTROS ${sufijo}`
   const descripcionObjetivo = `Objetivo filtro ${sufijo}`
   const descripcionFueraImporte = `Fuera de rango importe ${sufijo}`
   const descripcionFueraFecha = `Fuera de rango fecha ${sufijo}`
+  const descripcionOtraCuenta = `Movimiento otra cuenta ${sufijo}`
 
   await page.goto('/gestion/cuentas')
-  await page.getByRole('button', { name: 'Crear cuenta' }).click()
-  const panelCuenta = page.getByRole('dialog')
-  await panelCuenta.getByPlaceholder('Número de cuenta').fill(numeroCuenta)
-  await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
-  await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
+  for (const numero of [numeroCuenta, numeroCuentaB]) {
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    const panelCuenta = page.getByRole('dialog')
+    await panelCuenta.getByPlaceholder('Número de cuenta').fill(numero)
+    await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.locator('tr', { hasText: numero })).toBeVisible()
+  }
 
   await page.goto('/gestion/categorias')
   await page.getByRole('button', { name: 'Crear categoría' }).click()
@@ -531,7 +535,23 @@ test('los filtros de fecha, importe, categoría y subcategoría se combinan entr
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
   await page.goto('/gestion/movimientos')
+  await seleccionarCuenta(page, numeroCuentaB)
+  await page.getByRole('button', { name: 'Crear movimiento' }).click()
+  const panelOtraCuenta = page.getByRole('dialog')
+  await panelOtraCuenta.locator('input[type="date"]').fill('2026-03-01')
+  await elegirOpcion(
+    page,
+    panelOtraCuenta.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
+  await panelOtraCuenta.getByPlaceholder('Descripción').fill(descripcionOtraCuenta)
+  await panelOtraCuenta.getByPlaceholder('Importe').fill('-10.00')
+  await panelOtraCuenta.getByPlaceholder('Saldo').fill('990.00')
+  await panelOtraCuenta.getByRole('button', { name: 'Crear movimiento' }).click()
+  await expect(page.locator('tr', { hasText: descripcionOtraCuenta })).toBeVisible()
+
   await seleccionarCuenta(page, numeroCuenta)
+  await expect(page.locator('tr', { hasText: descripcionOtraCuenta })).toHaveCount(0)
 
   for (const [descripcion, fecha, importe] of [
     [descripcionObjetivo, '2026-03-01', '-15.00'],
@@ -572,9 +592,16 @@ test('los filtros de fecha, importe, categoría y subcategoría se combinan entr
   await expect(page.locator('tr', { hasText: descripcionObjetivo })).toBeVisible()
 
   await page.getByRole('button', { name: 'Limpiar filtros' }).click()
+  // Con la cuenta ya restablecida a "todas" (ver más abajo), la tabla puede
+  // acumular muchas filas de otros tests de esta misma ejecución; se busca
+  // por el sufijo propio de este test para no depender de en qué página cae
+  // cada fila.
+  await page.getByLabel('Buscar').fill(String(sufijo))
   await expect(page.locator('tr', { hasText: descripcionObjetivo })).toBeVisible()
   await expect(page.locator('tr', { hasText: descripcionFueraImporte })).toBeVisible()
   await expect(page.locator('tr', { hasText: descripcionFueraFecha })).toBeVisible()
+  // "Limpiar filtros" también restablece la cuenta a "todas".
+  await expect(page.locator('tr', { hasText: descripcionOtraCuenta })).toBeVisible()
 })
 
 test('el área de filtros se puede contraer y expandir', async ({ page }) => {

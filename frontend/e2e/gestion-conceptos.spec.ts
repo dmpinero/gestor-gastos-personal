@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('crear una asociación hace que el Resumen anual encuentre el importe real en otra categoría', async ({
   page,
@@ -34,7 +34,7 @@ test('crear una asociación hace que el Resumen anual encuentre el importe real 
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelConcepto.getByLabel('Categoría', { exact: true }),
     nombreCategoriaResumen,
@@ -54,7 +54,7 @@ test('crear una asociación hace que el Resumen anual encuentre el importe real 
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill(fechaMovimiento)
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoriaMovimiento,
@@ -143,7 +143,7 @@ test('editar una asociación ya creada cambia la categoría real que usa el Resu
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelConcepto.getByLabel('Categoría', { exact: true }),
     nombreCategoriaResumen,
@@ -166,7 +166,7 @@ test('editar una asociación ya creada cambia la categoría real que usa el Resu
     await page.getByRole('button', { name: 'Crear movimiento' }).click()
     const panelMovimiento = page.getByRole('dialog')
     await panelMovimiento.locator('input[type="date"]').fill(fechaMovimiento)
-    await elegirOpcion(
+    await elegirOpcionBuscador(
       page,
       panelMovimiento.getByLabel('Categoría', { exact: true }),
       nombreCategoria,
@@ -257,7 +257,7 @@ test('crear una asociación por descripción hace que el Resumen anual encuentre
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelConcepto.getByLabel('Categoría', { exact: true }),
     nombreCategoriaResumen,
@@ -279,7 +279,7 @@ test('crear una asociación por descripción hace que el Resumen anual encuentre
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill(fechaMovimiento)
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoriaMovimiento,

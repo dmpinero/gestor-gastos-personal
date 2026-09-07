@@ -31,6 +31,14 @@ import {
 } from '@/componentes/ui/alert-dialog'
 import { Button } from '@/componentes/ui/button'
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from '@/componentes/ui/combobox'
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -340,6 +348,14 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
   return ''
 }
 
+function mostrarCategoria(valor: string): string {
+  return nombreCategoria(Number(valor))
+}
+
+function mostrarSubcategoria(valor: string): string {
+  return valor === SIN_SUBCATEGORIA ? '(sin subcategoría)' : nombreSubcategoria(Number(valor))
+}
+
 const busqueda = ref('')
 
 function coincideConBusqueda(fila: FilaResumenAnual): boolean {
@@ -532,24 +548,26 @@ useRegistrarTourPagina({ pasos: pasosTour })
               >Categoría</Label
             >
             <div class="flex gap-2">
-              <Select v-model="formulario.categoriaId">
-                <SelectTrigger
-                  id="selector-categoria-previsto"
-                  aria-labelledby="etiqueta-categoria-previsto"
-                  class="w-full"
-                >
-                  <SelectValue placeholder="Selecciona una categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
+              <Combobox v-model="formulario.categoriaId" open-on-click open-on-focus class="w-full">
+                <ComboboxTrigger class="w-full">
+                  <ComboboxInput
+                    id="selector-categoria-previsto"
+                    aria-labelledby="etiqueta-categoria-previsto"
+                    placeholder="Selecciona o escribe para buscar"
+                    :display-value="mostrarCategoria"
+                  />
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                  <ComboboxItem
                     v-for="cat in categoriasDelTipoElegido"
                     :key="cat.id"
                     :value="String(cat.id)"
                   >
                     {{ cat.nombre }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  </ComboboxItem>
+                </ComboboxContent>
+              </Combobox>
               <Button
                 type="button"
                 variant="outline"
@@ -567,25 +585,32 @@ useRegistrarTourPagina({ pasos: pasosTour })
               >Subcategoría</Label
             >
             <div class="flex gap-2">
-              <Select v-model="formulario.subcategoriaId">
-                <SelectTrigger
-                  id="selector-subcategoria-previsto"
-                  aria-labelledby="etiqueta-subcategoria-previsto"
-                  class="flex-1"
-                >
-                  <SelectValue placeholder="(sin subcategoría)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-                  <SelectItem
+              <Combobox
+                v-model="formulario.subcategoriaId"
+                open-on-click
+                open-on-focus
+                class="flex-1"
+              >
+                <ComboboxTrigger class="w-full">
+                  <ComboboxInput
+                    id="selector-subcategoria-previsto"
+                    aria-labelledby="etiqueta-subcategoria-previsto"
+                    placeholder="Selecciona o escribe para buscar"
+                    :display-value="mostrarSubcategoria"
+                  />
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                  <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                  <ComboboxItem
                     v-for="s in subcategoriasDeLaCategoria"
                     :key="s.id"
                     :value="String(s.id)"
                   >
                     {{ s.nombre }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  </ComboboxItem>
+                </ComboboxContent>
+              </Combobox>
               <Button
                 type="button"
                 variant="outline"

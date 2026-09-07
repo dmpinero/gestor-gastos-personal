@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('la página de inicio muestra el panel principal con saldos y totales por categoría', async ({
   page,
@@ -31,7 +31,11 @@ test('la página de inicio muestra el panel principal con saldos y totales por c
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   let panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoriaGasto)
+  await elegirOpcionBuscador(
+    page,
+    panel.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaGasto,
+  )
   await panel.getByPlaceholder('Descripción').fill('Gasto de prueba')
   await panel.getByPlaceholder('Importe').fill('-30.00')
   await panel.getByPlaceholder('Saldo').fill('970.00')
@@ -41,7 +45,11 @@ test('la página de inicio muestra el panel principal con saldos y totales por c
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-02')
-  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoriaIngreso)
+  await elegirOpcionBuscador(
+    page,
+    panel.getByLabel('Categoría', { exact: true }),
+    nombreCategoriaIngreso,
+  )
   await panel.getByPlaceholder('Descripción').fill('Ingreso de prueba')
   await panel.getByPlaceholder('Importe').fill('1500.00')
   await panel.getByPlaceholder('Saldo').fill('2470.00')

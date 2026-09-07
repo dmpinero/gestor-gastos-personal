@@ -8,6 +8,14 @@ import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
 import { Button } from '@/componentes/ui/button'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from '@/componentes/ui/combobox'
 import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
 import {
@@ -79,6 +87,22 @@ const nombreCategoriaActual = computed(
     tiendaCategorias.categorias.find((c) => c.categoria.id === formulario.categoria_id)?.categoria
       .nombre ?? '',
 )
+
+function mostrarCategoria(valor: string): string {
+  return (
+    tiendaCategorias.categorias.find((c) => c.categoria.id === Number(valor))?.categoria.nombre ??
+    ''
+  )
+}
+
+function mostrarSubcategoria(valor: string): string {
+  if (valor === SIN_SUBCATEGORIA) return '(sin subcategoría)'
+  for (const c of tiendaCategorias.categorias) {
+    const sub = c.subcategorias.find((s) => s.id === Number(valor))
+    if (sub) return sub.nombre
+  }
+  return ''
+}
 
 const panelCrearCategoriaAbierto = ref(false)
 const nombreNuevaCategoria = ref('')
@@ -224,24 +248,31 @@ defineExpose({ abrirParaCrear, abrirParaEditar })
         <div class="flex flex-col gap-1.5">
           <Label id="etiqueta-categoria" for="selector-categoria">Categoría</Label>
           <div class="flex gap-2">
-            <Select v-model="categoriaSeleccionadaTexto">
-              <SelectTrigger
-                id="selector-categoria"
-                aria-labelledby="etiqueta-categoria"
-                class="flex-1"
-              >
-                <SelectValue placeholder="Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
+            <Combobox
+              v-model="categoriaSeleccionadaTexto"
+              open-on-click
+              open-on-focus
+              class="flex-1"
+            >
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-categoria"
+                  aria-labelledby="etiqueta-categoria"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarCategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem
                   v-for="c in tiendaCategorias.categorias"
                   :key="c.categoria.id"
                   :value="String(c.categoria.id)"
                 >
                   {{ c.categoria.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
             <Button
               type="button"
               variant="outline"
@@ -257,25 +288,32 @@ defineExpose({ abrirParaCrear, abrirParaEditar })
         <div class="flex flex-col gap-1.5">
           <Label id="etiqueta-subcategoria" for="selector-subcategoria">Subcategoría</Label>
           <div class="flex gap-2">
-            <Select v-model="subcategoriaSeleccionadaTexto">
-              <SelectTrigger
-                id="selector-subcategoria"
-                aria-labelledby="etiqueta-subcategoria"
-                class="flex-1"
-              >
-                <SelectValue placeholder="(sin subcategoría)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-                <SelectItem
+            <Combobox
+              v-model="subcategoriaSeleccionadaTexto"
+              open-on-click
+              open-on-focus
+              class="flex-1"
+            >
+              <ComboboxTrigger class="w-full">
+                <ComboboxInput
+                  id="selector-subcategoria"
+                  aria-labelledby="etiqueta-subcategoria"
+                  placeholder="Selecciona o escribe para buscar"
+                  :display-value="mostrarSubcategoria"
+                />
+              </ComboboxTrigger>
+              <ComboboxContent>
+                <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                <ComboboxItem
                   v-for="s in subcategoriasDeLaCategoria"
                   :key="s.id"
                   :value="String(s.id)"
                 >
                   {{ s.nombre }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                </ComboboxItem>
+              </ComboboxContent>
+            </Combobox>
             <Button
               type="button"
               variant="outline"

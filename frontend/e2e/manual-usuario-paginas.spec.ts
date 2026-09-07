@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 const BOTON_AYUDA = 'Abrir el manual de usuario interactivo'
 
@@ -109,7 +109,7 @@ test('Movimientos: "Mes anterior/siguiente" se resaltan durante el tour, y el fi
     await page.getByRole('button', { name: 'Crear movimiento' }).click()
     const panelMovimiento = page.getByRole('dialog')
     await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-    await elegirOpcion(
+    await elegirOpcionBuscador(
       page,
       panelMovimiento.getByLabel('Categoría', { exact: true }),
       nombreCategoria,
@@ -191,7 +191,7 @@ test('Historial: con una categoría elegida, el tour recorre evolución, filtros
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoria,

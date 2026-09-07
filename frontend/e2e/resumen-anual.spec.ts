@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { test, expect, type Download, type Page, type Locator } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 async function bufferDeDescarga(descarga: Download): Promise<Buffer> {
   const flujo = await descarga.createReadStream()
@@ -25,9 +25,13 @@ async function crearMovimiento(
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill(fecha)
-  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
   if (subcategoria) {
-    await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
+    await elegirOpcionBuscador(
+      page,
+      panel.getByLabel('Subcategoría', { exact: true }),
+      subcategoria,
+    )
   }
   await panel.getByPlaceholder('Descripción').fill(descripcion)
   if (comentario) {
@@ -94,8 +98,12 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   const conceptosGastosIniciales = await contarConceptos(seccionGastos)
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
-  await elegirOpcion(
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
+  await elegirOpcionBuscador(
     page,
     panelConcepto.getByLabel('Subcategoría', { exact: true }),
     nombreSubcategoria,
@@ -134,7 +142,11 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
 
   // Concepto anual con mes de inicio marzo: solo aparece en marzo.
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelConcepto.getByLabel('Periodicidad', { exact: true }).click()
   await page.getByRole('option', { name: 'Anual' }).click()
   await panelConcepto.getByLabel('Mes de inicio', { exact: true }).click()
@@ -202,7 +214,11 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   const seccionIngresos = page.locator('section:has(> h3:text-is("Ingresos"))')
   const conceptosIngresosIniciales = await contarConceptos(seccionIngresos)
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelConcepto.getByLabel('Tipo', { exact: true }).click()
   await page.getByRole('option', { name: 'Ingreso' }).click()
   await panelConcepto.getByLabel('Importe previsto').fill('500.00')
@@ -256,8 +272,12 @@ test('exportar a Excel, editar una celda y reimportarlo actualiza solo esa celda
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
-  await elegirOpcion(
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
+  await elegirOpcionBuscador(
     page,
     panelConcepto.getByLabel('Subcategoría', { exact: true }),
     nombreSubcategoria,
@@ -429,7 +449,7 @@ test('el formulario de "Añadir concepto" filtra la Categoría según el Tipo el
   await selectorCategoria.click()
   await expect(page.getByRole('option', { name: nombreCategoriaGasto, exact: true })).toHaveCount(0)
   await page.keyboard.press('Escape')
-  await elegirOpcion(page, selectorCategoria, nombreCategoriaIngreso)
+  await elegirOpcionBuscador(page, selectorCategoria, nombreCategoriaIngreso)
 
   // El botón "+" crea una categoría nueva (sin histórico todavía) y la deja
   // seleccionada, aunque no tenga aún ningún movimiento de tipo ingreso.
@@ -439,7 +459,7 @@ test('el formulario de "Añadir concepto" filtra la Categoría según el Tipo el
   await panelCrearCategoria.getByPlaceholder('Nueva categoría').fill(nombreCategoriaNueva)
   await panelCrearCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(panelCrearCategoria).toBeHidden()
-  await expect(selectorCategoria).toContainText(nombreCategoriaNueva)
+  await expect(selectorCategoria).toHaveValue(nombreCategoriaNueva)
 
   await panelConcepto.getByLabel('Importe previsto').fill('100.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
@@ -493,11 +513,11 @@ test('elegir una categoría y cambiar después el Tipo no la pierde: cualquier c
   const panelConcepto = page.getByRole('dialog')
   const selectorCategoria = panelConcepto.getByLabel('Categoría', { exact: true })
 
-  await elegirOpcion(page, selectorCategoria, nombreCategoria)
+  await elegirOpcionBuscador(page, selectorCategoria, nombreCategoria)
   await panelConcepto.getByLabel('Tipo', { exact: true }).click()
   await page.getByRole('option', { name: 'Ingreso' }).click()
 
-  await expect(selectorCategoria).toContainText(nombreCategoria)
+  await expect(selectorCategoria).toHaveValue(nombreCategoria)
   await panelConcepto.getByLabel('Importe previsto').fill('75.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
 
@@ -535,7 +555,11 @@ test('exportar un rango de dos años, editar celdas de ambos y reimportar actual
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelConcepto.getByLabel('Importe previsto').fill('50.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
 
@@ -625,7 +649,11 @@ test('el formulario de "Añadir concepto" permite crear una subcategoría nueva 
   // Sin categoría elegida todavía, no tiene sentido crear una subcategoría.
   await expect(botonCrearSubcategoria).toBeDisabled()
 
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await expect(botonCrearSubcategoria).toBeEnabled()
   await botonCrearSubcategoria.click()
 
@@ -635,7 +663,7 @@ test('el formulario de "Añadir concepto" permite crear una subcategoría nueva 
   await panelCrearSubcategoria.getByPlaceholder('Nueva subcategoría').fill(nombreSubcategoriaNueva)
   await panelCrearSubcategoria.getByRole('button', { name: 'Crear subcategoría' }).click()
   await expect(panelCrearSubcategoria).toBeHidden()
-  await expect(selectorSubcategoria).toContainText(nombreSubcategoriaNueva)
+  await expect(selectorSubcategoria).toHaveValue(nombreSubcategoriaNueva)
 
   await panelConcepto.getByLabel('Importe previsto').fill('25.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
@@ -667,7 +695,11 @@ test('agrupar el resumen anual por categoría permite expandir un grupo y editar
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelConcepto.getByLabel('Importe previsto').fill('40.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
   await expect(page.locator('tbody tr', { hasText: nombreCategoria })).toBeVisible()
@@ -732,12 +764,16 @@ test('el buscador filtra los conceptos por nombre, tanto agrupados como sin agru
   for (const nombreSub of [nombreSubcategoriaA, nombreSubcategoriaB]) {
     await page.getByRole('button', { name: 'Añadir concepto' }).click()
     const panelConcepto = page.getByRole('dialog')
-    await elegirOpcion(
+    await elegirOpcionBuscador(
       page,
       panelConcepto.getByLabel('Categoría', { exact: true }),
       nombreCategoria,
     )
-    await elegirOpcion(page, panelConcepto.getByLabel('Subcategoría', { exact: true }), nombreSub)
+    await elegirOpcionBuscador(
+      page,
+      panelConcepto.getByLabel('Subcategoría', { exact: true }),
+      nombreSub,
+    )
     await panelConcepto.getByLabel('Importe previsto').fill('10.00')
     await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
     await expect(page.locator('tbody tr', { hasText: nombreSub })).toBeVisible()
@@ -802,8 +838,12 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
-  await elegirOpcion(
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
+  await elegirOpcionBuscador(
     page,
     panelConcepto.getByLabel('Subcategoría', { exact: true }),
     nombreSubcategoria,
@@ -854,7 +894,7 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
   await modalDetalle.getByRole('button', { name: 'Editar' }).click()
   const panelEdicion = page.getByRole('dialog').filter({ hasText: 'Editar movimiento' })
   await expect(panelEdicion).toBeVisible()
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelEdicion.getByLabel('Categoría', { exact: true }),
     nombreOtraCategoria,
@@ -908,7 +948,7 @@ test('cargar el acumulado real de todos los conceptos actualiza varios a la vez'
   ] as const) {
     await page.getByRole('button', { name: 'Añadir concepto' }).click()
     const panelConcepto = page.getByRole('dialog')
-    await elegirOpcion(
+    await elegirOpcionBuscador(
       page,
       panelConcepto.getByLabel('Categoría', { exact: true }),
       nombreCategoria,
@@ -1000,7 +1040,11 @@ test('al pasar el ratón por el importe acumulado, se ve el comentario del movim
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelConcepto.getByLabel('Importe previsto').fill('50.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
   const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })
@@ -1057,7 +1101,11 @@ test('al pasar el ratón por el importe acumulado, si el movimiento no tiene com
   await page.goto('/resumen-anual')
   await page.getByRole('button', { name: 'Añadir concepto' }).click()
   const panelConcepto = page.getByRole('dialog')
-  await elegirOpcion(page, panelConcepto.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(
+    page,
+    panelConcepto.getByLabel('Categoría', { exact: true }),
+    nombreCategoria,
+  )
   await panelConcepto.getByLabel('Importe previsto').fill('50.00')
   await panelConcepto.getByRole('button', { name: 'Añadir concepto' }).click()
   const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })

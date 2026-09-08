@@ -7,7 +7,7 @@ test('el panel de navegación colapsa y expande, y resalta la sección activa', 
 
   await expect(page.getByRole('link', { name: 'Gestión' })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/gestion/categorias')
   await expect(page.getByRole('link', { name: 'Gestión' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute(
     'aria-current',
@@ -39,6 +39,62 @@ test('Importar es un acceso de primer nivel independiente de Gestión', async ({
   )
 })
 
+test('Movimientos es un acceso de primer nivel independiente de Gestión', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Movimientos' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Movimientos' }).click()
+  await expect(page).toHaveURL(/\/movimientos$/)
+  await expect(page.getByRole('link', { name: 'Movimientos' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  await expect(page.getByRole('link', { name: 'Gestión' })).not.toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+})
+
+test('el orden de las secciones del menú lateral es Dashboard, Movimientos, Importar, Historial, Resumen anual, Gestión, Backup', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const enlaces = page.locator('[data-slot="sidebar-menu"]').getByRole('link')
+  await expect(enlaces).toHaveText([
+    'Dashboard',
+    'Movimientos',
+    'Importar',
+    'Historial',
+    'Resumen anual',
+    'Gestión',
+    'Backup',
+  ])
+})
+
+test('el menú lateral separa visualmente las secciones de uso diario de las de configuración', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const grupos = page.locator('[data-slot="sidebar-group"]')
+  await expect(grupos).toHaveCount(2)
+
+  const general = grupos.nth(0)
+  await expect(general.locator('[data-slot="sidebar-group-label"]')).toHaveText('General')
+  await expect(general.getByRole('link')).toHaveText([
+    'Dashboard',
+    'Movimientos',
+    'Importar',
+    'Historial',
+    'Resumen anual',
+  ])
+
+  const configuracion = grupos.nth(1)
+  await expect(configuracion.locator('[data-slot="sidebar-group-label"]')).toHaveText(
+    'Configuración',
+  )
+  await expect(configuracion.getByRole('link')).toHaveText(['Gestión', 'Backup'])
+})
+
 test('el modo claro/oscuro se puede alternar y persiste tras recargar', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('html')).not.toHaveClass(/dark/)
@@ -60,13 +116,13 @@ test('cambiar de pestaña en Gestión muestra los datos reales de esa sección',
   await page.goto('/gestion/cuentas')
   await expect(page.getByRole('tab', { name: 'Cuentas' })).toHaveAttribute('data-state', 'active')
 
-  await page.getByRole('tab', { name: 'Movimientos' }).click()
-  await expect(page).toHaveURL(/\/gestion\/movimientos$/)
-  await expect(page.getByRole('tab', { name: 'Movimientos' })).toHaveAttribute(
+  await page.getByRole('tab', { name: 'Asociar conceptos' }).click()
+  await expect(page).toHaveURL(/\/gestion\/conceptos$/)
+  await expect(page.getByRole('tab', { name: 'Asociar conceptos' })).toHaveAttribute(
     'data-state',
     'active',
   )
-  await expect(page.getByLabel('Cuenta')).toBeVisible()
+  await expect(page.getByPlaceholder('p. ej. Ayuntamiento Las Rozas')).toBeVisible()
 })
 
 test('recargar la página mantiene la pestaña activa de Gestión', async ({ page }) => {
@@ -117,7 +173,7 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
     await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
   }
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   for (const [nombreCategoria, importe] of [
     [categoriaGasto, '-30.00'],

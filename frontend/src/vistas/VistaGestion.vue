@@ -9,7 +9,7 @@ const router = useRouter()
 const pestanas = [
   { nombre: 'gestion-cuentas', ruta: '/gestion/cuentas', etiqueta: 'Cuentas' },
   { nombre: 'gestion-categorias', ruta: '/gestion/categorias', etiqueta: 'Categorías' },
-  { nombre: 'gestion-movimientos', ruta: '/gestion/movimientos', etiqueta: 'Movimientos' },
+  { nombre: 'gestion-conceptos', ruta: '/gestion/conceptos', etiqueta: 'Asociar conceptos' },
 ]
 
 const PESTANA_POR_DEFECTO = 'gestion-cuentas'

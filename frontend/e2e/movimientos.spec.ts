@@ -31,7 +31,7 @@ test('gestión completa de un movimiento: crear, editar y eliminar', async ({ pa
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.screenshot({ path: 'e2e/capturas/movimientos-01-listado-inicial.png' })
 
@@ -82,7 +82,7 @@ test('crear categoría y subcategoría desde los botones "+" del panel de movimi
   await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
@@ -146,7 +146,7 @@ test('la fecha se muestra en formato dd/mm/aaaa, y el buscador y las cabeceras o
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [descripcion, fecha, importe, saldo] of [
@@ -210,7 +210,7 @@ test('la tabla se pagina, permite cambiar el tamaño de página y muestra el tot
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (let i = 1; i <= 11; i++) {
@@ -263,7 +263,7 @@ test('seleccionar varios movimientos y eliminarlos en bloque', async ({ page }) 
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [descripcion, fecha, importe, saldo] of [
@@ -337,7 +337,7 @@ test('cambiar la categoría y subcategoría de varios movimientos seleccionados 
   await tarjetaDestino.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaDestino.locator('li', { hasText: nombreSubcategoriaDestino })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [descripcion, fecha, importe, saldo] of [
@@ -411,7 +411,7 @@ test('crear categoría y subcategoría desde los botones "+" del diálogo de cam
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoriaOrigen })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
@@ -499,7 +499,7 @@ test('con "Agrupar por categoría" activo también se pueden seleccionar movimie
     page.locator('[data-slot="card"]', { hasText: nombreCategoriaDestino }),
   ).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [descripcion, fecha, importe, saldo] of [
@@ -575,7 +575,7 @@ test('el selector de cuenta funciona dentro de la barra de filtros y recarga mov
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   for (const [numeroCuenta, descripcion] of [
     [numeroCuentaA, descripcionA],
     [numeroCuentaB, descripcionB],
@@ -636,7 +636,7 @@ test('los filtros de fecha, importe, categoría y subcategoría se combinan entr
   await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [descripcion, fecha, importe] of [
@@ -702,7 +702,7 @@ test('el área de filtros se puede contraer y expandir', async ({ page }) => {
   await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   await expect(page.getByLabel('Buscar')).toBeVisible()
@@ -730,7 +730,7 @@ test('"Mes anterior"/"Mes siguiente" solo aparecen cuando el rango es un mes com
   await panelCuenta.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   const fechaDesde = page.getByLabel('Fecha desde')
@@ -802,7 +802,7 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [descripcion, importe] of [
@@ -904,7 +904,7 @@ test('el saldo se muestra en rojo cuando el total de gastos supera al de ingreso
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
@@ -940,7 +940,7 @@ test('el gráfico de evolución se puede ver como distribución circular', async
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   for (const [fecha, importe] of [
@@ -988,7 +988,7 @@ test('el gráfico comparativo de gastos vs ingresos muestra la evolución de amb
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   // Con un único gasto y ningún ingreso, la comparativa no debe aparecer
@@ -1144,7 +1144,7 @@ test.fixme('editar un movimiento desde el Top 10 por categoría refleja el cambi
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
@@ -1208,7 +1208,7 @@ test('las zonas de gráficos y de resultados se pueden contraer y expandir de fo
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
@@ -1267,7 +1267,7 @@ test('el filtro de cuenta permite seleccionar varias cuentas a la vez, mostrando
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   for (const [numeroCuenta, descripcion] of [
     [numeroCuentaA, descripcionA],
     [numeroCuentaB, descripcionB],
@@ -1332,7 +1332,7 @@ test('al crear un movimiento se puede elegir explícitamente la cuenta en el pan
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   // El filtro deja la cuenta A preseleccionada en el panel por defecto, pero
   // el movimiento se crea explícitamente para la cuenta B.
   await seleccionarCuenta(page, numeroCuentaA)
@@ -1392,7 +1392,7 @@ test('los filtros de categoría y subcategoría permiten seleccionar varios elem
     }
   }
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   for (const [descripcion, nombreCategoria, nombreSubcategoria] of [
     [descripcion1, nombreCategoriaX, nombreSub1],
@@ -1474,7 +1474,7 @@ test('"Agrupar por categoría" muestra totales por categoría/subcategoría, y p
   await tarjetaCategoriaX.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoriaX.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   async function crear(
@@ -1587,7 +1587,7 @@ test('el botón de copiar importe deja el importe crudo en el portapapeles, para
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')

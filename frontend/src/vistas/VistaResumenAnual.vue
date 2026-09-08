@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
+import { Download, Link2, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { DriveStep } from 'driver.js'
 
@@ -391,6 +391,14 @@ const agrupadoPorCategoria = ref(false)
 function pasosTour(): DriveStep[] {
   return [
     {
+      element: '[data-tour="resumen-anual-asociar-conceptos"]',
+      popover: {
+        title: 'Asociar conceptos',
+        description:
+          'Lleva a Gestión, donde puedes asociar cada concepto previsto con la categoría o descripción real de tus movimientos.',
+      },
+    },
+    {
       element: '[data-tour="resumen-anual-importar"]',
       popover: {
         title: 'Importar Excel',
@@ -461,6 +469,12 @@ useRegistrarTourPagina({ pasos: pasosTour })
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-xl font-semibold">Resumen anual</h2>
       <div class="flex gap-2">
+        <Button variant="outline" as-child data-tour="resumen-anual-asociar-conceptos">
+          <RouterLink to="/gestion/conceptos">
+            <Link2 class="size-4" />
+            Asociar conceptos
+          </RouterLink>
+        </Button>
         <Button variant="outline" data-tour="resumen-anual-importar" @click="abrirImportar">
           <Upload class="size-4" />
           Importar Excel

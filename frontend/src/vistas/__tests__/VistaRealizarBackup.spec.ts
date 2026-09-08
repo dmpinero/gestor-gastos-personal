@@ -14,7 +14,7 @@ const { driverMock } = vi.hoisted(() => {
   return { driverMock }
 })
 vi.mock('driver.js', () => ({ driver: driverMock }))
-vi.mock('vue-router', () => ({ useRoute: () => ({ name: 'administracion-backup' }) }))
+vi.mock('vue-router', () => ({ useRoute: () => ({ name: 'backup-realizar' }) }))
 
 describe('VistaRealizarBackup — tour guiado', () => {
   it('el tour recorre el bloque de realizar backup', () => {
@@ -26,7 +26,7 @@ describe('VistaRealizarBackup — tour guiado', () => {
 
     const config = driverMock.mock.calls[0]?.[0]
     expect(config?.steps?.map((paso) => paso.element)).toEqual([
-      '[data-tour="nav-administracion"]',
+      '[data-tour="nav-backup"]',
       '[data-tour="backup-accion"]',
       '[data-tour="conmutador-tema"]',
       '[data-tour="boton-manual-usuario"]',

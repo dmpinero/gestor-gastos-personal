@@ -123,7 +123,7 @@ test('crear, editar y eliminar conceptos previstos, combinando importes reales y
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-01-previsto.png' })
 
   // Un movimiento real en el mes actual sustituye la previsión de ese mes.
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -406,7 +406,7 @@ test('el formulario de "Añadir concepto" filtra la Categoría según el Tipo el
     await expect(page.locator('[data-slot="card"]', { hasText: nombre })).toBeVisible()
   }
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -497,7 +497,7 @@ test('elegir una categoría y cambiar después el Tipo no la pierde: cualquier c
   // el filtro por tipo entre en juego (antes de tener histórico, la
   // categoría no está excluida de ningún tipo, y el caso no sería revelador).
   const anioActual = new Date().getFullYear()
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -853,7 +853,7 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
   const filaConcepto = page.locator('tbody tr', { hasText: nombreSubcategoria })
   await expect(filaConcepto).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -905,7 +905,7 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
   await expect(modalDetalle).toBeVisible()
 
   // El movimiento ya no pertenece a la categoría original.
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await expect(page.locator('tr', { hasText: descripcionMovimiento })).toContainText(
     nombreOtraCategoria,
@@ -960,7 +960,7 @@ test('cargar el acumulado real de todos los conceptos actualiza varios a la vez'
     filasPorCategoria[nombreCategoria] = fila
   }
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -1050,7 +1050,7 @@ test('al pasar el ratón por el importe acumulado, se ve el comentario del movim
   const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })
   await expect(filaConcepto).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -1111,7 +1111,7 @@ test('al pasar el ratón por el importe acumulado, si el movimiento no tiene com
   const filaConcepto = page.locator('tbody tr', { hasText: nombreCategoria })
   await expect(filaConcepto).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,

@@ -209,6 +209,24 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
 })
 
 test('la barra de estado muestra la versión y abre el historial de cambios', async ({ page }) => {
+  // La versión y el historial se leen en vivo de la API pública de GitHub
+  // (ver frontend/src/api/github.ts); se mockea aquí para que el test no
+  // dependa de la disponibilidad/límite de peticiones de esa API externa,
+  // que la propia app ya trata como un fallo esperado (ver BarraEstado.vue).
+  const release = (tag: string) => ({
+    tag_name: tag,
+    name: tag,
+    body: `## ${tag}\n\n* cambios de prueba`,
+    published_at: '2026-01-01T00:00:00Z',
+    html_url: `https://github.com/dmpinero/gestor-gastos-personal/releases/tag/${tag}`,
+  })
+  await page.route('https://api.github.com/repos/**', (route) => {
+    const esUltima = route.request().url().endsWith('/releases/latest')
+    route.fulfill({
+      json: esUltima ? release('v9.9.9') : [release('v9.9.9'), release('v9.9.8')],
+    })
+  })
+
   await page.goto('/')
   await expect(page.getByText(/^v\d+\.\d+\.\d+$/)).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/layout-06-barra-estado.png' })

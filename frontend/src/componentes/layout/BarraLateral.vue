@@ -25,6 +25,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
@@ -70,10 +71,10 @@ const subseccionesGestion = [
   { a: '/gestion/cuentas', etiqueta: 'Cuentas', icono: Wallet, color: 'text-amber-500' },
   { a: '/gestion/categorias', etiqueta: 'Categorías', icono: Tags, color: 'text-teal-500' },
   {
-    a: '/gestion/movimientos',
-    etiqueta: 'Movimientos',
-    icono: ArrowLeftRight,
-    color: 'text-rose-500',
+    a: '/gestion/conceptos',
+    etiqueta: 'Asociar conceptos',
+    icono: Link2,
+    color: 'text-lime-500',
   },
 ]
 
@@ -85,34 +86,28 @@ function historialActivo(path: string): boolean {
   return path.startsWith('/historial')
 }
 
-const subseccionesAdministracion = [
+const subseccionesBackup = [
   {
-    a: '/administracion/backup',
+    a: '/backup/realizar',
     etiqueta: 'Realizar backup',
     icono: DatabaseBackup,
     color: 'text-sky-500',
   },
   {
-    a: '/administracion/importar-backup',
+    a: '/backup/importar',
     etiqueta: 'Importar backup',
     icono: ArchiveRestore,
     color: 'text-amber-500',
   },
-  {
-    a: '/administracion/gestion-conceptos',
-    etiqueta: 'Gestión de conceptos',
-    icono: Link2,
-    color: 'text-teal-500',
-  },
 ]
 
-function administracionActiva(path: string): boolean {
-  return path.startsWith('/administracion')
+function backupActiva(path: string): boolean {
+  return path.startsWith('/backup')
 }
 
 const gestionAbierta = ref(gestionActiva(ruta.path))
 const historialAbierta = ref(historialActivo(ruta.path))
-const administracionAbierta = ref(administracionActiva(ruta.path))
+const backupAbierta = ref(backupActiva(ruta.path))
 const categoriasAbiertas = ref<Set<number>>(new Set())
 
 function categoriaAbierta(idCategoria: number): boolean {
@@ -134,7 +129,7 @@ watch(
   ([path, categorias]) => {
     if (gestionActiva(path)) gestionAbierta.value = true
     if (historialActivo(path)) historialAbierta.value = true
-    if (administracionActiva(path)) administracionAbierta.value = true
+    if (backupActiva(path)) backupAbierta.value = true
     for (const item of categorias) {
       const enEstaCategoria =
         path === `/historial/categoria/${item.categoria.id}` ||
@@ -153,6 +148,7 @@ watch(
     </SidebarHeader>
     <SidebarContent>
       <SidebarGroup>
+        <SidebarGroupLabel>General</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -168,45 +164,22 @@ watch(
               </SidebarMenuButton>
             </SidebarMenuItem>
 
-            <Collapsible v-model:open="gestionAbierta" as-child>
-              <SidebarMenuItem>
-                <SidebarMenuButton as-child :is-active="gestionActiva(ruta.path)" tooltip="Gestión">
-                  <RouterLink
-                    to="/gestion"
-                    data-tour="nav-gestion"
-                    :aria-current="gestionActiva(ruta.path) ? 'page' : undefined"
-                  >
-                    <Settings2 class="text-violet-500" />
-                    <span>Gestión</span>
-                  </RouterLink>
-                </SidebarMenuButton>
-                <CollapsibleTrigger as-child>
-                  <SidebarMenuAction
-                    :aria-label="gestionAbierta ? 'Contraer Gestión' : 'Expandir Gestión'"
-                  >
-                    <ChevronRight
-                      class="transition-transform"
-                      :class="gestionAbierta ? 'rotate-90' : ''"
-                    />
-                  </SidebarMenuAction>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub>
-                    <SidebarMenuSubItem v-for="sub in subseccionesGestion" :key="sub.a">
-                      <SidebarMenuSubButton as-child :is-active="ruta.path === sub.a">
-                        <RouterLink
-                          :to="sub.a"
-                          :aria-current="ruta.path === sub.a ? 'page' : undefined"
-                        >
-                          <component :is="sub.icono" :class="sub.color" />
-                          <span>{{ sub.etiqueta }}</span>
-                        </RouterLink>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as-child
+                :is-active="ruta.path === '/movimientos'"
+                tooltip="Movimientos"
+              >
+                <RouterLink
+                  to="/movimientos"
+                  data-tour="nav-movimientos"
+                  :aria-current="ruta.path === '/movimientos' ? 'page' : undefined"
+                >
+                  <ArrowLeftRight class="text-rose-500" />
+                  <span>Movimientos</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
             <SidebarMenuItem>
               <SidebarMenuButton as-child :is-active="ruta.path === '/importar'" tooltip="Importar">
@@ -331,38 +304,79 @@ watch(
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
 
-            <Collapsible v-model:open="administracionAbierta" as-child>
+      <SidebarGroup>
+        <SidebarGroupLabel>Configuración</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <Collapsible v-model:open="gestionAbierta" as-child>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  as-child
-                  :is-active="administracionActiva(ruta.path)"
-                  tooltip="Administración"
-                >
+                <SidebarMenuButton as-child :is-active="gestionActiva(ruta.path)" tooltip="Gestión">
                   <RouterLink
-                    to="/administracion"
-                    data-tour="nav-administracion"
-                    :aria-current="administracionActiva(ruta.path) ? 'page' : undefined"
+                    to="/gestion"
+                    data-tour="nav-gestion"
+                    :aria-current="gestionActiva(ruta.path) ? 'page' : undefined"
                   >
-                    <Database class="text-orange-500" />
-                    <span>Administración</span>
+                    <Settings2 class="text-violet-500" />
+                    <span>Gestión</span>
                   </RouterLink>
                 </SidebarMenuButton>
                 <CollapsibleTrigger as-child>
                   <SidebarMenuAction
-                    :aria-label="
-                      administracionAbierta ? 'Contraer Administración' : 'Expandir Administración'
-                    "
+                    :aria-label="gestionAbierta ? 'Contraer Gestión' : 'Expandir Gestión'"
                   >
                     <ChevronRight
                       class="transition-transform"
-                      :class="administracionAbierta ? 'rotate-90' : ''"
+                      :class="gestionAbierta ? 'rotate-90' : ''"
                     />
                   </SidebarMenuAction>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    <SidebarMenuSubItem v-for="sub in subseccionesAdministracion" :key="sub.a">
+                    <SidebarMenuSubItem v-for="sub in subseccionesGestion" :key="sub.a">
+                      <SidebarMenuSubButton as-child :is-active="ruta.path === sub.a">
+                        <RouterLink
+                          :to="sub.a"
+                          :aria-current="ruta.path === sub.a ? 'page' : undefined"
+                        >
+                          <component :is="sub.icono" :class="sub.color" />
+                          <span>{{ sub.etiqueta }}</span>
+                        </RouterLink>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+
+            <Collapsible v-model:open="backupAbierta" as-child>
+              <SidebarMenuItem>
+                <SidebarMenuButton as-child :is-active="backupActiva(ruta.path)" tooltip="Backup">
+                  <RouterLink
+                    to="/backup"
+                    data-tour="nav-backup"
+                    :aria-current="backupActiva(ruta.path) ? 'page' : undefined"
+                  >
+                    <Database class="text-orange-500" />
+                    <span>Backup</span>
+                  </RouterLink>
+                </SidebarMenuButton>
+                <CollapsibleTrigger as-child>
+                  <SidebarMenuAction
+                    :aria-label="backupAbierta ? 'Contraer Backup' : 'Expandir Backup'"
+                  >
+                    <ChevronRight
+                      class="transition-transform"
+                      :class="backupAbierta ? 'rotate-90' : ''"
+                    />
+                  </SidebarMenuAction>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem v-for="sub in subseccionesBackup" :key="sub.a">
                       <SidebarMenuSubButton as-child :is-active="ruta.path === sub.a">
                         <RouterLink
                           :to="sub.a"

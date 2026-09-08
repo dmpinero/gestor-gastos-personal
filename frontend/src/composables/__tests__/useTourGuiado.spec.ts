@@ -80,12 +80,14 @@ describe('useTourGuiado', () => {
 
   it.each([
     ['inicio', '[data-tour="nav-dashboard"]'],
+    ['movimientos', '[data-tour="nav-movimientos"]'],
     ['gestion-cuentas', '[data-tour="nav-gestion"]'],
-    ['gestion-movimientos', '[data-tour="nav-gestion"]'],
+    ['gestion-conceptos', '[data-tour="nav-gestion"]'],
     ['importar', '[data-tour="nav-importar"]'],
     ['historial-categoria', '[data-tour="nav-historial"]'],
     ['resumen-anual', '[data-tour="nav-resumen-anual"]'],
-    ['administracion-gestion-conceptos', '[data-tour="nav-administracion"]'],
+    ['backup-realizar', '[data-tour="nav-backup"]'],
+    ['backup-importar', '[data-tour="nav-backup"]'],
   ])('la orientación para la ruta "%s" resalta %s', (nombreRuta, selectorEsperado) => {
     rutaMock.name = nombreRuta
     const { iniciar } = useTourGuiado()

@@ -10,11 +10,11 @@ async function bufferDeDescarga(descarga: Download): Promise<Buffer> {
   return Buffer.concat(trozos)
 }
 
-test('navegar a Administración > Realizar backup descarga un Excel', async ({ page }) => {
+test('navegar a Backup > Realizar backup descarga un Excel', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByRole('link', { name: 'Administración' }).click()
-  await expect(page.getByRole('link', { name: 'Administración' })).toHaveAttribute(
+  await page.getByRole('link', { name: 'Backup', exact: true }).click()
+  await expect(page.getByRole('link', { name: 'Backup', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
   )
@@ -25,7 +25,7 @@ test('navegar a Administración > Realizar backup descarga un Excel', async ({ p
     'aria-current',
     'page',
   )
-  await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Backup', exact: true })).toBeVisible()
 
   const [descarga] = await Promise.all([
     page.waitForEvent('download'),
@@ -49,7 +49,7 @@ test('exportar un backup e importarlo restaura solo los datos que tenía en ese 
   await panelOriginal.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page.locator('tr', { hasText: numeroCuentaOriginal })).toBeVisible()
 
-  await page.goto('/administracion/backup')
+  await page.goto('/backup/realizar')
   const [descarga] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Realizar backup' }).click(),
@@ -63,7 +63,7 @@ test('exportar un backup e importarlo restaura solo los datos que tenía en ese 
   await panelPosterior.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page.locator('tr', { hasText: numeroCuentaPosterior })).toBeVisible()
 
-  await page.goto('/administracion/importar-backup')
+  await page.goto('/backup/importar')
   const zona = page.getByRole('button', {
     name: 'Seleccionar o soltar uno o varios fichero de backup',
     exact: true,
@@ -94,7 +94,7 @@ test('cancelar la confirmación de importar no borra ningún dato', async ({ pag
   await panel.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
 
-  await page.goto('/administracion/importar-backup')
+  await page.goto('/backup/importar')
   const zona = page.getByRole('button', {
     name: 'Seleccionar o soltar uno o varios fichero de backup',
     exact: true,
@@ -133,7 +133,7 @@ test('importar un fichero sin las hojas esperadas muestra un error y no borra na
   libro.addWorksheet('Hoja cualquiera').addRow(['esto', 'no', 'es', 'un', 'backup'])
   const bufferInvalido = Buffer.from(await libro.xlsx.writeBuffer())
 
-  await page.goto('/administracion/importar-backup')
+  await page.goto('/backup/importar')
   const zona = page.getByRole('button', {
     name: 'Seleccionar o soltar uno o varios fichero de backup',
     exact: true,

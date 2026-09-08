@@ -74,6 +74,7 @@ describe('VistaResumenAnual — tour guiado', () => {
     const config = driverMock.mock.calls[0]?.[0]
     expect(config?.steps?.map((paso) => paso.element)).toEqual([
       '[data-tour="nav-resumen-anual"]',
+      '[data-tour="resumen-anual-asociar-conceptos"]',
       '[data-tour="resumen-anual-importar"]',
       '[data-tour="resumen-anual-exportar"]',
       '[data-tour="resumen-anual-cargar-acumulado"]',

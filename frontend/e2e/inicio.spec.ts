@@ -25,7 +25,7 @@ test('la página de inicio muestra el panel principal con saldos y totales por c
     await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
   }
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
 
   await page.getByRole('button', { name: 'Crear movimiento' }).click()

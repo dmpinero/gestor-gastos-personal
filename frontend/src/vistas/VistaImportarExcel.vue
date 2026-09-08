@@ -74,7 +74,7 @@ const cuentaIdImportada = computed(
 function verMovimientosImportados(): void {
   if (cuentaIdImportada.value === undefined) return
   router.push({
-    path: '/gestion/movimientos',
+    path: '/movimientos',
     query: { cuenta_id: String(cuentaIdImportada.value) },
   })
 }

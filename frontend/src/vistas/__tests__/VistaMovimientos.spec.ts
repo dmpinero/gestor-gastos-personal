@@ -21,7 +21,7 @@ const { driverMock } = vi.hoisted(() => {
   return { driverMock }
 })
 vi.mock('driver.js', () => ({ driver: driverMock }))
-vi.mock('vue-router', () => ({ useRoute: () => ({ name: 'gestion-movimientos', query: {} }) }))
+vi.mock('vue-router', () => ({ useRoute: () => ({ name: 'movimientos', query: {} }) }))
 
 const CUENTAS = [
   {
@@ -75,7 +75,7 @@ describe('VistaMovimientos — tour guiado', () => {
 
     const config = driverMock.mock.calls[0]?.[0]
     expect(config?.steps?.map((paso) => paso.element)).toEqual([
-      '[data-tour="nav-gestion"]',
+      '[data-tour="nav-movimientos"]',
       '[data-tour="movimientos-crear"]',
       '[data-tour="movimientos-saldo"]',
       '[data-tour="movimientos-evolucion-gastos"]',

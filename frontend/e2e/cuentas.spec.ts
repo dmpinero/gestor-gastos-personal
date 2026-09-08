@@ -223,7 +223,7 @@ test('eliminar una cuenta con movimientos asociados los borra en cascada al conf
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')

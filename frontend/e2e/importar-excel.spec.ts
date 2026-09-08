@@ -80,7 +80,7 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
   await page.screenshot({ path: 'e2e/capturas/importar-04-cuenta-creada.png' })
 })
 
-test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta correcta', async ({
+test('"Ver movimientos importados" lleva a Movimientos con la cuenta correcta', async ({
   page,
 }) => {
   await page.goto('/importar')
@@ -92,11 +92,7 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
 
   await page.getByRole('button', { name: 'Ver movimientos importados' }).click()
 
-  await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
-  await expect(page.getByRole('tab', { name: 'Movimientos' })).toHaveAttribute(
-    'data-state',
-    'active',
-  )
+  await expect(page).toHaveURL(/\/movimientos\?cuenta_id=\d+/)
   // El selector de cuenta muestra el alias (= titular tomado del Excel) en
   // vez del número de cuenta en bruto, cuando la cuenta tiene alias.
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA EJEMPLO')
@@ -130,7 +126,7 @@ test('importar un PDF (certificado de movimientos) crea la cuenta y sus movimien
   await page.screenshot({ path: 'e2e/capturas/importar-pdf-01-resumen.png' })
 
   await resumen.getByRole('button', { name: 'Ver movimientos importados' }).click()
-  await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
+  await expect(page).toHaveURL(/\/movimientos\?cuenta_id=\d+/)
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA PDF EJEMPLO')
   const filaSinCategorizar = page.locator('tbody tr', { hasText: 'Pago en Comercio Desconocido' })
   await expect(filaSinCategorizar).toContainText('Sin categorizar')

@@ -23,10 +23,27 @@ export async function obtenerUltimaVersion(): Promise<string> {
   return release.tag_name.replace(/^v/, '')
 }
 
+const RELEASES_POR_PAGINA = 100
+
 export async function obtenerHistorialDeReleases(): Promise<ReleaseGitHub[]> {
-  const respuesta = await fetch(`${URL_BASE}/releases`)
-  if (!respuesta.ok) {
-    throw new Error('No se pudo obtener el historial de cambios desde GitHub.')
+  const releases: ReleaseGitHub[] = []
+  let pagina = 1
+
+  // La API de GitHub pagina (30 resultados por defecto, 100 como máximo);
+  // sin recorrer todas las páginas, el historial se corta silenciosamente
+  // en las releases más recientes en cuanto el repositorio supera ese límite.
+  for (;;) {
+    const respuesta = await fetch(
+      `${URL_BASE}/releases?per_page=${RELEASES_POR_PAGINA}&page=${pagina}`,
+    )
+    if (!respuesta.ok) {
+      throw new Error('No se pudo obtener el historial de cambios desde GitHub.')
+    }
+    const paginaReleases = (await respuesta.json()) as ReleaseGitHub[]
+    releases.push(...paginaReleases)
+    if (paginaReleases.length < RELEASES_POR_PAGINA) break
+    pagina += 1
   }
-  return (await respuesta.json()) as ReleaseGitHub[]
+
+  return releases
 }

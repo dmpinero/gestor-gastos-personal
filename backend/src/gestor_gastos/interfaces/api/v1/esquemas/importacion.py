@@ -13,7 +13,11 @@ from gestor_gastos.interfaces.api.v1.esquemas.movimiento import MovimientoSalida
 _LONGITUD_CATEGORIA = 120
 _LONGITUD_DESCRIPCION = 500
 _LONGITUD_NUMERO_CUENTA = 64
-_LONGITUD_TITULAR = 200
+# El titular de la cabecera se guarda tanto en CuentaBancaria.titular
+# (String(200)) como en CuentaBancaria.alias (String(120)) si la cuenta es
+# nueva (ver ImportarMovimientosExcel._obtener_o_crear_cuenta): el límite
+# real es el más corto de los dos.
+_LONGITUD_TITULAR = 120
 
 
 class FilaMovimientoExcelEsquema(BaseModel):

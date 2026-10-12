@@ -156,3 +156,27 @@ export async function seleccionarSubcategoria(
 ): Promise<void> {
   await seleccionarSubcategorias(page, [nombreSubcategoria])
 }
+
+/**
+ * Abre el tour guiado (manual de usuario interactivo). El icono de ayuda ya
+ * no lo lanza directamente: abre un popover con dos opciones ("Manual de
+ * usuario" / "Historial de cambios", ver BotonManualUsuario.vue), así que
+ * hace falta un clic adicional sobre la primera.
+ */
+export async function abrirManualUsuario(page: Page): Promise<void> {
+  await page
+    .getByRole('button', { name: 'Ayuda: manual de usuario interactivo e historial de cambios' })
+    .click()
+  await page.getByRole('button', { name: 'Manual de usuario', exact: true }).click()
+}
+
+/**
+ * Confirma el modal de revisión de categorización que aparece al importar
+ * un Excel de movimientos (no un PDF, ni un Excel de conceptos previstos):
+ * ver ModalRevisionImportacionExcel.vue. Hace falta este paso adicional
+ * entre pulsar "Importar" y que aparezca el resumen de la importación.
+ */
+export async function confirmarRevisionExcel(page: Page): Promise<void> {
+  await page.getByRole('dialog', { name: 'Revisar categorización antes de importar' }).waitFor()
+  await page.getByRole('button', { name: 'Confirmar importación' }).click()
+}

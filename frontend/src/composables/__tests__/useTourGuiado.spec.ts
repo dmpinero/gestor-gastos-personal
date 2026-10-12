@@ -86,6 +86,7 @@ describe('useTourGuiado', () => {
     ['importar', '[data-tour="nav-importar"]'],
     ['historial-categoria', '[data-tour="nav-historial"]'],
     ['resumen-anual', '[data-tour="nav-resumen-anual"]'],
+    ['notificaciones', '[data-tour="nav-notificaciones"]'],
     ['backup-realizar', '[data-tour="nav-backup"]'],
     ['backup-importar', '[data-tour="nav-backup"]'],
   ])('la orientación para la ruta "%s" resalta %s', (nombreRuta, selectorEsperado) => {

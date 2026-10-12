@@ -5,6 +5,7 @@ from decimal import Decimal
 from gestor_gastos.aplicacion.prevision.normalizar_descripcion_asociacion import (
     normalizar_descripcion_asociacion,
 )
+from gestor_gastos.dominio.adjunto.entidades import Adjunto
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
 from gestor_gastos.dominio.importacion.valores import DatosExcelLeidos, DatosPdfLeidos
@@ -320,6 +321,9 @@ class RepositorioMovimientosFalso:
         ]
         return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
 
+    def categorias_con_algun_movimiento(self) -> set[tuple[int, int | None]]:
+        return {(m.categoria_id, m.subcategoria_id) for m in self._movimientos.values()}
+
 
 class RepositorioPrevisionesFalso:
     """Doble de RepositorioPrevisiones en memoria."""
@@ -627,3 +631,52 @@ class RepositorioImportacionCompletaFalso:
         if self._error is not None:
             raise self._error
         self.datos_recibidos = datos
+
+
+class RepositorioAdjuntosFalso:
+    """Doble de RepositorioAdjuntos en memoria."""
+
+    def __init__(self) -> None:
+        self._adjuntos: dict[int, Adjunto] = {}
+        self._siguiente_id = 1
+
+    def crear(self, adjunto: Adjunto) -> Adjunto:
+        adjunto.id = self._siguiente_id
+        self._adjuntos[adjunto.id] = adjunto
+        self._siguiente_id += 1
+        return adjunto
+
+    def obtener_por_id(self, id_adjunto: int) -> Adjunto | None:
+        return self._adjuntos.get(id_adjunto)
+
+    def listar_por_movimiento(self, movimiento_id: int) -> list[Adjunto]:
+        return [a for a in self._adjuntos.values() if a.movimiento_id == movimiento_id]
+
+    def contar_por_movimiento_de_todos(self) -> dict[int, int]:
+        conteos: dict[int, int] = {}
+        for adjunto in self._adjuntos.values():
+            conteos[adjunto.movimiento_id] = conteos.get(adjunto.movimiento_id, 0) + 1
+        return conteos
+
+    def eliminar(self, id_adjunto: int) -> None:
+        self._adjuntos.pop(id_adjunto, None)
+
+
+class AlmacenAdjuntosFalso:
+    """Doble de AlmacenAdjuntos en memoria (sin tocar el disco)."""
+
+    def __init__(self) -> None:
+        self._contenidos: dict[str, bytes] = {}
+        self._siguiente_nombre = 1
+
+    def guardar(self, contenido: bytes, nombre_original: str) -> str:
+        nombre_almacenado = f"falso-{self._siguiente_nombre}-{nombre_original}"
+        self._siguiente_nombre += 1
+        self._contenidos[nombre_almacenado] = contenido
+        return nombre_almacenado
+
+    def leer(self, nombre_almacenado: str) -> bytes:
+        return self._contenidos[nombre_almacenado]
+
+    def eliminar(self, nombre_almacenado: str) -> None:
+        self._contenidos.pop(nombre_almacenado, None)

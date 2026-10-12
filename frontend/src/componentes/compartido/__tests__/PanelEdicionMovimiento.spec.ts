@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import type { Movimiento } from '@/api/tipos'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -42,6 +43,11 @@ function montar() {
     },
   ]
   const tiendaMovimientos = useTiendaMovimientos()
+  // SeccionAdjuntosMovimiento pide sus adjuntos nada más montarse al editar
+  // (ver abrirParaEditar); sin este espía, esa petición real fallaría en el
+  // entorno de test y su propio role="alert" contaminaría las aserciones de
+  // estos tests, que buscan el error del formulario principal.
+  vi.spyOn(useTiendaAdjuntos(), 'cargarDeMovimiento').mockResolvedValue()
   const wrapper = mount(PanelEdicionMovimiento, {
     attachTo: document.body,
     global: { plugins: [pinia] },

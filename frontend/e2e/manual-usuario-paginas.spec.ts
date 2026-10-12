@@ -1,7 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
-
-const BOTON_AYUDA = 'Abrir el manual de usuario interactivo'
+import { abrirManualUsuario, elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 async function avanzarHastaTitulo(page: Page, titulo: string, maxPasos = 20): Promise<void> {
   const dialogo = page.getByRole('dialog')
@@ -40,7 +38,7 @@ test('Cuentas: la orientación resalta Gestión, el tour completo no se bloquea,
   await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
   await expect(page.getByText(/seleccionados/)).toHaveCount(0)
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Gestión')
 
   await avanzarHastaTitulo(page, 'Acciones en bloque')
@@ -66,7 +64,7 @@ test('Categorías: la orientación resalta Gestión, el tour completo no se bloq
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
   await expect(page.getByText(/seleccionados/)).toHaveCount(0)
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Gestión')
 
   await avanzarHastaTitulo(page, 'Acciones en bloque')
@@ -124,7 +122,7 @@ test('Movimientos: "Mes anterior/siguiente" se resaltan durante el tour, y el fi
   await expect(page.getByLabel('Fecha desde')).toHaveValue('')
   await expect(page.getByRole('button', { name: 'Mes anterior' })).toHaveCount(0)
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Movimientos')
 
   await avanzarHastaTitulo(page, 'Evolución de gastos')
@@ -154,7 +152,7 @@ test('Importar: la orientación resalta Importar y el tour recorre ambos bloques
 }) => {
   await page.goto('/importar')
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Importar')
 
   await avanzarHastaTitulo(page, 'Importar movimientos')
@@ -206,7 +204,7 @@ test('Historial: con una categoría elegida, el tour recorre evolución, filtros
   await page.getByRole('link', { name: nombreCategoria, exact: true }).click()
   await expect(page).toHaveURL(/\/historial\/categoria\/\d+/)
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Historial')
 
   await avanzarHastaTitulo(page, 'Evolución de gastos')
@@ -223,7 +221,7 @@ test('Resumen anual: la orientación resalta Resumen anual y el tour recorre tod
 }) => {
   await page.goto('/resumen-anual')
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Resumen anual')
 
   await avanzarHastaTitulo(page, 'Asociar conceptos')
@@ -245,7 +243,7 @@ test('Backup → Realizar backup: la orientación resalta Backup y el tour no se
 }) => {
   await page.goto('/backup/realizar')
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Backup')
 
   await avanzarHastaTitulo(page, 'Realizar backup')
@@ -259,7 +257,7 @@ test('Backup → Importar backup: el tour advierte de que es una acción destruc
 }) => {
   await page.goto('/backup/importar')
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Backup')
 
   await avanzarHastaTitulo(page, 'Importar backup')
@@ -274,7 +272,7 @@ test('Gestión → Asociar conceptos: el tour recorre los formularios y las tabl
 }) => {
   await page.goto('/gestion/conceptos')
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Gestión')
 
   await avanzarHastaTitulo(page, 'Asociar por categoría')

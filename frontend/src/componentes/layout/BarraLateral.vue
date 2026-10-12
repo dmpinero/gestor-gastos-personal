@@ -2,6 +2,7 @@
 import {
   ArchiveRestore,
   ArrowLeftRight,
+  Bell,
   CalendarRange,
   ChevronRight,
   Database,
@@ -301,6 +302,23 @@ watch(
                 >
                   <CalendarRange class="text-fuchsia-500" />
                   <span>Resumen anual</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                as-child
+                :is-active="ruta.path === '/notificaciones'"
+                tooltip="Notificaciones"
+              >
+                <RouterLink
+                  to="/notificaciones"
+                  data-tour="nav-notificaciones"
+                  :aria-current="ruta.path === '/notificaciones' ? 'page' : undefined"
+                >
+                  <Bell class="text-amber-500" />
+                  <span>Notificaciones</span>
                 </RouterLink>
               </SidebarMenuButton>
             </SidebarMenuItem>

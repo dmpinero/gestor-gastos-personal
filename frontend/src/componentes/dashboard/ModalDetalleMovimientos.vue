@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { CalendarDays, Euro, FileText, Pencil, Tags } from '@lucide/vue'
 import type { Movimiento } from '@/api/tipos'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
+import IconoAdjuntos from '@/componentes/compartido/IconoAdjuntos.vue'
 import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import { Button } from '@/componentes/ui/button'
 import {
@@ -61,7 +63,12 @@ const filasParaExportar = computed(() =>
   ]),
 )
 
+const tiendaAdjuntos = useTiendaAdjuntos()
 const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
+
+onMounted(() => {
+  if (Object.keys(tiendaAdjuntos.conteos).length === 0) tiendaAdjuntos.cargarConteos()
+})
 
 function aMovimiento(m: MovimientoDeCategoria): Movimiento {
   return {
@@ -152,9 +159,12 @@ function aMovimiento(m: MovimientoDeCategoria): Movimiento {
           <TableBody>
             <TableRow v-for="movimiento in filasOrdenadas" :key="movimiento.id">
               <TableCell>{{ formatearFecha(movimiento.fecha) }}</TableCell>
-              <TableCell class="truncate" :title="movimiento.descripcion">{{
-                movimiento.descripcion
-              }}</TableCell>
+              <TableCell class="truncate" :title="movimiento.descripcion">
+                <div class="flex items-center gap-1.5">
+                  <span class="truncate">{{ movimiento.descripcion }}</span>
+                  <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
+                </div>
+              </TableCell>
               <TableCell class="truncate" :title="nombreCategoria">{{ nombreCategoria }}</TableCell>
               <TableCell class="truncate" :title="movimiento.subcategoria">{{
                 movimiento.subcategoria

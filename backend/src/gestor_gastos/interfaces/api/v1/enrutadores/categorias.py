@@ -1,8 +1,12 @@
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.categoria.actualizar_categoria import ActualizarCategoria
 from gestor_gastos.aplicacion.categoria.actualizar_subcategoria import ActualizarSubcategoria
 from gestor_gastos.aplicacion.categoria.crear_categoria import CrearCategoria
@@ -15,6 +19,13 @@ from gestor_gastos.aplicacion.categoria.obtener_dependencias_categoria import (
 )
 from gestor_gastos.aplicacion.categoria.obtener_dependencias_subcategoria import (
     ObtenerDependenciasSubcategoria,
+)
+from gestor_gastos.configuracion import obtener_configuracion
+from gestor_gastos.infraestructura.almacenamiento.almacen_adjuntos_filesystem import (
+    AlmacenAdjuntosFilesystem,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_adjuntos_sqlalchemy import (  # noqa: E501
+    RepositorioAdjuntosSqlAlchemy,
 )
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesDescripcionSqlAlchemy,
@@ -103,12 +114,15 @@ def actualizar(
 def eliminar(
     id_categoria: int, cascada: bool = Query(False), sesion: Session = Depends(obtener_sesion)
 ) -> None:
+    almacen = AlmacenAdjuntosFilesystem(Path(obtener_configuracion().ruta_adjuntos))
+    eliminar_adjuntos = EliminarAdjuntosDeMovimiento(RepositorioAdjuntosSqlAlchemy(sesion), almacen)
     EliminarCategoria(
         RepositorioCategoriasSqlAlchemy(sesion),
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
         RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+        eliminar_adjuntos,
     ).ejecutar(id_categoria, cascada=cascada)
 
 
@@ -173,12 +187,15 @@ def eliminar_subcategoria(
     cascada: bool = Query(False),
     sesion: Session = Depends(obtener_sesion),
 ) -> None:
+    almacen = AlmacenAdjuntosFilesystem(Path(obtener_configuracion().ruta_adjuntos))
+    eliminar_adjuntos = EliminarAdjuntosDeMovimiento(RepositorioAdjuntosSqlAlchemy(sesion), almacen)
     EliminarSubcategoria(
         RepositorioCategoriasSqlAlchemy(sesion),
         RepositorioMovimientosSqlAlchemy(sesion),
         RepositorioPrevisionesSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
         RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+        eliminar_adjuntos,
     ).ejecutar(id_subcategoria, cascada=cascada)
 
 

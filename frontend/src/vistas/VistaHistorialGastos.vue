@@ -22,6 +22,7 @@ import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
 import { usePaginacionTabla, type TamanoPagina } from '@/composables/usePaginacionTabla'
 import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { claseFondoImporte, formatearFecha, formatearImporte } from '@/lib/formato'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -29,6 +30,7 @@ import BarraPaginacion from '@/componentes/compartido/BarraPaginacion.vue'
 import BotonesExportarTabla from '@/componentes/compartido/BotonesExportarTabla.vue'
 import CabeceraOrdenable from '@/componentes/compartido/CabeceraOrdenable.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import IconoAdjuntos from '@/componentes/compartido/IconoAdjuntos.vue'
 import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import PanelEdicionMovimiento from '@/componentes/compartido/PanelEdicionMovimiento.vue'
 import SelectorTamanoPagina from '@/componentes/compartido/SelectorTamanoPagina.vue'
@@ -48,6 +50,7 @@ import {
 } from '@/componentes/ui/table'
 
 const ruta = useRoute()
+const tiendaAdjuntos = useTiendaAdjuntos()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaMovimientos = useTiendaMovimientos()
@@ -95,6 +98,7 @@ const titulo = computed<string | null>(() => {
 onMounted(() => {
   tiendaCuentas.cargar()
   tiendaCategorias.cargar()
+  tiendaAdjuntos.cargarConteos()
 })
 
 // Rango de fecha completa "AAAA-MM-DD" (igual que en VistaMovimientos.vue); vacío = sin límite.
@@ -561,6 +565,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
                     <div class="flex items-center gap-1.5">
                       <IconoOrigenPdf :origen="movimiento.origen" />
                       <span class="truncate">{{ movimiento.descripcion }}</span>
+                      <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
                     </div>
                   </TableCell>
                   <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>

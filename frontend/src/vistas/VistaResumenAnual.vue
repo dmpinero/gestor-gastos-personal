@@ -81,6 +81,12 @@ function cargarResumen(): void {
   tienda.cargarResumenAnual(anio.value)
 }
 
+const SIN_MES_DESTACADO = 'ninguno'
+const mesDestacadoStr = ref(SIN_MES_DESTACADO)
+const mesDestacado = computed<number | null>(() =>
+  mesDestacadoStr.value === SIN_MES_DESTACADO ? null : Number(mesDestacadoStr.value),
+)
+
 onMounted(() => {
   tiendaCategorias.cargar()
   tienda.cargar()
@@ -368,23 +374,42 @@ function coincideConBusqueda(fila: FilaResumenAnual): boolean {
   ].some((v) => v.toLowerCase().includes(termino))
 }
 
+// Un concepto sin ningún mes con dato real o ajustado en el año no aporta
+// información real que mostrar (solo importe previsto, mes tras mes): se
+// oculta la fila entera para no dejar a la vista conceptos "muertos" en ese
+// año (p. ej. una suscripción que solo tuvo cargos en 2018). El origen
+// "real" con importe 0 no cuenta como actividad real: ObtenerResumenAnual lo
+// usa para marcar meses sin movimientos en los que un concepto no mensual
+// tampoco aplica (mismo criterio que mostrarDetalleMes en TablaResumenAnual).
+function tieneActividadRealEnAnio(fila: FilaResumenAnual): boolean {
+  return fila.valores.some(
+    (valor) =>
+      valor.origen === 'ajustado' || (valor.origen === 'real' && Number(valor.importe) !== 0),
+  )
+}
+
+// Solo se oculta si, además de no tener actividad en el año que se está
+// viendo, el concepto SÍ ha tenido alguna vez movimiento real o ajuste en
+// OTRO año (tiene_historial_real, calculado en el backend): si nunca ha
+// tenido ninguno, en ningún año (p. ej. se acaba de crear), se muestra
+// siempre, o no habría forma de pulsar una celda suya para introducirle su
+// primer valor.
+function seDebeMostrar(fila: FilaResumenAnual): boolean {
+  return !fila.tiene_historial_real || tieneActividadRealEnAnio(fila)
+}
+
 const filasGastosFiltradas = computed(() =>
-  (tienda.resumenAnual?.filas_gastos ?? []).filter(coincideConBusqueda),
+  (tienda.resumenAnual?.filas_gastos ?? []).filter(seDebeMostrar).filter(coincideConBusqueda),
 )
 const filasIngresosFiltradas = computed(() =>
-  (tienda.resumenAnual?.filas_ingresos ?? []).filter(coincideConBusqueda),
+  (tienda.resumenAnual?.filas_ingresos ?? []).filter(seDebeMostrar).filter(coincideConBusqueda),
 )
 
-const totalesGastosMostrados = computed(() =>
-  busqueda.value.trim() === ''
-    ? (tienda.resumenAnual?.totales_gastos ?? [])
-    : sumarTotalesPorMes(filasGastosFiltradas.value),
-)
-const totalesIngresosMostrados = computed(() =>
-  busqueda.value.trim() === ''
-    ? (tienda.resumenAnual?.totales_ingresos ?? [])
-    : sumarTotalesPorMes(filasIngresosFiltradas.value),
-)
+// Al ocultar conceptos sin actividad real, el total ya no puede tomarse tal
+// cual del backend (incluiría el previsto de filas que aquí no se ven): se
+// recalcula siempre a partir de las filas realmente mostradas.
+const totalesGastosMostrados = computed(() => sumarTotalesPorMes(filasGastosFiltradas.value))
+const totalesIngresosMostrados = computed(() => sumarTotalesPorMes(filasIngresosFiltradas.value))
 
 const agrupadoPorCategoria = ref(false)
 
@@ -434,6 +459,14 @@ function pasosTour(): DriveStep[] {
       popover: {
         title: 'Año',
         description: 'Cambia el año que se muestra en las tablas.',
+      },
+    },
+    {
+      element: '[data-tour="resumen-anual-destacar-mes"]',
+      popover: {
+        title: 'Destacar mes',
+        description:
+          'Elige un mes para resaltar su columna en las tablas y centrarte en los gastos de ese mes.',
       },
     },
     {
@@ -521,6 +554,25 @@ useRegistrarTourPagina({ pasos: pasosTour })
       <div class="flex max-w-32 flex-col gap-1.5" data-tour="resumen-anual-anio">
         <Label for="anio-resumen">Año</Label>
         <Input id="anio-resumen" v-model.number="anio" type="number" />
+      </div>
+
+      <div class="flex max-w-40 flex-col gap-1.5" data-tour="resumen-anual-destacar-mes">
+        <Label for="destacar-mes">Destacar mes</Label>
+        <Select v-model="mesDestacadoStr">
+          <SelectTrigger id="destacar-mes">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem :value="SIN_MES_DESTACADO">Ninguno</SelectItem>
+            <SelectItem
+              v-for="(mes, indice) in MESES_COMPLETOS"
+              :key="mes"
+              :value="String(indice + 1)"
+            >
+              {{ mes }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div class="flex max-w-xs flex-1 flex-col gap-1.5" data-tour="resumen-anual-buscar">
@@ -857,21 +909,25 @@ useRegistrarTourPagina({ pasos: pasosTour })
           titulo="Gastos"
           :filas="filasGastosFiltradas"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de gasto configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
         />
         <TablaResumenAnualAgrupada
           titulo="Ingresos"
           :filas="filasIngresosFiltradas"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de ingreso configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
         />
       </template>
       <template v-else>
@@ -880,22 +936,26 @@ useRegistrarTourPagina({ pasos: pasosTour })
           :filas="filasGastosFiltradas"
           :totales="totalesGastosMostrados"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de gasto configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
         />
         <TablaResumenAnual
           titulo="Ingresos"
           :filas="filasIngresosFiltradas"
           :totales="totalesIngresosMostrados"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de ingreso configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
         />
       </template>
     </div>

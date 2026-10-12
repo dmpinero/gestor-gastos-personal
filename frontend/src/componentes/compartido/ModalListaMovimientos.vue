@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   CalendarDays,
   Euro,
@@ -14,10 +14,12 @@ import {
 import type { Movimiento } from '@/api/tipos'
 import { formatearFecha, formatearImporte } from '@/lib/formato'
 import { useOrdenacionTabla } from '@/composables/useOrdenacionTabla'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import BotonesExportarTabla from './BotonesExportarTabla.vue'
 import CabeceraOrdenable from './CabeceraOrdenable.vue'
+import IconoAdjuntos from './IconoAdjuntos.vue'
 import PanelEdicionMovimiento from './PanelEdicionMovimiento.vue'
 import TablaMovimientosAgrupada from './TablaMovimientosAgrupada.vue'
 import { Button } from '@/componentes/ui/button'
@@ -43,10 +45,19 @@ const props = defineProps<{
   movimientos: Movimiento[]
 }>()
 
+const emit = defineEmits<{
+  'movimiento-actualizado': [movimiento: Movimiento]
+}>()
+
+const tiendaAdjuntos = useTiendaAdjuntos()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const panelEdicion = ref<InstanceType<typeof PanelEdicionMovimiento> | null>(null)
 const agrupadoPorCategoria = ref(false)
+
+onMounted(() => {
+  if (Object.keys(tiendaAdjuntos.conteos).length === 0) tiendaAdjuntos.cargarConteos()
+})
 
 function nombreCuenta(id: number): string {
   const cuenta = tiendaCuentas.cuentas.find((c) => c.id === id)
@@ -138,7 +149,10 @@ const filasParaExportar = computed(() =>
           {{ movimientos.length }} movimiento{{ movimientos.length === 1 ? '' : 's' }}
         </DialogDescription>
       </DialogHeader>
-      <PanelEdicionMovimiento ref="panelEdicion" />
+      <PanelEdicionMovimiento
+        ref="panelEdicion"
+        @guardado="emit('movimiento-actualizado', $event)"
+      />
       <TablaMovimientosAgrupada
         v-if="agrupadoPorCategoria"
         :movimientos="movimientos"
@@ -228,9 +242,12 @@ const filasParaExportar = computed(() =>
                 nombreCuenta(movimiento.cuenta_id)
               }}</TableCell>
               <TableCell>{{ formatearFecha(movimiento.fecha_valor) }}</TableCell>
-              <TableCell class="truncate" :title="movimiento.descripcion">{{
-                movimiento.descripcion
-              }}</TableCell>
+              <TableCell class="truncate" :title="movimiento.descripcion">
+                <div class="flex items-center gap-1.5">
+                  <span class="truncate">{{ movimiento.descripcion }}</span>
+                  <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
+                </div>
+              </TableCell>
               <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{
                 nombreCategoria(movimiento.categoria_id)
               }}</TableCell>

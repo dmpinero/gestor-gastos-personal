@@ -1,7 +1,19 @@
+import tempfile
+from pathlib import Path
+
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.categoria.eliminar_categoria import EliminarCategoria
 from gestor_gastos.aplicacion.categoria.eliminar_subcategoria import EliminarSubcategoria
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.prevision.entidades import AsociacionConcepto, AsociacionDescripcion
+from gestor_gastos.infraestructura.almacenamiento.almacen_adjuntos_filesystem import (
+    AlmacenAdjuntosFilesystem,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_adjuntos_sqlalchemy import (  # noqa: E501
+    RepositorioAdjuntosSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesDescripcionSqlAlchemy,
 )
@@ -17,6 +29,14 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimie
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_previsiones_sqlalchemy import (  # noqa: E501
     RepositorioPrevisionesSqlAlchemy,
 )
+
+
+def _eliminar_adjuntos(sesion_bd) -> EliminarAdjuntosDeMovimiento:
+    return EliminarAdjuntosDeMovimiento(
+        RepositorioAdjuntosSqlAlchemy(sesion_bd),
+        AlmacenAdjuntosFilesystem(Path(tempfile.mkdtemp())),
+    )
+
 
 # Reproduce contra MySQL de verdad las restricciones de clave foránea del
 # nuevo modelo AsociacionConceptoModelo, que referencia categorias/
@@ -47,6 +67,7 @@ def test_eliminar_categoria_referenciada_como_lado_resumen_en_cascada(sesion_bd)
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(resumen.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(resumen.id) is None
@@ -77,6 +98,7 @@ def test_eliminar_categoria_referenciada_como_lado_movimiento_en_cascada(sesion_
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(movimiento.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(movimiento.id) is None
@@ -110,6 +132,7 @@ def test_eliminar_subcategoria_con_asociacion_en_cascada(sesion_bd) -> None:
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(sub_resumen.id, cascada=True)
 
     assert repo_categorias.obtener_subcategoria_por_id(sub_resumen.id) is None
@@ -138,6 +161,7 @@ def test_eliminar_categoria_referenciada_por_asociacion_descripcion_en_cascada(s
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(resumen.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(resumen.id) is None

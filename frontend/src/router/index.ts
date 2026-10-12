@@ -7,6 +7,7 @@ import VistaCategorias from '@/vistas/VistaCategorias.vue'
 import VistaImportarExcel from '@/vistas/VistaImportarExcel.vue'
 import VistaHistorialGastos from '@/vistas/VistaHistorialGastos.vue'
 import VistaResumenAnual from '@/vistas/VistaResumenAnual.vue'
+import VistaNotificaciones from '@/vistas/VistaNotificaciones.vue'
 import VistaGestionConceptos from '@/vistas/VistaGestionConceptos.vue'
 import VistaBackup from '@/vistas/VistaBackup.vue'
 import VistaRealizarBackup from '@/vistas/VistaRealizarBackup.vue'
@@ -71,6 +72,11 @@ const router = createRouter({
       path: '/resumen-anual',
       name: 'resumen-anual',
       component: VistaResumenAnual,
+    },
+    {
+      path: '/notificaciones',
+      name: 'notificaciones',
+      component: VistaNotificaciones,
     },
     {
       path: '/backup',

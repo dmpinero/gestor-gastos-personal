@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { obtenerUltimaVersion } from '@/api/github'
-import ModalChangelog from './ModalChangelog.vue'
 
 const version = ref<string | null>(null)
 
@@ -21,6 +20,5 @@ onMounted(async () => {
     class="bg-background border-border fixed inset-x-0 bottom-0 z-40 flex h-9 items-center justify-end gap-1 border-t px-3 text-xs"
   >
     <span v-if="version" class="text-muted-foreground">v{{ version }}</span>
-    <ModalChangelog />
   </footer>
 </template>

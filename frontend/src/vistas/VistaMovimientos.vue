@@ -31,6 +31,7 @@ import {
 } from '@/lib/formato'
 import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
 import { detectarMesCompleto, rangoDelMes } from '@/lib/rangoMeses'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -42,6 +43,7 @@ import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import IconoAdjuntos from '@/componentes/compartido/IconoAdjuntos.vue'
 import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import DialogoCambiarCategoriaMasivo from '@/componentes/compartido/DialogoCambiarCategoriaMasivo.vue'
 import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
@@ -67,6 +69,7 @@ import {
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const ruta = useRoute()
+const tiendaAdjuntos = useTiendaAdjuntos()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaMovimientos = useTiendaMovimientos()
@@ -369,7 +372,11 @@ const todosSeleccionados = computed(
 )
 
 onMounted(async () => {
-  await Promise.all([tiendaCuentas.cargar(), tiendaCategorias.cargar()])
+  await Promise.all([
+    tiendaCuentas.cargar(),
+    tiendaCategorias.cargar(),
+    tiendaAdjuntos.cargarConteos(),
+  ])
 
   // Si se llega desde "Ver movimientos" tras una importación, se preselecciona
   // solo la cuenta indicada en la URL; si no, todas las cuentas por defecto.
@@ -627,7 +634,8 @@ function pasosTour(): DriveStep[] {
       element: '[data-tour="movimientos-barra-seleccion"]',
       popover: {
         title: 'Acciones en bloque',
-        description: 'Con al menos un movimiento marcado, aparece esta barra.',
+        description:
+          'Con al menos un movimiento marcado, aparece esta barra justo debajo de "Resultados".',
       },
     },
     {
@@ -690,24 +698,6 @@ useRegistrarTourPagina({
     <PanelEdicionMovimiento ref="panelEdicion" />
 
     <p v-if="error" class="text-destructive mt-4 text-sm" role="alert">{{ error }}</p>
-
-    <div
-      v-if="seleccionados.size > 0"
-      class="mt-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
-      data-tour="movimientos-barra-seleccion"
-    >
-      <span>{{ seleccionados.size }} seleccionados</span>
-      <DialogoCambiarCategoriaMasivo
-        :cantidad="seleccionados.size"
-        @confirmar="cambiarCategoriaSeleccionados"
-      />
-      <DialogoConfirmarEliminacion
-        :descripcion="`${seleccionados.size} movimientos seleccionados`"
-        texto-boton="Eliminar seleccionados"
-        disparador-solido
-        @confirmar="eliminarSeleccionados"
-      />
-    </div>
 
     <div
       v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
@@ -964,6 +954,24 @@ useRegistrarTourPagina({
           Resultados
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4">
+          <div
+            v-if="seleccionados.size > 0"
+            class="mb-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
+            data-tour="movimientos-barra-seleccion"
+          >
+            <span>{{ seleccionados.size }} seleccionados</span>
+            <DialogoCambiarCategoriaMasivo
+              :cantidad="seleccionados.size"
+              @confirmar="cambiarCategoriaSeleccionados"
+            />
+            <DialogoConfirmarEliminacion
+              :descripcion="`${seleccionados.size} movimientos seleccionados`"
+              texto-boton="Eliminar seleccionados"
+              disparador-solido
+              @confirmar="eliminarSeleccionados"
+            />
+          </div>
+
           <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
               <SelectorTamanoPagina
@@ -1111,6 +1119,7 @@ useRegistrarTourPagina({
                   <div class="flex items-center gap-1.5">
                     <IconoOrigenPdf :origen="movimiento.origen" />
                     <span class="truncate">{{ movimiento.descripcion }}</span>
+                    <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
                   </div>
                 </TableCell>
                 <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{

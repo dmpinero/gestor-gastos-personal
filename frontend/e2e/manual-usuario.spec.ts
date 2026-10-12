@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test'
-
-const BOTON_AYUDA = 'Abrir el manual de usuario interactivo'
+import { abrirManualUsuario } from './utilidades'
 
 test('recargar la aplicación no lanza el tour automáticamente', async ({ page }) => {
   await page.goto('/')
@@ -13,7 +12,7 @@ test('pulsar el icono de ayuda lanza el tour y resalta la sección activa del me
 }) => {
   await page.goto('/')
 
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
 
   const popover = page.getByRole('dialog', { name: 'Dashboard' })
   await expect(popover).toBeVisible()
@@ -37,7 +36,7 @@ test('en el Dashboard, tras la orientación recorre sus tarjetas y termina con t
   await expect(page.locator('tr', { hasText: numeroCuenta })).toBeVisible()
 
   await page.goto('/')
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
 
   const titulos = [
     'Dashboard',
@@ -60,7 +59,7 @@ test('en el Dashboard, tras la orientación recorre sus tarjetas y termina con t
 
 test('el botón "Anterior" retrocede al paso previo', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
 
   await page.getByRole('button', { name: 'Siguiente' }).click()
   await expect(page.getByRole('dialog').locator('header')).toHaveText('Saldo global')
@@ -71,7 +70,7 @@ test('el botón "Anterior" retrocede al paso previo', async ({ page }) => {
 
 test('cerrar con el botón de cerrar oculta el tour', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog')).toBeVisible()
 
   await page.getByRole('button', { name: 'Cerrar' }).click()
@@ -81,7 +80,7 @@ test('cerrar con el botón de cerrar oculta el tour', async ({ page }) => {
 
 test('cerrar con la tecla Escape oculta el tour igual que el botón', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
   await expect(page.getByRole('dialog')).toBeVisible()
 
   await page.keyboard.press('Escape')
@@ -91,7 +90,7 @@ test('cerrar con la tecla Escape oculta el tour igual que el botón', async ({ p
 
 test('el tour se recorre por completo solo con el teclado', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: BOTON_AYUDA }).click()
+  await abrirManualUsuario(page)
 
   await page.getByRole('button', { name: 'Siguiente' }).focus()
   await page.keyboard.press('Enter')

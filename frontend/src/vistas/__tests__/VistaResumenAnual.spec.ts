@@ -5,6 +5,7 @@ import type { Config } from 'driver.js'
 
 import { clienteApi } from '@/api/cliente'
 import { useTourGuiado } from '@/composables/useTourGuiado'
+import { formatearImporte } from '@/lib/formato'
 import VistaResumenAnual from '../VistaResumenAnual.vue'
 
 vi.mock('@/api/cliente', () => ({
@@ -32,7 +33,12 @@ const RESUMEN_ANUAL = {
       subcategoria_id: null,
       nombre: 'Alquiler',
       periodicidad: 'mensual',
-      valores: [],
+      valores: Array.from({ length: 12 }, (_, indice) => ({
+        mes: indice + 1,
+        importe: '-500.00',
+        origen: 'real',
+      })),
+      tiene_historial_real: true,
     },
   ],
   filas_ingresos: [],
@@ -62,7 +68,7 @@ describe('VistaResumenAnual — tour guiado', () => {
     driverMock.mockClear()
   })
 
-  it('el tour recorre importar, exportar, cargar acumulado, año, buscar, agrupar y las tablas', async () => {
+  it('el tour recorre importar, exportar, cargar acumulado, año, destacar mes, buscar, agrupar y las tablas', async () => {
     mockearRutas()
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -80,12 +86,124 @@ describe('VistaResumenAnual — tour guiado', () => {
       '[data-tour="resumen-anual-cargar-acumulado"]',
       '[data-tour="resumen-anual-anadir-concepto"]',
       '[data-tour="resumen-anual-anio"]',
+      '[data-tour="resumen-anual-destacar-mes"]',
       '[data-tour="resumen-anual-buscar"]',
       '[data-tour="resumen-anual-agrupar"]',
       '[data-tour="resumen-anual-tablas"]',
       '[data-tour="conmutador-tema"]',
       '[data-tour="boton-manual-usuario"]',
     ])
+    contenedor.unmount()
+  })
+})
+
+describe('VistaResumenAnual — oculta conceptos sin actividad real en el año', () => {
+  it('no muestra un concepto cuyos 12 meses son solo previsto, y el total excluye su previsto', async () => {
+    const resumen = {
+      anio: 2020,
+      filas_gastos: [
+        {
+          concepto_id: 1,
+          categoria_id: 1,
+          subcategoria_id: null,
+          nombre: 'Openwebinars',
+          periodicidad: 'mensual',
+          valores: Array.from({ length: 12 }, (_, indice) => ({
+            mes: indice + 1,
+            importe: '-29.00',
+            origen: 'previsto',
+          })),
+          tiene_historial_real: true,
+        },
+        {
+          concepto_id: 2,
+          categoria_id: 1,
+          subcategoria_id: null,
+          nombre: 'Alquiler',
+          periodicidad: 'mensual',
+          valores: Array.from({ length: 12 }, (_, indice) => ({
+            mes: indice + 1,
+            importe: '-500.00',
+            origen: 'real',
+          })),
+          tiene_historial_real: true,
+        },
+      ],
+      filas_ingresos: [],
+      totales_gastos: Array(12).fill('-529.00'),
+      totales_ingresos: Array(12).fill('0.00'),
+    }
+    vi.mocked(clienteApi.obtener).mockImplementation(((ruta: string) => {
+      if (ruta.startsWith('/previsiones/resumen-anual')) return Promise.resolve(resumen)
+      if (ruta.startsWith('/previsiones')) return Promise.resolve([])
+      if (ruta.startsWith('/categorias')) return Promise.resolve([])
+      if (ruta.startsWith('/dashboard/resumen')) {
+        return Promise.resolve({
+          saldo_global: '0.00',
+          saldos_por_cuenta: [],
+          gastos_por_categoria: [],
+          ingresos_por_categoria: [],
+        })
+      }
+      return Promise.resolve([])
+    }) as typeof clienteApi.obtener)
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const contenedor = mount(VistaResumenAnual, { global: { plugins: [pinia] } })
+
+    await vi.waitFor(() => expect(contenedor.text()).toContain('Alquiler'))
+
+    expect(contenedor.text()).not.toContain('Openwebinars')
+    // Total mostrado: solo el real de Alquiler (-500,00), sin el previsto
+    // de Openwebinars (-29,00) que ya no se ve.
+    expect(contenedor.text()).toContain(formatearImporte('-500.00'))
+    expect(contenedor.text()).not.toContain(formatearImporte('-529.00'))
+
+    contenedor.unmount()
+  })
+
+  it('muestra un concepto recién creado (sin historial en ningún año) aunque no tenga actividad este año', async () => {
+    const resumen = {
+      anio: 2026,
+      filas_gastos: [
+        {
+          concepto_id: 3,
+          categoria_id: 1,
+          subcategoria_id: null,
+          nombre: 'Concepto recién creado',
+          periodicidad: 'mensual',
+          valores: Array.from({ length: 12 }, (_, indice) => ({
+            mes: indice + 1,
+            importe: '-20.00',
+            origen: 'previsto',
+          })),
+          tiene_historial_real: false,
+        },
+      ],
+      filas_ingresos: [],
+      totales_gastos: Array(12).fill('-20.00'),
+      totales_ingresos: Array(12).fill('0.00'),
+    }
+    vi.mocked(clienteApi.obtener).mockImplementation(((ruta: string) => {
+      if (ruta.startsWith('/previsiones/resumen-anual')) return Promise.resolve(resumen)
+      if (ruta.startsWith('/previsiones')) return Promise.resolve([])
+      if (ruta.startsWith('/categorias')) return Promise.resolve([])
+      if (ruta.startsWith('/dashboard/resumen')) {
+        return Promise.resolve({
+          saldo_global: '0.00',
+          saldos_por_cuenta: [],
+          gastos_por_categoria: [],
+          ingresos_por_categoria: [],
+        })
+      }
+      return Promise.resolve([])
+    }) as typeof clienteApi.obtener)
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const contenedor = mount(VistaResumenAnual, { global: { plugins: [pinia] } })
+
+    await vi.waitFor(() => expect(contenedor.text()).toContain('Concepto recién creado'))
+
     contenedor.unmount()
   })
 })

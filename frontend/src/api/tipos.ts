@@ -79,6 +79,29 @@ export interface ResumenImportacion {
   duplicados: DuplicadoDetectado[]
 }
 
+export interface CabeceraExcel {
+  numero_cuenta: string
+  titular: string | null
+}
+
+export interface FilaPropuesta {
+  fecha_valor: string
+  descripcion: string
+  comentario: string | null
+  importe: string
+  saldo: string
+  categoria: string
+  subcategoria: string | null
+  categoria_original_excel: string
+  subcategoria_original_excel: string | null
+  propuesta_automatica: boolean
+}
+
+export interface AnalisisImportacionExcel {
+  cabecera: CabeceraExcel
+  filas: FilaPropuesta[]
+}
+
 export interface SaldoCuenta {
   cuenta_id: number
   numero_cuenta: string
@@ -148,6 +171,10 @@ export interface FilaResumenAnual {
   nombre: string
   periodicidad: Periodicidad
   valores: ValorMensual[]
+  // false si este concepto nunca ha tenido movimiento real ni ajuste en
+  // ningún año (p. ej. recién creado): nunca se debe ocultar en ese caso,
+  // o no habría forma de introducirle su primer valor desde la interfaz.
+  tiene_historial_real: boolean
 }
 
 export interface ResumenAnual {
@@ -156,6 +183,30 @@ export interface ResumenAnual {
   filas_ingresos: FilaResumenAnual[]
   totales_gastos: string[]
   totales_ingresos: string[]
+}
+
+export interface Adjunto {
+  id: number
+  movimiento_id: number
+  nombre_original: string
+  tipo_mime: string | null
+  tamanio_bytes: number
+  fecha_subida: string
+}
+
+export interface ConteoAdjuntos {
+  movimiento_id: number
+  cantidad: number
+}
+
+export interface ProximoEvento {
+  descripcion: string
+  categoria_id: number
+  subcategoria_id: number | null
+  importe_estimado: string
+  fecha_prevista: string
+  fecha_ultimo_real: string
+  periodicidad: Periodicidad
 }
 
 export interface CargaAcumuladoReal {

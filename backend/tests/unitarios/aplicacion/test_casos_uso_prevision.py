@@ -209,6 +209,96 @@ def test_resumen_anual_usa_el_real_cuando_existe_y_el_previsto_en_el_resto_de_me
     assert resumen.totales_gastos[3] == Decimal("-9.99")  # índice 3 = abril
 
 
+def test_resumen_anual_un_concepto_recien_creado_sin_historial_lo_marca_como_tal() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, categoria = (
+        _preparar()
+    )
+    CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=categoria.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-9.99"),
+    )
+
+    resumen = ObtenerResumenAnual(
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(2026)
+
+    assert resumen.filas_gastos[0].tiene_historial_real is False
+
+
+def test_resumen_anual_un_concepto_con_movimiento_real_en_otro_anio_lo_marca_con_historial() -> (
+    None
+):
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, categoria = (
+        _preparar()
+    )
+    cuenta = repo_cuentas.crear(CuentaBancaria(numero_cuenta="ES00 1234"))
+    CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=categoria.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-9.99"),
+    )
+    # El movimiento real es de 2018, pero se consulta el resumen de 2026: sin
+    # actividad ese año, pero con historial en otro, así que la fila debe
+    # seguir pudiéndose ocultar si no hay nada que mostrar en 2026 (lo
+    # decide el frontend; aquí solo se comprueba el cálculo del indicador).
+    CrearMovimiento(repo_movimientos, repo_cuentas, repo_categorias).ejecutar(
+        cuenta_id=cuenta.id,
+        categoria_id=categoria.id,
+        fecha_valor=datetime.date(2018, 3, 15),
+        descripcion="Cargo antiguo",
+        importe=Decimal("-9.99"),
+        saldo=Decimal("100.00"),
+    )
+
+    resumen = ObtenerResumenAnual(
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(2026)
+
+    fila = resumen.filas_gastos[0]
+    assert fila.tiene_historial_real is True
+    # Y, efectivamente, sin movimientos en 2026 todos sus meses son previsto.
+    assert all(v.origen == "previsto" for v in fila.valores)
+
+
+def test_resumen_anual_un_concepto_con_ajuste_en_otro_anio_lo_marca_con_historial() -> None:
+    repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, categoria = (
+        _preparar()
+    )
+    concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
+        categoria_id=categoria.id,
+        subcategoria_id=None,
+        periodicidad="mensual",
+        importe_previsto=Decimal("-9.99"),
+    )
+    AjustarValorMensual(repo_previsiones, repo_ajustes).ejecutar(
+        concepto.id, 2018, 3, Decimal("-15.00")
+    )
+
+    resumen = ObtenerResumenAnual(
+        repo_previsiones,
+        repo_categorias,
+        repo_movimientos,
+        repo_ajustes,
+        RepositorioAsociacionesFalso(),
+        RepositorioAsociacionesDescripcionFalso(),
+    ).ejecutar(2026)
+
+    assert resumen.filas_gastos[0].tiene_historial_real is True
+
+
 def test_resumen_anual_con_asociacion_busca_el_real_en_la_categoria_de_movimientos_mapeada() -> (
     None
 ):

@@ -1,3 +1,6 @@
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.dominio.categoria.repositorio import RepositorioCategorias
 from gestor_gastos.dominio.excepciones import EntidadConDependenciasError, EntidadNoEncontradaError
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
@@ -16,12 +19,14 @@ class EliminarCategoria:
         repositorio_previsiones: RepositorioPrevisiones,
         repositorio_asociaciones: RepositorioAsociaciones,
         repositorio_asociaciones_descripcion: RepositorioAsociacionesDescripcion,
+        eliminar_adjuntos_de_movimiento: EliminarAdjuntosDeMovimiento,
     ) -> None:
         self._repositorio = repositorio
         self._repositorio_movimientos = repositorio_movimientos
         self._repositorio_previsiones = repositorio_previsiones
         self._repositorio_asociaciones = repositorio_asociaciones
         self._repositorio_asociaciones_descripcion = repositorio_asociaciones_descripcion
+        self._eliminar_adjuntos_de_movimiento = eliminar_adjuntos_de_movimiento
 
     def ejecutar(self, id_categoria: int, cascada: bool = False) -> None:
         if self._repositorio.obtener_categoria_por_id(id_categoria) is None:
@@ -51,6 +56,8 @@ class EliminarCategoria:
             )
 
         if num_movimientos > 0:
+            for movimiento in self._repositorio_movimientos.listar_por_categoria(id_categoria):
+                self._eliminar_adjuntos_de_movimiento.ejecutar(movimiento.id)
             self._repositorio_movimientos.eliminar_movimientos_por_categoria(id_categoria)
         if num_conceptos_previstos > 0:
             self._repositorio_previsiones.eliminar_por_categoria(id_categoria)

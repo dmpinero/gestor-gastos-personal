@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { FilaResumenAnual, Movimiento } from '@/api/tipos'
 import { formatearImporte } from '@/lib/formato'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
+import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
 import TablaResumenAnual from '../TablaResumenAnual.vue'
 
 // jsdom no implementa ResizeObserver; Reka UI lo usa internamente para
@@ -56,13 +57,20 @@ function crearFila(): FilaResumenAnual {
       if (indice === 4) return { ...valor, importe: '-1.00', origen: 'ajustado' as const }
       return valor
     }),
+    tiene_historial_real: true,
   }
 }
 
 const totales = Array(12).fill('-9.99')
 
 function montar(
-  props: { titulo: string; filas: FilaResumenAnual[]; totales: string[]; mensajeVacio: string },
+  props: {
+    titulo: string
+    filas: FilaResumenAnual[]
+    totales: string[]
+    mensajeVacio: string
+    mesDestacado?: number | null
+  },
   opciones: { attachTo?: Element } = {},
 ) {
   const pinia = createPinia()
@@ -171,6 +179,41 @@ describe('TablaResumenAnual', () => {
     vi.useRealTimers()
   })
 
+  it('resalta con un fondo gris la columna del mes elegido en mesDestacado, cabecera, cuerpo y total', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+      mesDestacado: 3,
+    })
+
+    const cabeceras = wrapper.findAll('thead th')
+    expect(cabeceras[3]?.classes()).toContain('!bg-neutral-200') // Marzo = índice 3 (Concepto, Ene, Feb, Mar...)
+    expect(cabeceras[2]?.classes()).not.toContain('!bg-neutral-200')
+
+    const celdasCuerpo = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+    expect(celdasCuerpo[3]?.classes()).toContain('!bg-neutral-200')
+    expect(celdasCuerpo[2]?.classes()).not.toContain('!bg-neutral-200')
+
+    const celdasTotal = wrapper.findAll('tbody tr')[1]?.findAll('td') ?? []
+    expect(celdasTotal[3]?.classes()).toContain('!bg-neutral-200')
+    expect(celdasTotal[2]?.classes()).not.toContain('!bg-neutral-200')
+  })
+
+  it('sin mesDestacado, ninguna columna lleva el fondo de resaltado', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+
+    for (const celda of wrapper.findAll('td')) {
+      expect(celda.classes()).not.toContain('!bg-neutral-200')
+    }
+  })
+
   it('colorea en rojo los importes negativos confirmados o ajustados, pero no los previstos', () => {
     const wrapper = montar({
       titulo: 'Gastos',
@@ -188,17 +231,25 @@ describe('TablaResumenAnual', () => {
     expect(celdasTotal[1]?.classes()).toContain('text-destructive')
   })
 
-  it('muestra por separado el saldo previsto (todos los meses) y el actual (solo meses con dato real o ajustado)', () => {
-    const wrapper = montar({
-      titulo: 'Gastos',
-      filas: [crearFila()],
-      totales,
-      mensajeVacio: 'Vacío',
-    })
+  it('muestra por separado el saldo previsto (todos los meses) y el actual (solo meses con dato real o ajustado) al pasar el ratón por el concepto', async () => {
+    const wrapper = montar(
+      { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },
+      { attachTo: document.body },
+    )
+    const celdaConcepto = wrapper.findAll('tbody tr')[0]?.findAll('td')[0]
+
+    await celdaConcepto!.get('div').trigger('focus')
+    await esperarMicrotareas()
+    await wrapper.vm.$nextTick()
 
     // crearFila(): 10 meses a -9,99 previsto, mes 3 a -4,99 real, mes 5 a -1,00 ajustado.
-    expect(wrapper.text()).toContain(`Saldo año 2026 (previsto): ${formatearImporte('-105.89')}`)
-    expect(wrapper.text()).toContain(`Saldo año 2026 (actual): ${formatearImporte('-5.99')}`)
+    expect(document.body.textContent).toContain(
+      `Saldo año 2026 (previsto): ${formatearImporte('-105.89')}`,
+    )
+    expect(document.body.textContent).toContain(
+      `Saldo año 2026 (actual): ${formatearImporte('-5.99')}`,
+    )
+    wrapper.unmount()
   })
 
   it('muestra el número de conceptos, en singular si solo hay uno', () => {
@@ -321,6 +372,34 @@ describe('TablaResumenAnual', () => {
     await celdas[3]!.get('button').trigger('mouseenter')
 
     expect(espia).toHaveBeenCalledWith(1, 2026, 3)
+  })
+
+  it('al editar un movimiento desde "ver movimientos", recarga los movimientos de esa celda y avisa al padre', async () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+    const tienda = useTiendaPrevisiones()
+    const espia = vi.spyOn(tienda, 'listarMovimientosDeConcepto').mockResolvedValue([])
+    const celdas = wrapper.findAll('tbody tr')[0]?.findAll('td') ?? []
+
+    // mes 3 = real: dispara la primera carga, como ya hace "ver movimientos".
+    await celdas[3]!.get('button').trigger('mouseenter')
+    await esperarMicrotareas()
+
+    const modal = celdas[3]!.findComponent(ModalListaMovimientos)
+    modal.vm.$emit('movimiento-actualizado', crearMovimiento())
+    await esperarMicrotareas()
+    await wrapper.vm.$nextTick()
+
+    // La modal es un snapshot: tras editar uno de sus movimientos hay que
+    // volver a pedirlos (mismo concepto/año/mes) y avisar al padre, porque
+    // recategorizar puede mover el importe a otra celda del resumen.
+    expect(espia).toHaveBeenCalledTimes(2)
+    expect(espia).toHaveBeenNthCalledWith(2, 1, 2026, 3)
+    expect(wrapper.emitted('movimiento-editado')).toHaveLength(1)
   })
 
   it('al pasar el ratón por una celda prevista no pide ningún movimiento', async () => {

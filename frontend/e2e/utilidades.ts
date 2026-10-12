@@ -156,3 +156,16 @@ export async function seleccionarSubcategoria(
 ): Promise<void> {
   await seleccionarSubcategorias(page, [nombreSubcategoria])
 }
+
+/**
+ * Abre el tour guiado (manual de usuario interactivo). El icono de ayuda ya
+ * no lo lanza directamente: abre un popover con dos opciones ("Manual de
+ * usuario" / "Historial de cambios", ver BotonManualUsuario.vue), así que
+ * hace falta un clic adicional sobre la primera.
+ */
+export async function abrirManualUsuario(page: Page): Promise<void> {
+  await page
+    .getByRole('button', { name: 'Ayuda: manual de usuario interactivo e historial de cambios' })
+    .click()
+  await page.getByRole('button', { name: 'Manual de usuario' }).click()
+}

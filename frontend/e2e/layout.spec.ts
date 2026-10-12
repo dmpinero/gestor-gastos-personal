@@ -208,7 +208,9 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
   await expect(enlaceIngreso.locator('svg').first()).toHaveClass(/text-success/)
 })
 
-test('la barra de estado muestra la versión y abre el historial de cambios', async ({ page }) => {
+test('la barra de estado muestra la versión, y el icono de ayuda abre el historial de cambios', async ({
+  page,
+}) => {
   // La versión y el historial se leen en vivo de la API pública de GitHub
   // (ver frontend/src/api/github.ts); se mockea aquí para que el test no
   // dependa de la disponibilidad/límite de peticiones de esa API externa,
@@ -231,7 +233,13 @@ test('la barra de estado muestra la versión y abre el historial de cambios', as
   await expect(page.getByText(/^v\d+\.\d+\.\d+$/)).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/layout-06-barra-estado.png' })
 
-  await page.getByRole('button', { name: 'Ver historial de cambios' }).click()
+  // El historial de cambios vive dentro del icono de ayuda, junto al manual
+  // de usuario (ver BotonManualUsuario.vue).
+  await page
+    .getByRole('button', { name: 'Ayuda: manual de usuario interactivo e historial de cambios' })
+    .click()
+  await expect(page.getByRole('button', { name: 'Manual de usuario' })).toBeVisible()
+  await page.getByRole('button', { name: 'Historial de cambios' }).click()
   const modal = page.getByRole('dialog', { name: 'Historial de cambios' })
   await expect(modal).toBeVisible()
   await expect(modal).toContainText(/\d+\.\d+\.\d+/)

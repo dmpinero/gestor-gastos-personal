@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { abrirManualUsuario } from './utilidades'
 
 const RUTAS = [
   '/',
@@ -56,7 +57,7 @@ test('el manual de usuario interactivo no tiene violaciones de accesibilidad en 
   page,
 }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await abrirManualUsuario(page)
   await esperarPopoverEstable(page)
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])
@@ -67,7 +68,7 @@ test('el manual de usuario interactivo no tiene violaciones de accesibilidad en 
 }) => {
   await page.goto('/')
   await page.getByRole('switch').click()
-  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await abrirManualUsuario(page)
   await esperarPopoverEstable(page)
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])
@@ -77,7 +78,7 @@ test('el tour de Movimientos no tiene violaciones de accesibilidad en modo claro
   page,
 }) => {
   await page.goto('/movimientos')
-  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await abrirManualUsuario(page)
   await esperarPopoverEstable(page)
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])
@@ -88,7 +89,7 @@ test('el tour de Movimientos no tiene violaciones de accesibilidad en modo oscur
 }) => {
   await page.goto('/movimientos')
   await page.getByRole('switch').click()
-  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await abrirManualUsuario(page)
   await esperarPopoverEstable(page)
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])
@@ -98,7 +99,7 @@ test('el tour de Resumen anual no tiene violaciones de accesibilidad en modo cla
   page,
 }) => {
   await page.goto('/resumen-anual')
-  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await abrirManualUsuario(page)
   await esperarPopoverEstable(page)
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])
@@ -109,7 +110,7 @@ test('el tour de Resumen anual no tiene violaciones de accesibilidad en modo osc
 }) => {
   await page.goto('/resumen-anual')
   await page.getByRole('switch').click()
-  await page.getByRole('button', { name: 'Abrir el manual de usuario interactivo' }).click()
+  await abrirManualUsuario(page)
   await esperarPopoverEstable(page)
   const resultado = await auditarPagina(page)
   expect(resultado.violations).toEqual([])

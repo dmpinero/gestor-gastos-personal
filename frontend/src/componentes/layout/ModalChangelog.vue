@@ -39,8 +39,9 @@ async function cargarChangelog(): Promise<void> {
 <template>
   <Dialog @update:open="(abierto) => abierto && cargarChangelog()">
     <DialogTrigger as-child>
-      <Button variant="ghost" size="icon" class="size-6" aria-label="Ver historial de cambios">
-        <History class="size-3.5" />
+      <Button variant="ghost" class="w-full justify-start gap-2">
+        <History class="size-4" />
+        Historial de cambios
       </Button>
     </DialogTrigger>
     <DialogContent class="max-h-[80vh] overflow-y-auto">

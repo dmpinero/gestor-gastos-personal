@@ -131,7 +131,8 @@ const pasosCierre: DriveStep[] = [
     element: '[data-tour="boton-manual-usuario"]',
     popover: {
       title: 'Ayuda',
-      description: 'Vuelve a abrir este manual interactivo cuando quieras, pulsando este icono.',
+      description:
+        'Pulsa este icono para volver a abrir este manual interactivo o consultar el historial de cambios.',
     },
   },
 ]

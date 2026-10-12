@@ -47,6 +47,9 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     "/api/v1/adjuntos/movimiento/{movimiento_id}",
     # el fichero Excel a analizar tampoco puede estar vacío (mismo motivo).
     "/api/v1/movimientos/importar/analizar",
+    # el cuerpo de /confirmar incluye filas con importe/saldo, igualmente
+    # Decimal(12, 2): mismo motivo que /api/v1/movimientos/importar.
+    "/api/v1/movimientos/importar/confirmar",
 }
 
 # FastAPI/Starlette no rechazan un parámetro de query escalar (p.ej.

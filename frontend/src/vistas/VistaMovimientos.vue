@@ -31,6 +31,7 @@ import {
 } from '@/lib/formato'
 import { agruparMovimientosPorCategoria } from '@/lib/movimientosPorCategoria'
 import { detectarMesCompleto, rangoDelMes } from '@/lib/rangoMeses'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -42,6 +43,7 @@ import FiltroMultiple from '@/componentes/compartido/FiltroMultiple.vue'
 import FiltroRangoNumero from '@/componentes/compartido/FiltroRangoNumero.vue'
 import GraficoComparativoEvolucion from '@/componentes/compartido/GraficoComparativoEvolucion.vue'
 import GraficoEvolucion from '@/componentes/compartido/GraficoEvolucion.vue'
+import IconoAdjuntos from '@/componentes/compartido/IconoAdjuntos.vue'
 import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import DialogoCambiarCategoriaMasivo from '@/componentes/compartido/DialogoCambiarCategoriaMasivo.vue'
 import ModalListaMovimientos from '@/componentes/compartido/ModalListaMovimientos.vue'
@@ -67,6 +69,7 @@ import {
 import DialogoConfirmarEliminacion from '@/componentes/compartido/DialogoConfirmarEliminacion.vue'
 
 const ruta = useRoute()
+const tiendaAdjuntos = useTiendaAdjuntos()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaMovimientos = useTiendaMovimientos()
@@ -369,7 +372,11 @@ const todosSeleccionados = computed(
 )
 
 onMounted(async () => {
-  await Promise.all([tiendaCuentas.cargar(), tiendaCategorias.cargar()])
+  await Promise.all([
+    tiendaCuentas.cargar(),
+    tiendaCategorias.cargar(),
+    tiendaAdjuntos.cargarConteos(),
+  ])
 
   // Si se llega desde "Ver movimientos" tras una importación, se preselecciona
   // solo la cuenta indicada en la URL; si no, todas las cuentas por defecto.
@@ -1111,6 +1118,7 @@ useRegistrarTourPagina({
                   <div class="flex items-center gap-1.5">
                     <IconoOrigenPdf :origen="movimiento.origen" />
                     <span class="truncate">{{ movimiento.descripcion }}</span>
+                    <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
                   </div>
                 </TableCell>
                 <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{

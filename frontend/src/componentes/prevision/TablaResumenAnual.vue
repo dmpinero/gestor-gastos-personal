@@ -68,8 +68,9 @@ const props = withDefaults(
     mensajeVacio: string
     anio: number
     ocultarTitulo?: boolean
+    mesDestacado?: number | null
   }>(),
-  { ocultarTitulo: false },
+  { ocultarTitulo: false, mesDestacado: null },
 )
 
 const emit = defineEmits<{
@@ -77,6 +78,7 @@ const emit = defineEmits<{
   eliminar: [conceptoId: number]
   'editar-celda': [conceptoId: number, mes: number, importe: string | null]
   'cargar-acumulado-real': [conceptoId: number]
+  'movimiento-editado': []
 }>()
 
 const tiendaPrevisiones = useTiendaPrevisiones()
@@ -94,6 +96,21 @@ async function abrirDetalleMes(conceptoId: number, mes: number): Promise<void> {
     props.anio,
     mes,
   )
+}
+
+// Al editar un movimiento desde el modal "Ver movimientos" (p. ej. para
+// recategorizarlo), su propia lista de movimientos se refresca para que el
+// modal ya abierto deje de mostrar los datos antiguos; y como recategorizar
+// puede mover el importe a otro concepto o mes, se avisa al padre para que
+// recargue el resumen anual completo (no solo esta celda).
+async function alActualizarMovimientoDelMes(conceptoId: number, mes: number): Promise<void> {
+  const clave = claveDetalle(conceptoId, mes)
+  detalleMovimientos.value[clave] = await tiendaPrevisiones.listarMovimientosDeConcepto(
+    conceptoId,
+    props.anio,
+    mes,
+  )
+  emit('movimiento-editado')
 }
 
 // ObtenerResumenAnual marca como "real" (con importe 0) los meses en los que
@@ -191,18 +208,32 @@ function esMesFuturo(anio: number, mes: number): boolean {
   return anio > anioActual || (anio === anioActual && mes > mesActual)
 }
 
+// El mes elegido en "Destacar mes" se marca con un fondo gris en todas sus
+// celdas (cuerpo, cabecera y total), independiente del color por origen
+// (previsto/real/ajustado), para poder centrarse en ese mes sin perder esas
+// otras señales. Con !important porque algunas celdas (p. ej. previsto a
+// futuro) ya tienen su propio fondo y este debe imponerse sobre el suyo.
+function claseResaltadoMes(mes: number): string {
+  return mes === props.mesDestacado ? '!bg-neutral-200 dark:!bg-neutral-700/60' : ''
+}
+
 // Los valores "previsto" se muestran atenuados a propósito para distinguirlos
 // de los confirmados; no se colorean en verde/rojo para no perder ese matiz.
 function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): string {
-  const base = 'p-0 text-right tabular-nums'
+  const clases = ['p-0', 'text-right', 'tabular-nums', claseResaltadoMes(mes)]
   if (origen === 'previsto') {
-    const fondoFuturo = esMesFuturo(props.anio, mes) ? ' bg-blue-50 dark:bg-blue-950/40' : ''
-    return `${base} text-muted-foreground italic${fondoFuturo}`
+    clases.push('text-muted-foreground', 'italic')
+    if (esMesFuturo(props.anio, mes)) clases.push('bg-blue-50', 'dark:bg-blue-950/40')
+  } else if (origen === 'ajustado') {
+    clases.push('border-b-2', 'border-dashed', 'border-amber-500', claseColorImporte(importe))
+  } else {
+    clases.push(claseColorImporte(importe))
   }
-  if (origen === 'ajustado') {
-    return `${base} border-b-2 border-dashed border-amber-500 ${claseColorImporte(importe)}`
-  }
-  return `${base} ${claseColorImporte(importe)}`
+  return clases.filter(Boolean).join(' ')
+}
+
+function claseCabeceraMes(mes: number): string {
+  return mes === props.mesDestacado ? `${claseResaltadoMes(mes)} font-semibold` : ''
 }
 </script>
 
@@ -228,35 +259,48 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                   >Concepto</CabeceraOrdenable
                 >
               </TableHead>
-              <TableHead v-for="mes in MESES_CORTOS" :key="mes" class="text-right">{{
-                mes
-              }}</TableHead>
+              <TableHead
+                v-for="(mes, indice) in MESES_CORTOS"
+                :key="mes"
+                :class="`px-1 text-right ${claseCabeceraMes(indice + 1)}`"
+                >{{ mes }}</TableHead
+              >
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             <TableRow v-for="fila in filasOrdenadas" :key="fila.concepto_id">
               <TableCell>
-                <div class="flex flex-col gap-0.5">
-                  <div class="flex items-center gap-2">
-                    <span>{{ fila.nombre }}</span>
-                    <Badge :class="COLOR_PERIODICIDAD[fila.periodicidad]" variant="outline">
-                      {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
-                    </Badge>
-                  </div>
-                  <span
-                    class="text-xs tabular-nums whitespace-nowrap"
-                    :class="claseColorImporte(saldoAnual(fila)) || 'text-muted-foreground'"
-                  >
-                    Saldo año {{ anio }} (previsto): {{ formatearImporte(saldoAnual(fila)) }}
-                  </span>
-                  <span
-                    class="text-xs tabular-nums whitespace-nowrap"
-                    :class="claseColorImporte(saldoActual(fila)) || 'text-muted-foreground'"
-                  >
-                    Saldo año {{ anio }} (actual): {{ formatearImporte(saldoActual(fila)) }}
-                  </span>
-                </div>
+                <TooltipProvider>
+                  <Tooltip :delay-duration="300">
+                    <TooltipTrigger as-child>
+                      <div class="flex w-fit max-w-[180px] items-center gap-2">
+                        <span class="truncate" :title="fila.nombre">{{ fila.nombre }}</span>
+                        <Badge
+                          :class="COLOR_PERIODICIDAD[fila.periodicidad]"
+                          variant="outline"
+                          class="shrink-0"
+                        >
+                          {{ NOMBRE_PERIODICIDAD[fila.periodicidad] }}
+                        </Badge>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent class="flex flex-col gap-0.5">
+                      <span
+                        class="text-xs tabular-nums whitespace-nowrap"
+                        :class="claseColorImporte(saldoAnual(fila))"
+                      >
+                        Saldo año {{ anio }} (previsto): {{ formatearImporte(saldoAnual(fila)) }}
+                      </span>
+                      <span
+                        class="text-xs tabular-nums whitespace-nowrap"
+                        :class="claseColorImporte(saldoActual(fila))"
+                      >
+                        Saldo año {{ anio }} (actual): {{ formatearImporte(saldoActual(fila)) }}
+                      </span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </TableCell>
               <TableCell
                 v-for="valor in fila.valores"
@@ -268,7 +312,7 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                   :value="valorEdicion"
                   type="text"
                   autofocus
-                  class="w-full bg-transparent px-2 py-2 text-right outline-none"
+                  class="w-full bg-transparent px-1 py-2 text-right outline-none"
                   :aria-label="`Importe de ${MESES_CORTOS[valor.mes - 1]} para ${fila.nombre}`"
                   @input="valorEdicion = ($event.target as HTMLInputElement).value"
                   @keydown.enter="confirmarEdicion()"
@@ -281,7 +325,7 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                       <TooltipTrigger as-child>
                         <button
                           type="button"
-                          class="hover:bg-muted/50 flex-1 px-2 py-2 text-right"
+                          class="hover:bg-muted/50 flex-1 px-1 py-2 text-right"
                           @click="empezarEdicion(fila.concepto_id, valor.mes, valor.importe)"
                           @mouseenter="alPasarElRatonPorImporte(fila.concepto_id, valor.mes, valor)"
                           @focus="alPasarElRatonPorImporte(fila.concepto_id, valor.mes, valor)"
@@ -303,11 +347,14 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                     :movimientos="
                       detalleMovimientos[claveDetalle(fila.concepto_id, valor.mes)] ?? []
                     "
+                    @movimiento-actualizado="
+                      alActualizarMovimientoDelMes(fila.concepto_id, valor.mes)
+                    "
                   >
                     <template #disparador>
                       <button
                         type="button"
-                        class="text-muted-foreground hover:text-foreground shrink-0 pr-2"
+                        class="text-muted-foreground hover:text-foreground shrink-0 pr-1"
                         :aria-label="`Ver movimientos de ${fila.nombre} en ${MESES_CORTOS[valor.mes - 1]}`"
                         @click="abrirDetalleMes(fila.concepto_id, valor.mes)"
                       >
@@ -317,11 +364,16 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                   </ModalListaMovimientos>
                 </div>
               </TableCell>
-              <TableCell class="text-right whitespace-nowrap">
+              <TableCell class="px-1 text-right whitespace-nowrap">
                 <AlertDialog>
                   <AlertDialogTrigger as-child>
-                    <Button variant="ghost" size="icon" aria-label="Cargar acumulado real">
-                      <RefreshCw class="size-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="size-7"
+                      aria-label="Cargar acumulado real"
+                    >
+                      <RefreshCw class="size-3.5" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -346,10 +398,11 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                 <Button
                   variant="ghost"
                   size="icon"
+                  class="size-7"
                   aria-label="Editar"
                   @click="emit('editar', fila.concepto_id)"
                 >
-                  <Pencil class="size-4" />
+                  <Pencil class="size-3.5" />
                 </Button>
                 <DialogoConfirmarEliminacion
                   :descripcion="`el concepto previsto ${fila.nombre}`"
@@ -359,10 +412,10 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="text-destructive"
+                      class="size-7 text-destructive"
                       aria-label="Eliminar"
                     >
-                      <Trash2 class="size-4" />
+                      <Trash2 class="size-3.5" />
                     </Button>
                   </template>
                 </DialogoConfirmarEliminacion>
@@ -373,12 +426,12 @@ function claseCelda(origen: OrigenValorMensual, importe: string, mes: number): s
               <TableCell
                 v-for="(total, indice) in totales"
                 :key="indice"
-                class="text-right tabular-nums"
-                :class="claseColorImporte(total)"
+                class="px-1 text-right tabular-nums"
+                :class="`${claseColorImporte(total)} ${claseResaltadoMes(indice + 1)}`"
               >
                 {{ formatearImporte(total) }}
               </TableCell>
-              <TableCell></TableCell>
+              <TableCell class="px-1"></TableCell>
             </TableRow>
           </TableBody>
         </Table>

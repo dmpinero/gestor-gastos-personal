@@ -45,6 +45,10 @@ const props = defineProps<{
   movimientos: Movimiento[]
 }>()
 
+const emit = defineEmits<{
+  'movimiento-actualizado': [movimiento: Movimiento]
+}>()
+
 const tiendaAdjuntos = useTiendaAdjuntos()
 const tiendaCuentas = useTiendaCuentas()
 const tiendaCategorias = useTiendaCategorias()
@@ -145,7 +149,10 @@ const filasParaExportar = computed(() =>
           {{ movimientos.length }} movimiento{{ movimientos.length === 1 ? '' : 's' }}
         </DialogDescription>
       </DialogHeader>
-      <PanelEdicionMovimiento ref="panelEdicion" />
+      <PanelEdicionMovimiento
+        ref="panelEdicion"
+        @guardado="emit('movimiento-actualizado', $event)"
+      />
       <TablaMovimientosAgrupada
         v-if="agrupadoPorCategoria"
         :movimientos="movimientos"

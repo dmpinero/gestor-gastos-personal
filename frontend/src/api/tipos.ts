@@ -158,6 +158,16 @@ export interface ResumenAnual {
   totales_ingresos: string[]
 }
 
+export interface ProximoEvento {
+  descripcion: string
+  categoria_id: number
+  subcategoria_id: number | null
+  importe_estimado: string
+  fecha_prevista: string
+  fecha_ultimo_real: string
+  periodicidad: Periodicidad
+}
+
 export interface CargaAcumuladoReal {
   meses_actualizados: number
 }

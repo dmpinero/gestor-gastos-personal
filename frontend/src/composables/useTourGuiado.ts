@@ -23,7 +23,14 @@ export function useRegistrarTourPagina(proveedor: ProveedorTourPagina): void {
 }
 
 type SeccionMenu =
-  'dashboard' | 'movimientos' | 'gestion' | 'importar' | 'historial' | 'resumen-anual' | 'backup'
+  | 'dashboard'
+  | 'movimientos'
+  | 'gestion'
+  | 'importar'
+  | 'historial'
+  | 'resumen-anual'
+  | 'notificaciones'
+  | 'backup'
 
 const SECCION_POR_RUTA: Record<string, SeccionMenu> = {
   inicio: 'dashboard',
@@ -36,6 +43,7 @@ const SECCION_POR_RUTA: Record<string, SeccionMenu> = {
   'historial-categoria': 'historial',
   'historial-subcategoria': 'historial',
   'resumen-anual': 'resumen-anual',
+  notificaciones: 'notificaciones',
   'backup-realizar': 'backup',
   'backup-importar': 'backup',
 }
@@ -86,6 +94,14 @@ const ORIENTACION_POR_SECCION: Record<SeccionMenu, DriveStep> = {
       title: 'Resumen anual',
       description:
         'Compara lo previsto con lo real, mes a mes, para cada concepto de tu presupuesto anual.',
+    },
+  },
+  notificaciones: {
+    element: '[data-tour="nav-notificaciones"]',
+    popover: {
+      title: 'Notificaciones',
+      description:
+        'Próximos gastos e ingresos recurrentes (suscripciones, nóminas, seguros...), predichos a partir de tu histórico de movimientos.',
     },
   },
   backup: {

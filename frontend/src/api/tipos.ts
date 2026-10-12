@@ -79,6 +79,29 @@ export interface ResumenImportacion {
   duplicados: DuplicadoDetectado[]
 }
 
+export interface CabeceraExcel {
+  numero_cuenta: string
+  titular: string | null
+}
+
+export interface FilaPropuesta {
+  fecha_valor: string
+  descripcion: string
+  comentario: string | null
+  importe: string
+  saldo: string
+  categoria: string
+  subcategoria: string | null
+  categoria_original_excel: string
+  subcategoria_original_excel: string | null
+  propuesta_automatica: boolean
+}
+
+export interface AnalisisImportacionExcel {
+  cabecera: CabeceraExcel
+  filas: FilaPropuesta[]
+}
+
 export interface SaldoCuenta {
   cuenta_id: number
   numero_cuenta: string

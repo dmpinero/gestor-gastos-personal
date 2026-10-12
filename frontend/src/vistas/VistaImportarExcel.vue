@@ -4,12 +4,17 @@ import { useRouter } from 'vue-router'
 import type { DriveStep } from 'driver.js'
 
 import { clienteApi, ErrorApi } from '@/api/cliente'
-import type { ResumenImportacion, ResumenImportacionConceptosPrevistos } from '@/api/tipos'
+import type {
+  AnalisisImportacionExcel,
+  ResumenImportacion,
+  ResumenImportacionConceptosPrevistos,
+} from '@/api/tipos'
 import DialogoDetalleError from '@/componentes/compartido/DialogoDetalleError.vue'
 import ModalProgresoBloqueante from '@/componentes/compartido/ModalProgresoBloqueante.vue'
 import { useRegistrarTourPagina } from '@/composables/useTourGuiado'
 import { Button } from '@/componentes/ui/button'
 import ModalComparacionDuplicados from '@/componentes/importacion/ModalComparacionDuplicados.vue'
+import ModalRevisionImportacionExcel from '@/componentes/importacion/ModalRevisionImportacionExcel.vue'
 import ZonaSoltarFichero from '@/componentes/importacion/ZonaSoltarFichero.vue'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaPrevisiones } from '@/stores/previsiones'
@@ -17,6 +22,7 @@ import { useTiendaPrevisiones } from '@/stores/previsiones'
 const router = useRouter()
 const tiendaPrevisiones = useTiendaPrevisiones()
 const tiendaCategorias = useTiendaCategorias()
+const modalRevision = ref<InstanceType<typeof ModalRevisionImportacionExcel> | null>(null)
 
 onMounted(() => {
   // Necesaria para resolver categoria_id/subcategoria_id a nombres en la
@@ -84,6 +90,30 @@ function onFicherosElegidos(ficheros: File[]): void {
   resultados.value = []
 }
 
+function esExcel(nombreFichero: string): boolean {
+  const nombre = nombreFichero.toLowerCase()
+  return nombre.endsWith('.xlsx') || nombre.endsWith('.xls')
+}
+
+async function importarExcelConRevision(fichero: File): Promise<ResumenImportacion | null> {
+  const analisis = await clienteApi.subirArchivo<AnalisisImportacionExcel>(
+    '/movimientos/importar/analizar',
+    'fichero',
+    fichero,
+  )
+  // Se oculta el modal de "preparando" mientras el usuario revisa/edita la
+  // propuesta; no hay progreso que mostrar en esa espera (depende del
+  // usuario, no del servidor).
+  ficheroEnProceso.value = null
+  const analisisConfirmado = await modalRevision.value?.abrir(analisis, fichero.name)
+  if (!analisisConfirmado) return null // el usuario canceló: no se importa este fichero
+  ficheroEnProceso.value = fichero.name
+  return await clienteApi.crear<ResumenImportacion>(
+    '/movimientos/importar/confirmar',
+    analisisConfirmado,
+  )
+}
+
 async function importar(): Promise<void> {
   if (ficherosSeleccionados.value.length === 0) return
 
@@ -96,15 +126,17 @@ async function importar(): Promise<void> {
     ficheroEnProceso.value = fichero.name
     progreso.value = null
     try {
-      const resumen = await clienteApi.subirArchivoConProgreso<ResumenImportacion>(
-        '/movimientos/importar',
-        'fichero',
-        fichero,
-        (procesadas, total) => {
-          progreso.value = { procesadas, total }
-        },
-      )
-      resultados.value.push({ nombreFichero: fichero.name, resumen })
+      const resumen = esExcel(fichero.name)
+        ? await importarExcelConRevision(fichero)
+        : await clienteApi.subirArchivoConProgreso<ResumenImportacion>(
+            '/movimientos/importar',
+            'fichero',
+            fichero,
+            (procesadas, total) => {
+              progreso.value = { procesadas, total }
+            },
+          )
+      if (resumen) resultados.value.push({ nombreFichero: fichero.name, resumen })
     } catch (motivo) {
       resultados.value.push({
         nombreFichero: fichero.name,
@@ -214,6 +246,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
 
 <template>
   <section>
+    <ModalRevisionImportacionExcel ref="modalRevision" />
     <div data-tour="importar-movimientos">
       <h2 class="text-xl font-semibold">Importar movimientos</h2>
       <p class="text-muted-foreground mt-2">

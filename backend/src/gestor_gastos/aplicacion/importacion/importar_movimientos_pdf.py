@@ -1,7 +1,8 @@
 from collections.abc import Iterator
 
-from gestor_gastos.aplicacion.prevision.normalizar_descripcion_asociacion import (
-    normalizar_descripcion_asociacion,
+from gestor_gastos.aplicacion.importacion.resolver_categoria_por_descripcion import (
+    cargar_asociaciones_normalizadas,
+    resolver_categoria_por_descripcion,
 )
 from gestor_gastos.dominio.categoria.entidades import Categoria
 from gestor_gastos.dominio.categoria.repositorio import RepositorioCategorias
@@ -18,13 +19,10 @@ from gestor_gastos.dominio.importacion.valores import (
 )
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
 from gestor_gastos.dominio.movimiento.repositorio import RepositorioMovimientos
-from gestor_gastos.dominio.prevision.entidades import AsociacionDescripcion
 from gestor_gastos.dominio.prevision.repositorio import RepositorioAsociacionesDescripcion
 
 NOMBRE_CATEGORIA_SIN_CATEGORIZAR = "Sin categorizar"
 ORIGEN_PDF = "pdf"
-
-_AsociacionConFragmento = tuple[str, AsociacionDescripcion]
 
 
 class ImportarMovimientosPdf:
@@ -58,7 +56,7 @@ class ImportarMovimientosPdf:
         """Generador: emite un EventoProgreso tras procesar cada fila y, al
         terminar, el ResumenImportacion final (siempre el último elemento)."""
         cuenta = self._obtener_o_crear_cuenta(datos.cabecera.numero_cuenta, datos.cabecera.titular)
-        asociaciones = self._cargar_asociaciones_normalizadas()
+        asociaciones = cargar_asociaciones_normalizadas(self._asociaciones_descripcion)
 
         resumen = ResumenImportacion(cuenta_id=cuenta.id)
         cache_categorias: dict[int, Categoria | None] = {}
@@ -66,7 +64,7 @@ class ImportarMovimientosPdf:
         total = len(datos.filas)
 
         for indice, fila in enumerate(datos.filas, start=1):
-            categoria_id, subcategoria_id = self._resolver_asociacion(
+            categoria_id, subcategoria_id = resolver_categoria_por_descripcion(
                 fila.descripcion, asociaciones
             )
             if categoria_id is None:
@@ -125,28 +123,6 @@ class ImportarMovimientosPdf:
                 moneda="€",
             )
         )
-
-    def _cargar_asociaciones_normalizadas(self) -> list[_AsociacionConFragmento]:
-        return [
-            (normalizar_descripcion_asociacion(a.descripcion).lower(), a)
-            for a in self._asociaciones_descripcion.listar()
-        ]
-
-    def _resolver_asociacion(
-        self, descripcion: str, asociaciones: list[_AsociacionConFragmento]
-    ) -> tuple[int | None, int | None]:
-        descripcion_normalizada = normalizar_descripcion_asociacion(descripcion).lower()
-        candidatas = [
-            asociacion
-            for fragmento, asociacion in asociaciones
-            if fragmento in descripcion_normalizada
-        ]
-        if not candidatas:
-            return None, None
-        # Si varias asociaciones coinciden, se usa la más específica (el
-        # fragmento más largo) para desempatar sin ambigüedad.
-        mejor = max(candidatas, key=lambda a: len(a.descripcion))
-        return mejor.categoria_resumen_id, mejor.subcategoria_resumen_id
 
     def _obtener_o_crear_categoria_sin_categorizar(self, resumen: ResumenImportacion) -> Categoria:
         categoria = self._categorias.obtener_categoria_por_nombre(NOMBRE_CATEGORIA_SIN_CATEGORIZAR)

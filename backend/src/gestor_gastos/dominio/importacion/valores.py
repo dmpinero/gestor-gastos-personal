@@ -71,3 +71,36 @@ class ResumenImportacion:
     categorias_creadas: list[str] = field(default_factory=list)
     subcategorias_creadas: list[str] = field(default_factory=list)
     duplicados: list[DuplicadoDetectado] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class FilaPropuesta:
+    """Como FilaMovimientoExcel, pero con la categoría/subcategoría ya
+    resueltas a un valor por defecto propuesto: si la descripción coincide
+    con una asociación por descripción ya configurada, se propone esa
+    categoría/subcategoría (propuesta_automatica=True); si no, se deja tal
+    cual venía en el Excel. categoria_original_excel/
+    subcategoria_original_excel conservan siempre el valor original del
+    fichero, para poder mostrarlo como referencia aunque se haya propuesto
+    otra cosa."""
+
+    fecha_valor: datetime.date
+    descripcion: str
+    comentario: str | None
+    importe: Decimal
+    saldo: Decimal
+    categoria: str
+    subcategoria: str | None
+    categoria_original_excel: str
+    subcategoria_original_excel: str | None
+    propuesta_automatica: bool
+
+
+@dataclass(frozen=True)
+class AnalisisImportacionExcel:
+    """Resultado de analizar un Excel antes de importarlo: la cabecera (para
+    resolver/crear la cuenta al confirmar) y una propuesta de categorización
+    por fila, pendiente de revisión del usuario."""
+
+    cabecera: CabeceraExcel
+    filas: list[FilaPropuesta]

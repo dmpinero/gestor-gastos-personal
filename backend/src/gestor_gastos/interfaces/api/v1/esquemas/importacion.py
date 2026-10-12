@@ -28,3 +28,26 @@ class ResumenImportacionEsquema(BaseModel):
     categorias_creadas: list[str]
     subcategorias_creadas: list[str]
     duplicados: list[DuplicadoDetectadoEsquema] = []
+
+
+class CabeceraExcelEsquema(BaseModel):
+    numero_cuenta: str
+    titular: str | None
+
+
+class FilaPropuestaEsquema(BaseModel):
+    fecha_valor: datetime.date
+    descripcion: str
+    comentario: str | None
+    importe: Decimal
+    saldo: Decimal
+    categoria: str
+    subcategoria: str | None
+    categoria_original_excel: str
+    subcategoria_original_excel: str | None
+    propuesta_automatica: bool
+
+
+class AnalisisImportacionExcelEsquema(BaseModel):
+    cabecera: CabeceraExcelEsquema
+    filas: list[FilaPropuestaEsquema]

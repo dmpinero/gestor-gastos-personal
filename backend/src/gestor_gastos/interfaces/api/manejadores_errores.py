@@ -56,71 +56,71 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
 
     @aplicacion.exception_handler(FiltroDeListadoInvalidoError)
     async def _filtro_invalido(_: Request, error: FiltroDeListadoInvalidoError) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(ExtensionNoSoportadaError)
     async def _extension_no_soportada(_: Request, error: ExtensionNoSoportadaError) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(CabeceraNoReconocidaError)
     async def _cabecera_no_reconocida(_: Request, error: CabeceraNoReconocidaError) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(FicheroSinMovimientosError)
     async def _fichero_sin_movimientos(
         _: Request, error: FicheroSinMovimientosError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(HojaExcelNoReconocidaError)
     async def _hoja_no_reconocida(_: Request, error: HojaExcelNoReconocidaError) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(FormatoDeIdConceptoInvalidoError)
     async def _formato_id_invalido(
         _: Request, error: FormatoDeIdConceptoInvalidoError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(FicheroSinConceptosPrevistosError)
     async def _fichero_sin_conceptos_previstos(
         _: Request, error: FicheroSinConceptosPrevistosError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(PeriodicidadNoReconocidaError)
     async def _periodicidad_no_reconocida(
         _: Request, error: PeriodicidadNoReconocidaError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(ImportePrevistoInvalidoError)
     async def _importe_previsto_invalido(
         _: Request, error: ImportePrevistoInvalidoError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(HojasExcelNoReconocidasError)
     async def _hojas_no_reconocidas(
         _: Request, error: HojasExcelNoReconocidasError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(CabeceraExcelNoReconocidaError)
     async def _cabecera_excel_no_reconocida(
         _: Request, error: CabeceraExcelNoReconocidaError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(FilaExcelInvalidaError)
     async def _fila_excel_invalida(_: Request, error: FilaExcelInvalidaError) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(RestauracionDeDatosFallidaError)
     async def _restauracion_fallida(
         _: Request, error: RestauracionDeDatosFallidaError
     ) -> JSONResponse:
-        return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+        return _respuesta(status.HTTP_422_UNPROCESSABLE_CONTENT, error)
 
     @aplicacion.exception_handler(AdjuntoDemasiadoGrandeError)
     async def _adjunto_demasiado_grande(

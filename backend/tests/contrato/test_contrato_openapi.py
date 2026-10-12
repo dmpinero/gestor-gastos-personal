@@ -39,6 +39,9 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     # acepta la cadena literal "null" como valor de un query param entero,
     # solo un entero válido o la ausencia del parámetro).
     "/api/v1/previsiones/movimientos-por-categoria",
+    # el fichero adjunto no puede estar vacío (mismo motivo que
+    # /api/v1/movimientos/importar).
+    "/api/v1/adjuntos/movimiento/{movimiento_id}",
 }
 
 # FastAPI/Starlette no rechazan un parámetro de query escalar (p.ej.

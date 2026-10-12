@@ -3,6 +3,7 @@ import traceback
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from gestor_gastos.dominio.adjunto.excepciones import AdjuntoDemasiadoGrandeError
 from gestor_gastos.dominio.excepciones import (
     AsociacionDuplicadaError,
     EntidadConDependenciasError,
@@ -120,6 +121,12 @@ def registrar_manejadores_de_errores(aplicacion: FastAPI) -> None:
         _: Request, error: RestauracionDeDatosFallidaError
     ) -> JSONResponse:
         return _respuesta(status.HTTP_422_UNPROCESSABLE_ENTITY, error)
+
+    @aplicacion.exception_handler(AdjuntoDemasiadoGrandeError)
+    async def _adjunto_demasiado_grande(
+        _: Request, error: AdjuntoDemasiadoGrandeError
+    ) -> JSONResponse:
+        return _respuesta(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, error)
 
     @aplicacion.exception_handler(Exception)
     async def _error_no_controlado(_: Request, error: Exception) -> JSONResponse:

@@ -158,6 +158,20 @@ export interface ResumenAnual {
   totales_ingresos: string[]
 }
 
+export interface Adjunto {
+  id: number
+  movimiento_id: number
+  nombre_original: string
+  tipo_mime: string | null
+  tamanio_bytes: number
+  fecha_subida: string
+}
+
+export interface ConteoAdjuntos {
+  movimiento_id: number
+  cantidad: number
+}
+
 export interface ProximoEvento {
   descripcion: string
   categoria_id: number

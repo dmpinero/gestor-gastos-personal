@@ -8,3 +8,6 @@ RESPUESTA_CUERPO_MALFORMADO = {400: {"description": "El cuerpo de la petición n
 RESPUESTA_FILTRO_INVALIDO = {
     422: {"description": "La combinación de filtros indicada no es válida"}
 }
+RESPUESTA_CARGA_DEMASIADO_GRANDE = {
+    413: {"description": "El fichero supera el tamaño máximo permitido"}
+}

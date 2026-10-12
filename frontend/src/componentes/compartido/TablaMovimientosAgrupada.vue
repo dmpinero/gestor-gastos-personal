@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronRight, Pencil } from '@lucide/vue'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { Movimiento } from '@/api/tipos'
 import {
   claseColorImporte,
@@ -9,9 +9,11 @@ import {
   formatearImporte,
 } from '@/lib/formato'
 import { agruparMovimientosParaTabla } from '@/lib/movimientosPorCategoria'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import BotonCopiarImporte from '@/componentes/compartido/BotonCopiarImporte.vue'
+import IconoAdjuntos from '@/componentes/compartido/IconoAdjuntos.vue'
 import IconoOrigenPdf from '@/componentes/compartido/IconoOrigenPdf.vue'
 import { Button } from '@/componentes/ui/button'
 import { Checkbox } from '@/componentes/ui/checkbox'
@@ -30,8 +32,13 @@ const emit = defineEmits<{
   alternarSeleccion: [ids: number[], marcado: boolean]
 }>()
 
+const tiendaAdjuntos = useTiendaAdjuntos()
 const tiendaCategorias = useTiendaCategorias()
 const tiendaCuentas = useTiendaCuentas()
+
+onMounted(() => {
+  if (Object.keys(tiendaAdjuntos.conteos).length === 0) tiendaAdjuntos.cargarConteos()
+})
 
 function nombreCategoria(idCategoria: number): string {
   return (
@@ -211,6 +218,7 @@ function todosSeleccionadosEnSubcategoria(movimientos: Movimiento[]): boolean {
                   <div class="flex items-center gap-1.5">
                     <IconoOrigenPdf :origen="movimiento.origen" />
                     <span class="truncate">{{ movimiento.descripcion }}</span>
+                    <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
                   </div>
                 </TableCell>
                 <TableCell

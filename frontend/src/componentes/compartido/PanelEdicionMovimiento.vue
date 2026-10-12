@@ -7,6 +7,7 @@ import { aTextoOULlo } from '@/api/utilidades'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
+import SeccionAdjuntosMovimiento from '@/componentes/compartido/SeccionAdjuntosMovimiento.vue'
 import { Button } from '@/componentes/ui/button'
 import {
   Combobox,
@@ -348,6 +349,11 @@ defineExpose({ abrirParaCrear, abrirParaEditar })
           <Label for="saldo">Saldo</Label>
           <Input id="saldo" v-model="formulario.saldo" placeholder="Saldo" required />
         </div>
+
+        <SeccionAdjuntosMovimiento v-if="idEnEdicion !== null" :movimiento-id="idEnEdicion" />
+        <p v-else class="text-muted-foreground text-sm">
+          Podrás añadir adjuntos después de guardar el movimiento.
+        </p>
 
         <p v-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
 

@@ -55,7 +55,7 @@ test('Movimientos es un acceso de primer nivel independiente de Gestión', async
   )
 })
 
-test('el orden de las secciones del menú lateral es Dashboard, Movimientos, Importar, Historial, Resumen anual, Gestión, Backup', async ({
+test('el orden de las secciones del menú lateral es Dashboard, Movimientos, Importar, Historial, Resumen anual, Notificaciones, Gestión, Backup', async ({
   page,
 }) => {
   await page.goto('/')
@@ -66,6 +66,7 @@ test('el orden de las secciones del menú lateral es Dashboard, Movimientos, Imp
     'Importar',
     'Historial',
     'Resumen anual',
+    'Notificaciones',
     'Gestión',
     'Backup',
   ])
@@ -86,6 +87,7 @@ test('el menú lateral separa visualmente las secciones de uso diario de las de 
     'Importar',
     'Historial',
     'Resumen anual',
+    'Notificaciones',
   ])
 
   const configuracion = grupos.nth(1)
@@ -238,8 +240,8 @@ test('la barra de estado muestra la versión, y el icono de ayuda abre el histor
   await page
     .getByRole('button', { name: 'Ayuda: manual de usuario interactivo e historial de cambios' })
     .click()
-  await expect(page.getByRole('button', { name: 'Manual de usuario' })).toBeVisible()
-  await page.getByRole('button', { name: 'Historial de cambios' }).click()
+  await expect(page.getByRole('button', { name: 'Manual de usuario', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Historial de cambios', exact: true }).click()
   const modal = page.getByRole('dialog', { name: 'Historial de cambios' })
   await expect(modal).toBeVisible()
   await expect(modal).toContainText(/\d+\.\d+\.\d+/)

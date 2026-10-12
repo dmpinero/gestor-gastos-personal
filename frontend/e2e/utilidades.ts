@@ -167,5 +167,5 @@ export async function abrirManualUsuario(page: Page): Promise<void> {
   await page
     .getByRole('button', { name: 'Ayuda: manual de usuario interactivo e historial de cambios' })
     .click()
-  await page.getByRole('button', { name: 'Manual de usuario' }).click()
+  await page.getByRole('button', { name: 'Manual de usuario', exact: true }).click()
 }

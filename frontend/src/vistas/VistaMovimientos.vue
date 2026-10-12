@@ -634,7 +634,8 @@ function pasosTour(): DriveStep[] {
       element: '[data-tour="movimientos-barra-seleccion"]',
       popover: {
         title: 'Acciones en bloque',
-        description: 'Con al menos un movimiento marcado, aparece esta barra.',
+        description:
+          'Con al menos un movimiento marcado, aparece esta barra justo debajo de "Resultados".',
       },
     },
     {
@@ -697,24 +698,6 @@ useRegistrarTourPagina({
     <PanelEdicionMovimiento ref="panelEdicion" />
 
     <p v-if="error" class="text-destructive mt-4 text-sm" role="alert">{{ error }}</p>
-
-    <div
-      v-if="seleccionados.size > 0"
-      class="mt-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
-      data-tour="movimientos-barra-seleccion"
-    >
-      <span>{{ seleccionados.size }} seleccionados</span>
-      <DialogoCambiarCategoriaMasivo
-        :cantidad="seleccionados.size"
-        @confirmar="cambiarCategoriaSeleccionados"
-      />
-      <DialogoConfirmarEliminacion
-        :descripcion="`${seleccionados.size} movimientos seleccionados`"
-        texto-boton="Eliminar seleccionados"
-        disparador-solido
-        @confirmar="eliminarSeleccionados"
-      />
-    </div>
 
     <div
       v-if="movimientosGastados.length > 0 || movimientosIngresados.length > 0"
@@ -971,6 +954,24 @@ useRegistrarTourPagina({
           Resultados
         </CollapsibleTrigger>
         <CollapsibleContent class="mt-4">
+          <div
+            v-if="seleccionados.size > 0"
+            class="mb-4 flex items-center gap-3 rounded-lg border p-2 text-sm"
+            data-tour="movimientos-barra-seleccion"
+          >
+            <span>{{ seleccionados.size }} seleccionados</span>
+            <DialogoCambiarCategoriaMasivo
+              :cantidad="seleccionados.size"
+              @confirmar="cambiarCategoriaSeleccionados"
+            />
+            <DialogoConfirmarEliminacion
+              :descripcion="`${seleccionados.size} movimientos seleccionados`"
+              texto-boton="Eliminar seleccionados"
+              disparador-solido
+              @confirmar="eliminarSeleccionados"
+            />
+          </div>
+
           <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
               <SelectorTamanoPagina

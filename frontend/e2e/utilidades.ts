@@ -169,3 +169,14 @@ export async function abrirManualUsuario(page: Page): Promise<void> {
     .click()
   await page.getByRole('button', { name: 'Manual de usuario', exact: true }).click()
 }
+
+/**
+ * Confirma el modal de revisión de categorización que aparece al importar
+ * un Excel de movimientos (no un PDF, ni un Excel de conceptos previstos):
+ * ver ModalRevisionImportacionExcel.vue. Hace falta este paso adicional
+ * entre pulsar "Importar" y que aparezca el resumen de la importación.
+ */
+export async function confirmarRevisionExcel(page: Page): Promise<void> {
+  await page.getByRole('dialog', { name: 'Revisar categorización antes de importar' }).waitFor()
+  await page.getByRole('button', { name: 'Confirmar importación' }).click()
+}

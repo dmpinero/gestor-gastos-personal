@@ -887,8 +887,12 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
   await celdaMes(filaConcepto, mesActualNumero)
     .getByRole('button', { name: /^Ver movimientos/ })
     .click()
-  const modalDetalle = page.getByRole('dialog').filter({ hasText: descripcionMovimiento })
-  await expect(modalDetalle).toBeVisible()
+  // Se identifica la modal por su título (concepto + mes + año), no por el
+  // movimiento que contiene: tras recategorizarlo más abajo, ese movimiento
+  // deja de aparecer en ella (pasa a pertenecer a otra categoría), así que
+  // un filtro por su descripción dejaría de encontrarla.
+  const modalDetalle = page.getByRole('dialog').filter({ hasText: nombreSubcategoria })
+  await expect(modalDetalle).toContainText(descripcionMovimiento)
   await page.screenshot({ path: 'e2e/capturas/resumen-anual-07-detalle-movimientos.png' })
 
   await modalDetalle.getByRole('button', { name: 'Editar' }).click()
@@ -901,8 +905,10 @@ test('cargar el acumulado real sobrescribe un ajuste manual, y el detalle del me
   )
   await panelEdicion.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(panelEdicion).toBeHidden()
-  // Cerrar el panel de edición no cierra la modal de detalle.
+  // Cerrar el panel de edición no cierra la modal de detalle, aunque su
+  // contenido se refresque (el movimiento recategorizado ya no aparece).
   await expect(modalDetalle).toBeVisible()
+  await expect(modalDetalle).not.toContainText(descripcionMovimiento)
 
   // El movimiento ya no pertenece a la categoría original.
   await page.goto('/movimientos')

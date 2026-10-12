@@ -38,6 +38,7 @@ const RESUMEN_ANUAL = {
         importe: '-500.00',
         origen: 'real',
       })),
+      tiene_historial_real: true,
     },
   ],
   filas_ingresos: [],
@@ -112,6 +113,7 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
             importe: '-29.00',
             origen: 'previsto',
           })),
+          tiene_historial_real: true,
         },
         {
           concepto_id: 2,
@@ -124,6 +126,7 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
             importe: '-500.00',
             origen: 'real',
           })),
+          tiene_historial_real: true,
         },
       ],
       filas_ingresos: [],
@@ -155,6 +158,51 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
     // de Openwebinars (-29,00) que ya no se ve.
     expect(contenedor.text()).toContain(formatearImporte('-500.00'))
     expect(contenedor.text()).not.toContain(formatearImporte('-529.00'))
+
+    contenedor.unmount()
+  })
+
+  it('muestra un concepto recién creado (sin historial en ningún año) aunque no tenga actividad este año', async () => {
+    const resumen = {
+      anio: 2026,
+      filas_gastos: [
+        {
+          concepto_id: 3,
+          categoria_id: 1,
+          subcategoria_id: null,
+          nombre: 'Concepto recién creado',
+          periodicidad: 'mensual',
+          valores: Array.from({ length: 12 }, (_, indice) => ({
+            mes: indice + 1,
+            importe: '-20.00',
+            origen: 'previsto',
+          })),
+          tiene_historial_real: false,
+        },
+      ],
+      filas_ingresos: [],
+      totales_gastos: Array(12).fill('-20.00'),
+      totales_ingresos: Array(12).fill('0.00'),
+    }
+    vi.mocked(clienteApi.obtener).mockImplementation(((ruta: string) => {
+      if (ruta.startsWith('/previsiones/resumen-anual')) return Promise.resolve(resumen)
+      if (ruta.startsWith('/previsiones')) return Promise.resolve([])
+      if (ruta.startsWith('/categorias')) return Promise.resolve([])
+      if (ruta.startsWith('/dashboard/resumen')) {
+        return Promise.resolve({
+          saldo_global: '0.00',
+          saldos_por_cuenta: [],
+          gastos_por_categoria: [],
+          ingresos_por_categoria: [],
+        })
+      }
+      return Promise.resolve([])
+    }) as typeof clienteApi.obtener)
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const contenedor = mount(VistaResumenAnual, { global: { plugins: [pinia] } })
+
+    await vi.waitFor(() => expect(contenedor.text()).toContain('Concepto recién creado'))
 
     contenedor.unmount()
   })

@@ -81,6 +81,21 @@ class ObtenerResumenAnual:
                     )
                 )
 
+        # Para que el frontend pueda distinguir "sin actividad este año,
+        # pero con historial en otro" (se oculta) de "nunca ha tenido
+        # actividad real, en ningún año" (nunca se oculta: si no, un
+        # concepto recién creado desaparecería sin dejar forma de
+        # introducirle su primer valor desde la interfaz). Se calcula aquí,
+        # sin filtrar por año, en vez de uno a uno por concepto.
+        categorias_con_movimiento = self._repositorio_movimientos.categorias_con_algun_movimiento()
+        concepto_ids_con_ajuste = {a.concepto_id for a in self._repositorio_ajustes.listar_todos()}
+        fragmentos_con_historial = {
+            a.descripcion: len(self._repositorio_movimientos.listar_por_descripcion(a.descripcion))
+            > 0
+            for asociaciones_del_concepto in asociaciones_descripcion.values()
+            for a in asociaciones_del_concepto
+        }
+
         filas_gastos: list[FilaResumenAnual] = []
         filas_ingresos: list[FilaResumenAnual] = []
         totales_gastos = [Decimal("0")] * 12
@@ -121,6 +136,15 @@ class ObtenerResumenAnual:
                 else:
                     valores.append(ValorMensual(mes=mes, importe=Decimal("0"), origen="real"))
 
+            tiene_historial_real = (
+                (categoria_real, subcategoria_real) in categorias_con_movimiento
+                or concepto.id in concepto_ids_con_ajuste
+                or any(
+                    fragmentos_con_historial.get(a.descripcion, False)
+                    for a in asociaciones_descripcion_concepto
+                )
+            )
+
             fila = FilaResumenAnual(
                 concepto_id=concepto.id,
                 categoria_id=concepto.categoria_id,
@@ -128,6 +152,7 @@ class ObtenerResumenAnual:
                 nombre=self._nombre_de(concepto.categoria_id, concepto.subcategoria_id),
                 periodicidad=concepto.periodicidad,
                 valores=valores,
+                tiene_historial_real=tiene_historial_real,
             )
 
             totales = totales_gastos if concepto.importe_previsto < 0 else totales_ingresos

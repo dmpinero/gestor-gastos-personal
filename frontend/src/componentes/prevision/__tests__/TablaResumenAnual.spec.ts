@@ -57,6 +57,7 @@ function crearFila(): FilaResumenAnual {
       if (indice === 4) return { ...valor, importe: '-1.00', origen: 'ajustado' as const }
       return valor
     }),
+    tiene_historial_real: true,
   }
 }
 

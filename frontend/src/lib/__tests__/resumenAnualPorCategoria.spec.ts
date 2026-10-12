@@ -20,6 +20,7 @@ function crearFila(datos: Partial<FilaResumenAnual> = {}): FilaResumenAnual {
     nombre: 'Concepto',
     periodicidad: 'mensual',
     valores: crearValores(),
+    tiene_historial_real: true,
     ...datos,
   }
 }

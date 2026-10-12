@@ -58,6 +58,7 @@ class FilaResumenAnualEsquema(BaseModel):
     nombre: str
     periodicidad: Periodicidad
     valores: list[ValorMensualEsquema]
+    tiene_historial_real: bool
 
 
 class ResumenAnualEsquema(BaseModel):

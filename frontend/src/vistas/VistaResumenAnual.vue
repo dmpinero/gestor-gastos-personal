@@ -388,15 +388,21 @@ function tieneActividadRealEnAnio(fila: FilaResumenAnual): boolean {
   )
 }
 
+// Solo se oculta si, además de no tener actividad en el año que se está
+// viendo, el concepto SÍ ha tenido alguna vez movimiento real o ajuste en
+// OTRO año (tiene_historial_real, calculado en el backend): si nunca ha
+// tenido ninguno, en ningún año (p. ej. se acaba de crear), se muestra
+// siempre, o no habría forma de pulsar una celda suya para introducirle su
+// primer valor.
+function seDebeMostrar(fila: FilaResumenAnual): boolean {
+  return !fila.tiene_historial_real || tieneActividadRealEnAnio(fila)
+}
+
 const filasGastosFiltradas = computed(() =>
-  (tienda.resumenAnual?.filas_gastos ?? [])
-    .filter(tieneActividadRealEnAnio)
-    .filter(coincideConBusqueda),
+  (tienda.resumenAnual?.filas_gastos ?? []).filter(seDebeMostrar).filter(coincideConBusqueda),
 )
 const filasIngresosFiltradas = computed(() =>
-  (tienda.resumenAnual?.filas_ingresos ?? [])
-    .filter(tieneActividadRealEnAnio)
-    .filter(coincideConBusqueda),
+  (tienda.resumenAnual?.filas_ingresos ?? []).filter(seDebeMostrar).filter(coincideConBusqueda),
 )
 
 // Al ocultar conceptos sin actividad real, el total ya no puede tomarse tal

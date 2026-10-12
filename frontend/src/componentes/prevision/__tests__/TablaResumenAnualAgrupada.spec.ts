@@ -18,6 +18,7 @@ function crearFila(datos: Partial<FilaResumenAnual> = {}): FilaResumenAnual {
       importe: '-9.99',
       origen: 'previsto' as const,
     })),
+    tiene_historial_real: true,
     ...datos,
   }
 }

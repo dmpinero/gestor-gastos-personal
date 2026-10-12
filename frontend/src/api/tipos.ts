@@ -171,6 +171,10 @@ export interface FilaResumenAnual {
   nombre: string
   periodicidad: Periodicidad
   valores: ValorMensual[]
+  // false si este concepto nunca ha tenido movimiento real ni ajuste en
+  // ningún año (p. ej. recién creado): nunca se debe ocultar en ese caso,
+  // o no habría forma de introducirle su primer valor desde la interfaz.
+  tiene_historial_real: boolean
 }
 
 export interface ResumenAnual {

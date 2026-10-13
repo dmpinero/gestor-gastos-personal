@@ -218,7 +218,7 @@ function todosSeleccionadosEnSubcategoria(movimientos: Movimiento[]): boolean {
                   <div class="flex items-center gap-1.5">
                     <IconoOrigenPdf :origen="movimiento.origen" />
                     <span class="truncate">{{ movimiento.descripcion }}</span>
-                    <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
+                    <IconoAdjuntos :movimiento-id="movimiento.id" />
                   </div>
                 </TableCell>
                 <TableCell

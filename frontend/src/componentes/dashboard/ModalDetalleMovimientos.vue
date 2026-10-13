@@ -162,7 +162,7 @@ function aMovimiento(m: MovimientoDeCategoria): Movimiento {
               <TableCell class="truncate" :title="movimiento.descripcion">
                 <div class="flex items-center gap-1.5">
                   <span class="truncate">{{ movimiento.descripcion }}</span>
-                  <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
+                  <IconoAdjuntos :movimiento-id="movimiento.id" />
                 </div>
               </TableCell>
               <TableCell class="truncate" :title="nombreCategoria">{{ nombreCategoria }}</TableCell>

@@ -643,7 +643,7 @@ function pasosTour(): DriveStep[] {
       popover: {
         title: 'Tabla de movimientos',
         description:
-          'Ordena por columnas, edita o elimina cada movimiento. El icono junto a la descripción indica que se importó desde PDF.',
+          'Ordena por columnas, edita o elimina cada movimiento. El icono junto a la descripción indica que se importó desde PDF, y el del clip (si aparece) permite ver los adjuntos del movimiento.',
       },
     },
     {
@@ -1119,7 +1119,7 @@ useRegistrarTourPagina({
                   <div class="flex items-center gap-1.5">
                     <IconoOrigenPdf :origen="movimiento.origen" />
                     <span class="truncate">{{ movimiento.descripcion }}</span>
-                    <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
+                    <IconoAdjuntos :movimiento-id="movimiento.id" />
                   </div>
                 </TableCell>
                 <TableCell class="truncate" :title="nombreCategoria(movimiento.categoria_id)">{{

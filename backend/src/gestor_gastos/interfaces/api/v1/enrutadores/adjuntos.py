@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import Response
@@ -36,6 +37,19 @@ enrutador = APIRouter(prefix="/adjuntos", tags=["Adjuntos"])
 
 def _almacen() -> AlmacenAdjuntosFilesystem:
     return AlmacenAdjuntosFilesystem(Path(obtener_configuracion().ruta_adjuntos))
+
+
+def _content_disposition_inline(nombre_original: str) -> str:
+    """Cabecera `Content-Disposition` segura para nombres con caracteres no
+    ASCII (p. ej. "€"), que `latin-1` (la codificación de las cabeceras HTTP)
+    no puede representar directamente. Sigue el mismo criterio que
+    `starlette.responses.FileResponse`: si el nombre cambia al escaparlo con
+    `quote`, se usa la forma extendida `filename*` (RFC 5987/6266).
+    """
+    nombre_escapado = quote(nombre_original)
+    if nombre_escapado != nombre_original:
+        return f"inline; filename*=utf-8''{nombre_escapado}"
+    return f'inline; filename="{nombre_original}"'
 
 
 @enrutador.post(
@@ -88,7 +102,7 @@ def ver(id_adjunto: int, sesion: Session = Depends(obtener_sesion)) -> Response:
     return Response(
         content=contenido,
         media_type=adjunto.tipo_mime or "application/octet-stream",
-        headers={"Content-Disposition": f'inline; filename="{adjunto.nombre_original}"'},
+        headers={"Content-Disposition": _content_disposition_inline(adjunto.nombre_original)},
     )
 
 

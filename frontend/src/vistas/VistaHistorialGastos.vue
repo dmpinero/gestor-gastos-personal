@@ -294,7 +294,8 @@ function pasosTour(): DriveStep[] {
       element: '[data-tour="historial-tabla"]',
       popover: {
         title: 'Tabla de movimientos',
-        description: 'El detalle de cada movimiento. Pulsa el icono de lápiz para editarlo.',
+        description:
+          'El detalle de cada movimiento. Pulsa el icono de lápiz para editarlo, y el del clip (si aparece) para ver sus adjuntos.',
       },
     },
   ]
@@ -565,7 +566,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
                     <div class="flex items-center gap-1.5">
                       <IconoOrigenPdf :origen="movimiento.origen" />
                       <span class="truncate">{{ movimiento.descripcion }}</span>
-                      <IconoAdjuntos :cantidad="tiendaAdjuntos.conteos[movimiento.id] ?? 0" />
+                      <IconoAdjuntos :movimiento-id="movimiento.id" />
                     </div>
                   </TableCell>
                   <TableCell>{{ formatearImporte(movimiento.importe) }}</TableCell>

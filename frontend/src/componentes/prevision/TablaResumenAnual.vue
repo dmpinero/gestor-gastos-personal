@@ -21,6 +21,7 @@ import {
 } from '@/componentes/ui/alert-dialog'
 import { Badge } from '@/componentes/ui/badge'
 import { Button } from '@/componentes/ui/button'
+import { Checkbox } from '@/componentes/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -79,6 +80,7 @@ const emit = defineEmits<{
   'editar-celda': [conceptoId: number, mes: number, importe: string | null]
   'cargar-acumulado-real': [conceptoId: number]
   'movimiento-editado': []
+  'cambiar-cancelado': [conceptoId: number, cancelado: boolean]
 }>()
 
 const tiendaPrevisiones = useTiendaPrevisiones()
@@ -274,7 +276,7 @@ function claseCabeceraMes(mes: number): string {
                 <TooltipProvider>
                   <Tooltip :delay-duration="300">
                     <TooltipTrigger as-child>
-                      <div class="flex w-fit max-w-[180px] items-center gap-2">
+                      <div class="flex w-fit max-w-[220px] items-center gap-2">
                         <span class="truncate" :title="fila.nombre">{{ fila.nombre }}</span>
                         <Badge
                           :class="COLOR_PERIODICIDAD[fila.periodicidad]"
@@ -301,6 +303,22 @@ function claseCabeceraMes(mes: number): string {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                <div class="mt-1 flex items-center gap-1.5">
+                  <Checkbox
+                    :id="`cancelado-${fila.concepto_id}`"
+                    :model-value="fila.cancelado"
+                    @update:model-value="
+                      (valor) => emit('cambiar-cancelado', fila.concepto_id, valor === true)
+                    "
+                  />
+                  <label
+                    :for="`cancelado-${fila.concepto_id}`"
+                    class="text-muted-foreground cursor-pointer text-xs"
+                    title="Si lo marcas, este concepto deja de mostrarse en los años sin ningún cargo real. Si no, se sigue mostrando siempre (p. ej. una suscripción vigente cuyo cargo de este año todavía no ha llegado)."
+                  >
+                    Cancelado
+                  </label>
+                </div>
               </TableCell>
               <TableCell
                 v-for="valor in fila.valores"

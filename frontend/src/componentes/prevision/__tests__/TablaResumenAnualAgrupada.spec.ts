@@ -18,7 +18,7 @@ function crearFila(datos: Partial<FilaResumenAnual> = {}): FilaResumenAnual {
       importe: '-9.99',
       origen: 'previsto' as const,
     })),
-    tiene_historial_real: true,
+    cancelado: false,
     ...datos,
   }
 }
@@ -92,7 +92,7 @@ describe('TablaResumenAnualAgrupada', () => {
     })
 
     await wrapper.get('button[aria-expanded]').trigger('click')
-    await wrapper.get('td button').trigger('click')
+    await wrapper.get('tbody td:nth-of-type(2) button').trigger('click')
     const input = wrapper.get('td input')
     await input.setValue('-60.00')
     await input.trigger('keydown.enter')

@@ -57,7 +57,7 @@ function crearFila(): FilaResumenAnual {
       if (indice === 4) return { ...valor, importe: '-1.00', origen: 'ajustado' as const }
       return valor
     }),
-    tiene_historial_real: true,
+    cancelado: false,
   }
 }
 
@@ -91,7 +91,7 @@ describe('TablaResumenAnual', () => {
       mensajeVacio: 'Vacío',
     })
 
-    await wrapper.get('td button').trigger('click')
+    await wrapper.get('tbody td:nth-of-type(2) button').trigger('click')
 
     const input = wrapper.get('td input')
     expect((input.element as HTMLInputElement).value).toBe('-9.99')
@@ -105,7 +105,7 @@ describe('TablaResumenAnual', () => {
       mensajeVacio: 'Vacío',
     })
 
-    await wrapper.get('td button').trigger('click')
+    await wrapper.get('tbody td:nth-of-type(2) button').trigger('click')
     const input = wrapper.get('td input')
     await input.setValue('-60.00')
     await input.trigger('keydown.enter')
@@ -121,7 +121,7 @@ describe('TablaResumenAnual', () => {
       mensajeVacio: 'Vacío',
     })
 
-    await wrapper.get('td button').trigger('click')
+    await wrapper.get('tbody td:nth-of-type(2) button').trigger('click')
     const input = wrapper.get('td input')
     await input.setValue('')
     await input.trigger('keydown.enter')
@@ -137,7 +137,7 @@ describe('TablaResumenAnual', () => {
       mensajeVacio: 'Vacío',
     })
 
-    await wrapper.get('td button').trigger('click')
+    await wrapper.get('tbody td:nth-of-type(2) button').trigger('click')
     const input = wrapper.get('td input')
     await input.setValue('-60.00')
     await input.trigger('keydown.escape')
@@ -455,6 +455,33 @@ describe('TablaResumenAnual', () => {
     expect(document.body.querySelector('[data-slot="tooltip-content"]')).not.toBeNull()
     expect(document.body.textContent).toContain('Amazon Prime')
     wrapper.unmount()
+  })
+
+  it('la casilla "Cancelado" refleja el valor de la fila y, al marcarla, emite cambiar-cancelado', async () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+
+    const casilla = wrapper.find('[role="checkbox"]')
+    expect(casilla.attributes('aria-checked')).toBe('false')
+
+    await casilla.trigger('click')
+
+    expect(wrapper.emitted('cambiar-cancelado')).toEqual([[1, true]])
+  })
+
+  it('un concepto ya cancelado muestra la casilla "Cancelado" marcada', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [{ ...crearFila(), cancelado: true }],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+
+    expect(wrapper.find('[role="checkbox"]').attributes('aria-checked')).toBe('true')
   })
 
   it('con varios movimientos, el tooltip lista todos con su descripción, y el comentario si lo tienen', async () => {

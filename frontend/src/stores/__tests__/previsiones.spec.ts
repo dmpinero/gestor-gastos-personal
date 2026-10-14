@@ -31,6 +31,7 @@ const conceptoEjemplo = {
   periodicidad: 'mensual' as const,
   mes_inicio: null,
   importe_previsto: '-50.00',
+  cancelado: false,
 }
 
 const resumenEjemplo = {
@@ -154,6 +155,29 @@ describe('useTiendaPrevisiones', () => {
 
     const tienda = useTiendaPrevisiones()
     await tienda.ajustarCelda(1, 2026, 5, '-30.00')
+
+    expect(tienda.error).toBe('fallo de red')
+  })
+
+  it('marca un concepto como cancelado y recarga el resumen del año', async () => {
+    vi.mocked(clienteApi.actualizar).mockResolvedValue(undefined)
+    vi.mocked(clienteApi.obtener).mockResolvedValue(resumenEjemplo)
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.marcarCancelado(1, 2026, true)
+
+    expect(clienteApi.actualizar).toHaveBeenCalledWith('/previsiones/1/cancelado', {
+      cancelado: true,
+    })
+    expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')
+    expect(tienda.resumenAnual).toEqual(resumenEjemplo)
+  })
+
+  it('guarda el mensaje de error si marcar un concepto como cancelado falla', async () => {
+    vi.mocked(clienteApi.actualizar).mockRejectedValue(new Error('fallo de red'))
+
+    const tienda = useTiendaPrevisiones()
+    await tienda.marcarCancelado(1, 2026, true)
 
     expect(tienda.error).toBe('fallo de red')
   })

@@ -21,6 +21,7 @@ const emit = defineEmits<{
   'editar-celda': [conceptoId: number, mes: number, importe: string | null]
   'cargar-acumulado-real': [conceptoId: number]
   'movimiento-editado': []
+  'cambiar-cancelado': [conceptoId: number, cancelado: boolean]
 }>()
 
 const tiendaCategorias = useTiendaCategorias()
@@ -90,6 +91,9 @@ function alternarCategoria(idCategoria: number): void {
             "
             @cargar-acumulado-real="emit('cargar-acumulado-real', $event)"
             @movimiento-editado="emit('movimiento-editado')"
+            @cambiar-cancelado="
+              (conceptoId, cancelado) => emit('cambiar-cancelado', conceptoId, cancelado)
+            "
           />
         </div>
       </div>

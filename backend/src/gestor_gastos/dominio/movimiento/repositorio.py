@@ -114,10 +114,3 @@ class RepositorioMovimientos(Protocol):
         todos los movimientos de una categoría/subcategoría sin acotar a un
         periodo."""
         ...
-
-    def categorias_con_algun_movimiento(self) -> set[tuple[int, int | None]]:
-        """Pares (categoria_id, subcategoria_id) que tienen al menos un
-        movimiento, de cualquier año. Lo usa ObtenerResumenAnual para saber
-        si un concepto tiene historial real en ALGÚN año (no solo el que se
-        está consultando), sin una consulta por concepto."""
-        ...

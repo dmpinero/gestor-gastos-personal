@@ -321,9 +321,6 @@ class RepositorioMovimientosFalso:
         ]
         return sorted(movimientos, key=lambda m: m.fecha_valor, reverse=True)
 
-    def categorias_con_algun_movimiento(self) -> set[tuple[int, int | None]]:
-        return {(m.categoria_id, m.subcategoria_id) for m in self._movimientos.values()}
-
 
 class RepositorioPrevisionesFalso:
     """Doble de RepositorioPrevisiones en memoria."""

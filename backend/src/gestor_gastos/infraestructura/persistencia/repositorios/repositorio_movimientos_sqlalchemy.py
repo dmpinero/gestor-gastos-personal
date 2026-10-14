@@ -289,9 +289,3 @@ class RepositorioMovimientosSqlAlchemy:
             .order_by(MovimientoModelo.fecha_valor.desc())
         ).all()
         return [_a_entidad(m) for m in modelos]
-
-    def categorias_con_algun_movimiento(self) -> set[tuple[int, int | None]]:
-        filas = self._sesion.execute(
-            select(MovimientoModelo.categoria_id, MovimientoModelo.subcategoria_id).distinct()
-        ).all()
-        return {(categoria_id, subcategoria_id) for categoria_id, subcategoria_id in filas}

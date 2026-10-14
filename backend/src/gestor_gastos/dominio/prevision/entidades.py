@@ -18,6 +18,12 @@ class ConceptoPrevisto:
     periodicidad: Periodicidad
     importe_previsto: Decimal
     mes_inicio: int | None = None
+    # Marca manual del usuario: un concepto cancelado deja de mostrarse en el
+    # resumen anual a partir de que no tenga actividad real en un año (ver
+    # ObtenerResumenAnual y VistaResumenAnual.seDebeMostrar). Uno no cancelado
+    # siempre se muestra, aunque ese año todavía no tenga ningún cargo real
+    # (p. ej. una suscripción anual cuyo cargo de este año aún no ha llegado).
+    cancelado: bool = False
     id: int | None = None
 
     def meses_aplicables(self) -> set[int]:

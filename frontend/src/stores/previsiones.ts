@@ -88,6 +88,21 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     }
   }
 
+  async function marcarCancelado(
+    idConcepto: number,
+    anio: number,
+    cancelado: boolean,
+  ): Promise<void> {
+    error.value = null
+    errorTraza.value = null
+    try {
+      await clienteApi.actualizar(`/previsiones/${idConcepto}/cancelado`, { cancelado })
+      await cargarResumenAnual(anio)
+    } catch (motivo) {
+      _guardarError(motivo)
+    }
+  }
+
   async function eliminarAjuste(idConcepto: number, anio: number, mes: number): Promise<void> {
     error.value = null
     errorTraza.value = null
@@ -208,6 +223,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     eliminar,
     cargarResumenAnual,
     ajustarCelda,
+    marcarCancelado,
     eliminarAjuste,
     cargarAcumuladoReal,
     cargarAcumuladoRealTodos,

@@ -22,14 +22,14 @@ class FilaResumenAnual:
     nombre: str
     periodicidad: Periodicidad
     valores: list[ValorMensual]
-    # False si este concepto nunca ha tenido ni un movimiento real ni un
-    # ajuste manual en NINGÚN año (p. ej. recién creado): el frontend no
-    # debe ocultarlo nunca, por mucho que el año que se esté viendo no
-    # tenga actividad, o un concepto nuevo se quedaría sin forma de
-    # introducirle su primer valor (no se puede pulsar una celda de una
-    # fila que no se ve). Solo si esto es True tiene sentido ocultar la
-    # fila por falta de actividad en el año concreto que se está viendo.
-    tiene_historial_real: bool = True
+    # Marca manual del usuario (ConceptoPrevisto.cancelado). Si es False, el
+    # frontend nunca oculta la fila, aunque el año que se esté viendo no
+    # tenga actividad real: o un concepto nuevo, o uno vigente cuyo cargo de
+    # este año aún no ha llegado (p. ej. una suscripción anual), se quedarían
+    # sin forma de verse/editarse. Solo si es True tiene sentido ocultar la
+    # fila por falta de actividad real en el año concreto que se está viendo
+    # (ver VistaResumenAnual.seDebeMostrar).
+    cancelado: bool = False
 
 
 @dataclass(frozen=True)

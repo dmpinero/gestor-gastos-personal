@@ -389,13 +389,16 @@ function tieneActividadRealEnAnio(fila: FilaResumenAnual): boolean {
 }
 
 // Solo se oculta si, además de no tener actividad en el año que se está
-// viendo, el concepto SÍ ha tenido alguna vez movimiento real o ajuste en
-// OTRO año (tiene_historial_real, calculado en el backend): si nunca ha
-// tenido ninguno, en ningún año (p. ej. se acaba de crear), se muestra
-// siempre, o no habría forma de pulsar una celda suya para introducirle su
-// primer valor.
+// viendo, el concepto está marcado como cancelado (checkbox "Cancelado" en
+// la propia fila): si no lo está, se muestra siempre, aunque el año que se
+// esté viendo no tenga ningún cargo real todavía (p. ej. un concepto nuevo,
+// o una suscripción vigente cuyo cargo de este año aún no ha llegado).
 function seDebeMostrar(fila: FilaResumenAnual): boolean {
-  return !fila.tiene_historial_real || tieneActividadRealEnAnio(fila)
+  return !fila.cancelado || tieneActividadRealEnAnio(fila)
+}
+
+async function cambiarCancelado(conceptoId: number, cancelado: boolean): Promise<void> {
+  await tienda.marcarCancelado(conceptoId, anio.value, cancelado)
 }
 
 const filasGastosFiltradas = computed(() =>
@@ -916,6 +919,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
           @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
         <TablaResumenAnualAgrupada
           titulo="Ingresos"
@@ -928,6 +932,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
           @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
       </template>
       <template v-else>
@@ -943,6 +948,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
           @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
         <TablaResumenAnual
           titulo="Ingresos"
@@ -956,6 +962,7 @@ useRegistrarTourPagina({ pasos: pasosTour })
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
           @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
       </template>
     </div>

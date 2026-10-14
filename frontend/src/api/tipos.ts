@@ -146,6 +146,7 @@ export interface ConceptoPrevisto {
   periodicidad: Periodicidad
   mes_inicio: number | null
   importe_previsto: string
+  cancelado: boolean
 }
 
 export interface DatosConceptoPrevisto {
@@ -171,10 +172,12 @@ export interface FilaResumenAnual {
   nombre: string
   periodicidad: Periodicidad
   valores: ValorMensual[]
-  // false si este concepto nunca ha tenido movimiento real ni ajuste en
-  // ningún año (p. ej. recién creado): nunca se debe ocultar en ese caso,
-  // o no habría forma de introducirle su primer valor desde la interfaz.
-  tiene_historial_real: boolean
+  // Marca manual del usuario (checkbox "Cancelado" en el resumen anual). Si
+  // es false, nunca se debe ocultar la fila por falta de actividad en el
+  // año que se esté viendo (ver VistaResumenAnual.seDebeMostrar): o un
+  // concepto nuevo, o uno vigente cuyo cargo de este año aún no ha
+  // llegado, se quedarían sin forma de verse/editarse.
+  cancelado: boolean
 }
 
 export interface ResumenAnual {

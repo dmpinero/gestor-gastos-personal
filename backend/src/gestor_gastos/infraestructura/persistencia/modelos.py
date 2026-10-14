@@ -1,7 +1,16 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from gestor_gastos.infraestructura.persistencia.sesion import Base
@@ -80,6 +89,7 @@ class ConceptoPrevistoModelo(Base):
     periodicidad: Mapped[str] = mapped_column(String(20))
     mes_inicio: Mapped[int | None] = mapped_column(Integer)
     importe_previsto: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    cancelado: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     categoria: Mapped[CategoriaModelo] = relationship()
     subcategoria: Mapped[SubcategoriaModelo | None] = relationship()

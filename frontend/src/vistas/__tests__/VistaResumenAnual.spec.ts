@@ -38,7 +38,7 @@ const RESUMEN_ANUAL = {
         importe: '-500.00',
         origen: 'real',
       })),
-      tiene_historial_real: true,
+      cancelado: false,
     },
   ],
   filas_ingresos: [],
@@ -97,8 +97,8 @@ describe('VistaResumenAnual — tour guiado', () => {
   })
 })
 
-describe('VistaResumenAnual — oculta conceptos sin actividad real en el año', () => {
-  it('no muestra un concepto cuyos 12 meses son solo previsto, y el total excluye su previsto', async () => {
+describe('VistaResumenAnual — oculta conceptos cancelados sin actividad real en el año', () => {
+  it('no muestra un concepto cancelado cuyos 12 meses son solo previsto, y el total excluye su previsto', async () => {
     const resumen = {
       anio: 2020,
       filas_gastos: [
@@ -113,7 +113,7 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
             importe: '-29.00',
             origen: 'previsto',
           })),
-          tiene_historial_real: true,
+          cancelado: true,
         },
         {
           concepto_id: 2,
@@ -126,7 +126,7 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
             importe: '-500.00',
             origen: 'real',
           })),
-          tiene_historial_real: true,
+          cancelado: false,
         },
       ],
       filas_ingresos: [],
@@ -162,7 +162,7 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
     contenedor.unmount()
   })
 
-  it('muestra un concepto recién creado (sin historial en ningún año) aunque no tenga actividad este año', async () => {
+  it('muestra un concepto no cancelado aunque no tenga actividad real este año (recién creado, o vigente a la espera de su próximo cargo)', async () => {
     const resumen = {
       anio: 2026,
       filas_gastos: [
@@ -177,7 +177,7 @@ describe('VistaResumenAnual — oculta conceptos sin actividad real en el año',
             importe: '-20.00',
             origen: 'previsto',
           })),
-          tiene_historial_real: false,
+          cancelado: false,
         },
       ],
       filas_ingresos: [],

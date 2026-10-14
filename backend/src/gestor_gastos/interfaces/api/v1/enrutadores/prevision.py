@@ -52,6 +52,9 @@ from gestor_gastos.aplicacion.prevision.listar_movimientos_de_concepto import (
 from gestor_gastos.aplicacion.prevision.listar_movimientos_por_categoria_resumen import (
     ListarMovimientosPorCategoriaResumen,
 )
+from gestor_gastos.aplicacion.prevision.marcar_concepto_previsto_cancelado import (
+    MarcarConceptoPrevistoCancelado,
+)
 from gestor_gastos.aplicacion.prevision.obtener_resumen_anual import ObtenerResumenAnual
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_ajustes_prevision_sqlalchemy import (  # noqa: E501
     RepositorioAjustesPrevisionSqlAlchemy,
@@ -99,6 +102,7 @@ from gestor_gastos.interfaces.api.v1.esquemas.prevision import (
     CargaAcumuladoRealEsquema,
     CargaAcumuladoRealTodosEsquema,
     ConceptoPrevistoActualizarEsquema,
+    ConceptoPrevistoCanceladoEsquema,
     ConceptoPrevistoCrearEsquema,
     ConceptoPrevistoSalidaEsquema,
     ResumenAnualEsquema,
@@ -175,6 +179,22 @@ def actualizar(
         periodicidad=datos.periodicidad,
         importe_previsto=datos.importe_previsto,
         mes_inicio=datos.mes_inicio,
+    )
+    return ConceptoPrevistoSalidaEsquema(**asdict(concepto))
+
+
+@enrutador.put(
+    "/{id_concepto:int}/cancelado",
+    response_model=ConceptoPrevistoSalidaEsquema,
+    responses=RESPUESTA_NO_ENCONTRADO,
+)
+def marcar_cancelado(
+    id_concepto: int,
+    datos: ConceptoPrevistoCanceladoEsquema,
+    sesion: Session = Depends(obtener_sesion),
+) -> ConceptoPrevistoSalidaEsquema:
+    concepto = MarcarConceptoPrevistoCancelado(RepositorioPrevisionesSqlAlchemy(sesion)).ejecutar(
+        id_concepto, datos.cancelado
     )
     return ConceptoPrevistoSalidaEsquema(**asdict(concepto))
 

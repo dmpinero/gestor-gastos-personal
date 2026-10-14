@@ -113,6 +113,15 @@ def _redondear(importe: Decimal) -> Decimal:
     return importe.quantize(_CENTAVO, rounding=ROUND_HALF_UP)
 
 
+def _id_asignado(id_entidad: int | None) -> int:
+    """El repositorio siempre devuelve el id autogenerado tras `crear()`; esta
+    comprobación es solo para el tipado (`id: int | None` en la entidad, que
+    sí puede ser None antes de persistirla)."""
+    if id_entidad is None:
+        raise RuntimeError("El repositorio no asignó un id a la entidad recién creada")
+    return id_entidad
+
+
 def _meses_entre(inicio: datetime.date, fin: datetime.date) -> list[datetime.date]:
     meses = []
     cursor = inicio.replace(day=1)
@@ -143,9 +152,7 @@ def _crear_cuentas(
         moneda="EUR",
         titular="Usuario Demo",
     )
-    assert corriente.id is not None
-    assert ahorro.id is not None
-    return corriente.id, ahorro.id
+    return _id_asignado(corriente.id), _id_asignado(ahorro.id)
 
 
 def _crear_categorias(
@@ -157,13 +164,13 @@ def _crear_categorias(
     ids_categoria: dict[str, int] = {}
     ids_subcategoria: dict[tuple[str, str], int] = {}
     for nombre_categoria, subcategorias in _CATEGORIAS.items():
-        categoria = caso_crear_categoria.ejecutar(nombre_categoria)
-        assert categoria.id is not None
-        ids_categoria[nombre_categoria] = categoria.id
+        categoria_id = _id_asignado(caso_crear_categoria.ejecutar(nombre_categoria).id)
+        ids_categoria[nombre_categoria] = categoria_id
         for nombre_subcategoria in subcategorias:
-            subcategoria = caso_crear_subcategoria.ejecutar(categoria.id, nombre_subcategoria)
-            assert subcategoria.id is not None
-            ids_subcategoria[(nombre_categoria, nombre_subcategoria)] = subcategoria.id
+            subcategoria_id = _id_asignado(
+                caso_crear_subcategoria.ejecutar(categoria_id, nombre_subcategoria).id
+            )
+            ids_subcategoria[(nombre_categoria, nombre_subcategoria)] = subcategoria_id
 
     return ids_categoria, ids_subcategoria
 
@@ -394,7 +401,9 @@ def main() -> None:
         repositorio_movimientos = RepositorioMovimientosSqlAlchemy(sesion)
         repositorio_previsiones = RepositorioPrevisionesSqlAlchemy(sesion)
 
-        aleatorio = random.Random(_SEMILLA)
+        # No es uso criptográfico: solo varía ligeramente importes y fechas
+        # ficticias para que los datos de ejemplo parezcan más reales.
+        aleatorio = random.Random(_SEMILLA)  # nosec B311
 
         print("Creando cuentas bancarias...")
         cuenta_corriente_id, cuenta_ahorro_id = _crear_cuentas(repositorio_cuentas)

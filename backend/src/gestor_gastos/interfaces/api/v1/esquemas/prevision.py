@@ -27,7 +27,6 @@ class ConceptoPrevistoSalidaEsquema(BaseModel):
     periodicidad: Periodicidad
     mes_inicio: int | None
     importe_previsto: Decimal
-    cancelado: bool
 
 
 class ConceptoPrevistoCanceladoEsquema(BaseModel):

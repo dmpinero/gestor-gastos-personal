@@ -37,6 +37,7 @@ from tests.unitarios.aplicacion.dobles import (
     RepositorioAsociacionesDescripcionFalso,
     RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
+    RepositorioConceptosCanceladosFalso,
     RepositorioCuentasFalso,
     RepositorioMovimientosFalso,
     RepositorioPrevisionesFalso,
@@ -138,8 +139,9 @@ def test_actualizar_concepto_previsto_inexistente_falla() -> None:
         )
 
 
-def test_marcar_concepto_previsto_cancelado_lo_marca() -> None:
+def test_marcar_concepto_previsto_cancelado_lo_marca_para_ese_anio() -> None:
     repo_previsiones, repo_categorias, _, _, _, categoria = _preparar()
+    repo_cancelados = RepositorioConceptosCanceladosFalso()
     concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
         categoria_id=categoria.id,
         subcategoria_id=None,
@@ -147,31 +149,41 @@ def test_marcar_concepto_previsto_cancelado_lo_marca() -> None:
         importe_previsto=Decimal("-9.99"),
     )
 
-    actualizado = MarcarConceptoPrevistoCancelado(repo_previsiones).ejecutar(concepto.id, True)
+    MarcarConceptoPrevistoCancelado(repo_previsiones, repo_cancelados).ejecutar(
+        concepto.id, 2026, True
+    )
 
-    assert actualizado.cancelado is True
+    cancelados_2026 = {c.concepto_id for c in repo_cancelados.listar_por_anio(2026)}
+    assert cancelados_2026 == {concepto.id}
+    assert repo_cancelados.listar_por_anio(2025) == []
 
 
 def test_marcar_concepto_previsto_cancelado_lo_puede_revertir() -> None:
     repo_previsiones, repo_categorias, _, _, _, categoria = _preparar()
+    repo_cancelados = RepositorioConceptosCanceladosFalso()
     concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
         categoria_id=categoria.id,
         subcategoria_id=None,
         periodicidad="mensual",
         importe_previsto=Decimal("-9.99"),
     )
-    MarcarConceptoPrevistoCancelado(repo_previsiones).ejecutar(concepto.id, True)
+    MarcarConceptoPrevistoCancelado(repo_previsiones, repo_cancelados).ejecutar(
+        concepto.id, 2026, True
+    )
 
-    actualizado = MarcarConceptoPrevistoCancelado(repo_previsiones).ejecutar(concepto.id, False)
+    MarcarConceptoPrevistoCancelado(repo_previsiones, repo_cancelados).ejecutar(
+        concepto.id, 2026, False
+    )
 
-    assert actualizado.cancelado is False
+    assert repo_cancelados.listar_por_anio(2026) == []
 
 
 def test_marcar_concepto_previsto_cancelado_con_concepto_inexistente_falla() -> None:
     repo_previsiones, _, _, _, _, _ = _preparar()
+    repo_cancelados = RepositorioConceptosCanceladosFalso()
 
     with pytest.raises(EntidadNoEncontradaError):
-        MarcarConceptoPrevistoCancelado(repo_previsiones).ejecutar(999, True)
+        MarcarConceptoPrevistoCancelado(repo_previsiones, repo_cancelados).ejecutar(999, 2026, True)
 
 
 def test_eliminar_concepto_previsto_inexistente_falla() -> None:
@@ -234,6 +246,7 @@ def test_resumen_anual_usa_el_real_cuando_existe_y_el_previsto_en_el_resto_de_me
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     assert len(resumen.filas_gastos) == 1
@@ -266,34 +279,40 @@ def test_resumen_anual_un_concepto_recien_creado_no_esta_cancelado() -> None:
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     assert resumen.filas_gastos[0].cancelado is False
 
 
-def test_resumen_anual_refleja_el_cancelado_marcado_por_el_usuario_en_el_concepto() -> None:
+def test_resumen_anual_refleja_el_cancelado_marcado_por_el_usuario_para_ese_anio() -> None:
     repo_previsiones, repo_categorias, repo_movimientos, repo_cuentas, repo_ajustes, categoria = (
         _preparar()
     )
+    repo_cancelados = RepositorioConceptosCanceladosFalso()
     concepto = CrearConceptoPrevisto(repo_previsiones, repo_categorias).ejecutar(
         categoria_id=categoria.id,
         subcategoria_id=None,
         periodicidad="mensual",
         importe_previsto=Decimal("-9.99"),
     )
-    concepto.cancelado = True
-    repo_previsiones.actualizar(concepto)
+    repo_cancelados.establecer(concepto.id, 2026, True)
 
-    resumen = ObtenerResumenAnual(
-        repo_previsiones,
-        repo_categorias,
-        repo_movimientos,
-        repo_ajustes,
-        RepositorioAsociacionesFalso(),
-        RepositorioAsociacionesDescripcionFalso(),
-    ).ejecutar(2026)
+    def resumen_de(anio: int):
+        return ObtenerResumenAnual(
+            repo_previsiones,
+            repo_categorias,
+            repo_movimientos,
+            repo_ajustes,
+            RepositorioAsociacionesFalso(),
+            RepositorioAsociacionesDescripcionFalso(),
+            repo_cancelados,
+        ).ejecutar(anio)
 
-    assert resumen.filas_gastos[0].cancelado is True
+    assert resumen_de(2026).filas_gastos[0].cancelado is True
+    # El mismo concepto, visto en otro año, no está cancelado: la marca es
+    # por (concepto, año), no global al concepto.
+    assert resumen_de(2025).filas_gastos[0].cancelado is False
 
 
 def test_resumen_anual_con_asociacion_busca_el_real_en_la_categoria_de_movimientos_mapeada() -> (
@@ -338,6 +357,7 @@ def test_resumen_anual_con_asociacion_busca_el_real_en_la_categoria_de_movimient
         repo_ajustes,
         repo_asociaciones,
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -374,6 +394,7 @@ def test_resumen_anual_sin_asociacion_no_encuentra_el_real_de_otra_categoria() -
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -439,6 +460,7 @@ def test_resumen_anual_con_asociacion_descripcion_suma_el_real_al_de_la_categori
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -494,6 +516,7 @@ def test_resumen_anual_no_duplica_un_movimiento_que_coincide_con_dos_asociacione
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -544,6 +567,7 @@ def test_resumen_anual_no_duplica_un_movimiento_que_coincide_por_categoria_y_por
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -598,6 +622,7 @@ def test_resumen_anual_con_asociacion_de_categoria_no_duplica_un_movimiento_que_
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -643,6 +668,7 @@ def test_resumen_anual_con_asociacion_descripcion_sin_categoria_asociada_encuent
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -668,6 +694,7 @@ def test_resumen_anual_concepto_anual_solo_aparece_en_su_mes() -> None:
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -698,6 +725,7 @@ def test_resumen_anual_separa_gastos_e_ingresos_por_el_signo() -> None:
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     assert len(resumen.filas_gastos) == 1
@@ -821,6 +849,7 @@ def test_resumen_anual_un_ajuste_tiene_prioridad_sobre_el_real_y_el_previsto() -
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]
@@ -852,6 +881,7 @@ def test_resumen_anual_un_ajuste_en_un_mes_no_aplicable_lo_muestra_igualmente() 
         repo_ajustes,
         RepositorioAsociacionesFalso(),
         RepositorioAsociacionesDescripcionFalso(),
+        RepositorioConceptosCanceladosFalso(),
     ).ejecutar(2026)
 
     fila = resumen.filas_gastos[0]

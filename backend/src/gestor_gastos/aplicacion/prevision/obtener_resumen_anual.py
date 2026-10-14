@@ -8,6 +8,7 @@ from gestor_gastos.dominio.prevision.repositorio import (
     RepositorioAjustesMensuales,
     RepositorioAsociaciones,
     RepositorioAsociacionesDescripcion,
+    RepositorioConceptosCancelados,
     RepositorioPrevisiones,
 )
 from gestor_gastos.dominio.prevision.valores import FilaResumenAnual, ResumenAnual, ValorMensual
@@ -22,6 +23,7 @@ class ObtenerResumenAnual:
         repositorio_ajustes: RepositorioAjustesMensuales,
         repositorio_asociaciones: RepositorioAsociaciones,
         repositorio_asociaciones_descripcion: RepositorioAsociacionesDescripcion,
+        repositorio_cancelados: RepositorioConceptosCancelados,
     ) -> None:
         self._repositorio = repositorio
         self._repositorio_categorias = repositorio_categorias
@@ -29,6 +31,7 @@ class ObtenerResumenAnual:
         self._repositorio_ajustes = repositorio_ajustes
         self._repositorio_asociaciones = repositorio_asociaciones
         self._repositorio_asociaciones_descripcion = repositorio_asociaciones_descripcion
+        self._repositorio_cancelados = repositorio_cancelados
 
     def ejecutar(self, anio: int) -> ResumenAnual:
         conceptos = self._repositorio.listar()
@@ -36,6 +39,9 @@ class ObtenerResumenAnual:
         ajustes = {
             (a.concepto_id, a.mes): a.importe
             for a in self._repositorio_ajustes.listar_por_anio(anio)
+        }
+        conceptos_cancelados_este_anio = {
+            c.concepto_id for c in self._repositorio_cancelados.listar_por_anio(anio)
         }
         # Una asociación hace corresponder la categoría/subcategoría con la
         # que se nombra un concepto en el resumen anual con la categoría/
@@ -128,7 +134,7 @@ class ObtenerResumenAnual:
                 nombre=self._nombre_de(concepto.categoria_id, concepto.subcategoria_id),
                 periodicidad=concepto.periodicidad,
                 valores=valores,
-                cancelado=concepto.cancelado,
+                cancelado=concepto.id in conceptos_cancelados_este_anio,
             )
 
             totales = totales_gastos if concepto.importe_previsto < 0 else totales_ingresos

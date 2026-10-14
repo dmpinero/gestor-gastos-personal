@@ -1,16 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import (
-    Boolean,
-    Date,
-    DateTime,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    UniqueConstraint,
-)
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from gestor_gastos.infraestructura.persistencia.sesion import Base
@@ -89,7 +80,6 @@ class ConceptoPrevistoModelo(Base):
     periodicidad: Mapped[str] = mapped_column(String(20))
     mes_inicio: Mapped[int | None] = mapped_column(Integer)
     importe_previsto: Mapped[Decimal] = mapped_column(Numeric(12, 2))
-    cancelado: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     categoria: Mapped[CategoriaModelo] = relationship()
     subcategoria: Mapped[SubcategoriaModelo | None] = relationship()
@@ -106,6 +96,19 @@ class AjustePrevisionMensualModelo(Base):
     anio: Mapped[int] = mapped_column(Integer)
     mes: Mapped[int] = mapped_column(Integer)
     importe: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+
+    concepto: Mapped[ConceptoPrevistoModelo] = relationship()
+
+
+class ConceptoCanceladoAnioModelo(Base):
+    __tablename__ = "conceptos_previstos_cancelados_anio"
+    __table_args__ = (UniqueConstraint("concepto_id", "anio"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    concepto_id: Mapped[int] = mapped_column(
+        ForeignKey("conceptos_previstos.id", ondelete="CASCADE")
+    )
+    anio: Mapped[int] = mapped_column(Integer)
 
     concepto: Mapped[ConceptoPrevistoModelo] = relationship()
 

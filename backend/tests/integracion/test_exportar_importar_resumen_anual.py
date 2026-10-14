@@ -26,6 +26,9 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociac
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_conceptos_cancelados_sqlalchemy import (  # noqa: E501
+    RepositorioConceptosCanceladosSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimientos_sqlalchemy import (  # noqa: E501
     RepositorioMovimientosSqlAlchemy,
 )
@@ -75,6 +78,7 @@ def test_exportar_e_reimportar_sin_cambios_no_altera_nada(sesion_bd) -> None:
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosSqlAlchemy(sesion_bd),
     )
 
     contenido = ExportarResumenAnualExcel(
@@ -116,6 +120,7 @@ def test_editar_una_celda_del_excel_exportado_y_reimportarlo_crea_un_ajuste(sesi
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosSqlAlchemy(sesion_bd),
     )
     contenido = ExportarResumenAnualExcel(
         obtener_resumen, EscritorExcelResumenAnualOpenpyxl()
@@ -167,6 +172,7 @@ def test_vaciar_en_excel_una_celda_ajustada_y_reimportarlo_revierte_el_ajuste(se
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosSqlAlchemy(sesion_bd),
     )
     ajustar = AjustarValorMensual(repo_previsiones, repo_ajustes)
     eliminar_ajuste = EliminarAjusteMensual(repo_previsiones, repo_ajustes)
@@ -210,6 +216,7 @@ def test_exportar_un_rango_de_anios_editar_celdas_de_ambos_y_reimportar_los_actu
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosSqlAlchemy(sesion_bd),
     )
     anio_siguiente = ANIO + 1
 

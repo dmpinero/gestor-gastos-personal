@@ -374,42 +374,22 @@ function coincideConBusqueda(fila: FilaResumenAnual): boolean {
   ].some((v) => v.toLowerCase().includes(termino))
 }
 
-// Un concepto sin ningún mes con dato real o ajustado en el año no aporta
-// información real que mostrar (solo importe previsto, mes tras mes): se
-// oculta la fila entera para no dejar a la vista conceptos "muertos" en ese
-// año (p. ej. una suscripción que solo tuvo cargos en 2018). El origen
-// "real" con importe 0 no cuenta como actividad real: ObtenerResumenAnual lo
-// usa para marcar meses sin movimientos en los que un concepto no mensual
-// tampoco aplica (mismo criterio que mostrarDetalleMes en TablaResumenAnual).
-function tieneActividadRealEnAnio(fila: FilaResumenAnual): boolean {
-  return fila.valores.some(
-    (valor) =>
-      valor.origen === 'ajustado' || (valor.origen === 'real' && Number(valor.importe) !== 0),
-  )
-}
-
-// Solo se oculta si, además de no tener actividad en el año que se está
-// viendo, el concepto está marcado como cancelado (checkbox "Cancelado" en
-// la propia fila): si no lo está, se muestra siempre, aunque el año que se
-// esté viendo no tenga ningún cargo real todavía (p. ej. un concepto nuevo,
-// o una suscripción vigente cuyo cargo de este año aún no ha llegado).
-function seDebeMostrar(fila: FilaResumenAnual): boolean {
-  return !fila.cancelado || tieneActividadRealEnAnio(fila)
-}
-
+// Un concepto cancelado en este año concreto (checkbox "Cancelado" en la
+// propia fila) no se oculta: TablaResumenAnual lo muestra igual, tachado.
+// La marca es por (concepto, año): no afecta a otros años.
 async function cambiarCancelado(conceptoId: number, cancelado: boolean): Promise<void> {
   await tienda.marcarCancelado(conceptoId, anio.value, cancelado)
 }
 
 const filasGastosFiltradas = computed(() =>
-  (tienda.resumenAnual?.filas_gastos ?? []).filter(seDebeMostrar).filter(coincideConBusqueda),
+  (tienda.resumenAnual?.filas_gastos ?? []).filter(coincideConBusqueda),
 )
 const filasIngresosFiltradas = computed(() =>
-  (tienda.resumenAnual?.filas_ingresos ?? []).filter(seDebeMostrar).filter(coincideConBusqueda),
+  (tienda.resumenAnual?.filas_ingresos ?? []).filter(coincideConBusqueda),
 )
 
-// Al ocultar conceptos sin actividad real, el total ya no puede tomarse tal
-// cual del backend (incluiría el previsto de filas que aquí no se ven): se
+// Al filtrar por búsqueda, el total ya no puede tomarse tal cual del backend
+// (incluiría conceptos que no coinciden con el término buscado): se
 // recalcula siempre a partir de las filas realmente mostradas.
 const totalesGastosMostrados = computed(() => sumarTotalesPorMes(filasGastosFiltradas.value))
 const totalesIngresosMostrados = computed(() => sumarTotalesPorMes(filasIngresosFiltradas.value))

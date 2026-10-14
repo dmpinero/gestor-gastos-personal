@@ -97,8 +97,8 @@ describe('VistaResumenAnual — tour guiado', () => {
   })
 })
 
-describe('VistaResumenAnual — oculta conceptos cancelados sin actividad real en el año', () => {
-  it('no muestra un concepto cancelado cuyos 12 meses son solo previsto, y el total excluye su previsto', async () => {
+describe('VistaResumenAnual — conceptos cancelados', () => {
+  it('un concepto cancelado sigue mostrándose (tachado), no se oculta', async () => {
     const resumen = {
       anio: 2020,
       filas_gastos: [
@@ -153,11 +153,10 @@ describe('VistaResumenAnual — oculta conceptos cancelados sin actividad real e
 
     await vi.waitFor(() => expect(contenedor.text()).toContain('Alquiler'))
 
-    expect(contenedor.text()).not.toContain('Openwebinars')
-    // Total mostrado: solo el real de Alquiler (-500,00), sin el previsto
-    // de Openwebinars (-29,00) que ya no se ve.
+    // Ambos conceptos siguen presentes: cancelar ya no oculta la fila.
+    expect(contenedor.text()).toContain('Openwebinars')
     expect(contenedor.text()).toContain(formatearImporte('-500.00'))
-    expect(contenedor.text()).not.toContain(formatearImporte('-529.00'))
+    expect(contenedor.text()).toContain(formatearImporte('-529.00'))
 
     contenedor.unmount()
   })

@@ -68,6 +68,9 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociac
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_conceptos_cancelados_sqlalchemy import (  # noqa: E501
+    RepositorioConceptosCanceladosSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimientos_sqlalchemy import (  # noqa: E501
     RepositorioMovimientosSqlAlchemy,
 )
@@ -130,6 +133,7 @@ def _construir_obtener_resumen_anual(sesion: Session) -> ObtenerResumenAnual:
         RepositorioAjustesPrevisionSqlAlchemy(sesion),
         RepositorioAsociacionesSqlAlchemy(sesion),
         RepositorioAsociacionesDescripcionSqlAlchemy(sesion),
+        RepositorioConceptosCanceladosSqlAlchemy(sesion),
     )
 
 
@@ -184,19 +188,19 @@ def actualizar(
 
 
 @enrutador.put(
-    "/{id_concepto:int}/cancelado",
-    response_model=ConceptoPrevistoSalidaEsquema,
-    responses=RESPUESTA_NO_ENCONTRADO,
+    "/{id_concepto:int}/cancelado/{anio:int}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={**RESPUESTA_NO_ENCONTRADO, **RESPUESTA_CUERPO_MALFORMADO},
 )
 def marcar_cancelado(
     id_concepto: int,
     datos: ConceptoPrevistoCanceladoEsquema,
+    anio: int = Path(ge=1, le=9999),
     sesion: Session = Depends(obtener_sesion),
-) -> ConceptoPrevistoSalidaEsquema:
-    concepto = MarcarConceptoPrevistoCancelado(RepositorioPrevisionesSqlAlchemy(sesion)).ejecutar(
-        id_concepto, datos.cancelado
-    )
-    return ConceptoPrevistoSalidaEsquema(**asdict(concepto))
+) -> None:
+    MarcarConceptoPrevistoCancelado(
+        RepositorioPrevisionesSqlAlchemy(sesion), RepositorioConceptosCanceladosSqlAlchemy(sesion)
+    ).ejecutar(id_concepto, anio, datos.cancelado)
 
 
 @enrutador.delete(

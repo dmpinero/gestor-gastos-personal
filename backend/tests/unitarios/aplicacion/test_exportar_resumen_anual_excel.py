@@ -15,6 +15,7 @@ from tests.unitarios.aplicacion.dobles import (
     RepositorioAsociacionesDescripcionFalso,
     RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
+    RepositorioConceptosCanceladosFalso,
     RepositorioMovimientosFalso,
     RepositorioPrevisionesFalso,
 )
@@ -41,6 +42,7 @@ def _construir_exportar(escritor: EscritorExcelResumenAnualFalso) -> ExportarRes
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     )
     return ExportarResumenAnualExcel(obtener_resumen, escritor)
 

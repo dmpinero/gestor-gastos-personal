@@ -28,16 +28,65 @@ gestor-gastos-personal/
 
 ## Puesta en marcha (Docker)
 
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-docker compose up -d --build
-```
+Requisito previo: tener [Docker](https://www.docker.com/products/docker-desktop/)
+instalado y en ejecución (incluye Docker Compose). No hace falta instalar
+Python, Node ni MySQL: todo corre dentro de los contenedores.
 
-- Frontend: http://localhost:5173
-- API: http://localhost:8000/api/v1 (documentación interactiva en http://localhost:8000/docs)
-- Comprobación de salud: http://localhost:8000/api/v1/salud
-- Métricas Prometheus: http://localhost:8000/metricas
+1. Clonar el repositorio y situarse en su carpeta raíz:
+
+   ```bash
+   git clone https://github.com/dmpinero/gestor-gastos-personal.git
+   cd gestor-gastos-personal
+   ```
+
+2. Crear los ficheros de configuración a partir de los ejemplos (los valores
+   por defecto ya sirven para evaluar la aplicación en local, no hace falta
+   editarlos):
+
+   ```bash
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
+
+3. Levantar los 3 servicios (MySQL, backend y frontend). La primera vez
+   tarda unos minutos porque construye las imágenes:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. Comprobar que los 3 contenedores están sanos (columna `STATUS` con
+   `(healthy)`; puede tardar hasta medio minuto tras el paso anterior):
+
+   ```bash
+   docker compose ps
+   ```
+
+5. **(Opcional, recomendado para evaluación)** La base de datos empieza
+   vacía. Para explorar la aplicación con un conjunto de datos de ejemplo
+   (cuentas, categorías, ~2 años de movimientos y previsión anual, todo
+   ficticio) en lugar de partir de cero:
+
+   ```bash
+   docker compose exec backend python -m gestor_gastos.scripts.sembrar_datos_demo
+   ```
+
+   El script se niega a ejecutarse si la base de datos ya tiene alguna
+   cuenta creada, así que es seguro incluso si se ejecuta por error dos
+   veces. Para repetirlo desde una base de datos limpia:
+   `docker compose down -v && docker compose up -d --build` (⚠️ esto borra
+   todos los datos del volumen de MySQL).
+
+6. Abrir la aplicación:
+
+   - Frontend: http://localhost:5173
+   - API: http://localhost:8000/api/v1 (documentación interactiva en http://localhost:8000/docs)
+   - Comprobación de salud: http://localhost:8000/api/v1/salud
+   - Métricas Prometheus: http://localhost:8000/metricas
+
+Para detener los contenedores sin perder los datos: `docker compose down`.
+Para arrancarlos de nuevo más tarde: `docker compose up -d` (sin `--build`,
+ya que las imágenes siguen construidas).
 
 ## Desarrollo sin Docker
 

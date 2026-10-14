@@ -13,7 +13,6 @@ def _a_entidad(modelo: ConceptoPrevistoModelo) -> ConceptoPrevisto:
         periodicidad=modelo.periodicidad,
         mes_inicio=modelo.mes_inicio,
         importe_previsto=modelo.importe_previsto,
-        cancelado=modelo.cancelado,
     )
 
 
@@ -28,7 +27,6 @@ class RepositorioPrevisionesSqlAlchemy:
             periodicidad=concepto.periodicidad,
             mes_inicio=concepto.mes_inicio,
             importe_previsto=concepto.importe_previsto,
-            cancelado=concepto.cancelado,
         )
         self._sesion.add(modelo)
         self._sesion.commit()
@@ -49,7 +47,6 @@ class RepositorioPrevisionesSqlAlchemy:
         modelo.periodicidad = concepto.periodicidad
         modelo.mes_inicio = concepto.mes_inicio
         modelo.importe_previsto = concepto.importe_previsto
-        modelo.cancelado = concepto.cancelado
         self._sesion.commit()
         return _a_entidad(modelo)
 

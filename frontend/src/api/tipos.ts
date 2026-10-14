@@ -146,7 +146,6 @@ export interface ConceptoPrevisto {
   periodicidad: Periodicidad
   mes_inicio: number | null
   importe_previsto: string
-  cancelado: boolean
 }
 
 export interface DatosConceptoPrevisto {
@@ -172,11 +171,9 @@ export interface FilaResumenAnual {
   nombre: string
   periodicidad: Periodicidad
   valores: ValorMensual[]
-  // Marca manual del usuario (checkbox "Cancelado" en el resumen anual). Si
-  // es false, nunca se debe ocultar la fila por falta de actividad en el
-  // año que se esté viendo (ver VistaResumenAnual.seDebeMostrar): o un
-  // concepto nuevo, o uno vigente cuyo cargo de este año aún no ha
-  // llegado, se quedarían sin forma de verse/editarse.
+  // Marca manual del usuario para ESTE año concreto (checkbox "Cancelado"
+  // en el resumen anual): no oculta la fila, se muestra tachada. No afecta
+  // a otros años, que mantienen su propio estado (por defecto, false).
   cancelado: boolean
 }
 

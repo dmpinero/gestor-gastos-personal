@@ -22,13 +22,10 @@ class FilaResumenAnual:
     nombre: str
     periodicidad: Periodicidad
     valores: list[ValorMensual]
-    # Marca manual del usuario (ConceptoPrevisto.cancelado). Si es False, el
-    # frontend nunca oculta la fila, aunque el año que se esté viendo no
-    # tenga actividad real: o un concepto nuevo, o uno vigente cuyo cargo de
-    # este año aún no ha llegado (p. ej. una suscripción anual), se quedarían
-    # sin forma de verse/editarse. Solo si es True tiene sentido ocultar la
-    # fila por falta de actividad real en el año concreto que se está viendo
-    # (ver VistaResumenAnual.seDebeMostrar).
+    # Marca manual del usuario para ESTE año concreto (ver
+    # ConceptoCanceladoAnio): no oculta la fila, el frontend la muestra
+    # tachada. No afecta a otros años, que mantienen su propio estado
+    # (por defecto, no cancelado).
     cancelado: bool = False
 
 

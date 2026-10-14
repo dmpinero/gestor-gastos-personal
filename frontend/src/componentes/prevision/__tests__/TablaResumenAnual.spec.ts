@@ -484,6 +484,29 @@ describe('TablaResumenAnual', () => {
     expect(wrapper.find('[role="checkbox"]').attributes('aria-checked')).toBe('true')
   })
 
+  it('un concepto cancelado se tacha, pero sigue mostrándose (no se oculta)', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [{ ...crearFila(), cancelado: true }],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+
+    expect(wrapper.text()).toContain('Amazon Prime')
+    expect(wrapper.findAll('tbody tr')[0]?.classes()).toContain('line-through')
+  })
+
+  it('un concepto no cancelado no lleva la clase de tachado', () => {
+    const wrapper = montar({
+      titulo: 'Gastos',
+      filas: [crearFila()],
+      totales,
+      mensajeVacio: 'Vacío',
+    })
+
+    expect(wrapper.findAll('tbody tr')[0]?.classes()).not.toContain('line-through')
+  })
+
   it('con varios movimientos, el tooltip lista todos con su descripción, y el comentario si lo tienen', async () => {
     const wrapper = montar(
       { titulo: 'Gastos', filas: [crearFila()], totales, mensajeVacio: 'Vacío' },

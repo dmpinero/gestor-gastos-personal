@@ -1,16 +1,21 @@
 from gestor_gastos.dominio.excepciones import EntidadNoEncontradaError
-from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
-from gestor_gastos.dominio.prevision.repositorio import RepositorioPrevisiones
+from gestor_gastos.dominio.prevision.repositorio import (
+    RepositorioConceptosCancelados,
+    RepositorioPrevisiones,
+)
 
 
 class MarcarConceptoPrevistoCancelado:
-    def __init__(self, repositorio: RepositorioPrevisiones) -> None:
+    def __init__(
+        self,
+        repositorio: RepositorioPrevisiones,
+        repositorio_cancelados: RepositorioConceptosCancelados,
+    ) -> None:
         self._repositorio = repositorio
+        self._repositorio_cancelados = repositorio_cancelados
 
-    def ejecutar(self, id_concepto: int, cancelado: bool) -> ConceptoPrevisto:
-        concepto = self._repositorio.obtener_por_id(id_concepto)
-        if concepto is None:
+    def ejecutar(self, id_concepto: int, anio: int, cancelado: bool) -> None:
+        if self._repositorio.obtener_por_id(id_concepto) is None:
             raise EntidadNoEncontradaError(f"No existe el concepto previsto con id {id_concepto}")
 
-        concepto.cancelado = cancelado
-        return self._repositorio.actualizar(concepto)
+        self._repositorio_cancelados.establecer(id_concepto, anio, cancelado)

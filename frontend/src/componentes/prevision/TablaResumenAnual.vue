@@ -271,7 +271,11 @@ function claseCabeceraMes(mes: number): string {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="fila in filasOrdenadas" :key="fila.concepto_id">
+            <TableRow
+              v-for="fila in filasOrdenadas"
+              :key="fila.concepto_id"
+              :class="fila.cancelado ? 'line-through opacity-70' : ''"
+            >
               <TableCell>
                 <TooltipProvider>
                   <Tooltip :delay-duration="300">
@@ -314,7 +318,7 @@ function claseCabeceraMes(mes: number): string {
                   <label
                     :for="`cancelado-${fila.concepto_id}`"
                     class="text-muted-foreground cursor-pointer text-xs"
-                    title="Si lo marcas, este concepto deja de mostrarse en los años sin ningún cargo real. Si no, se sigue mostrando siempre (p. ej. una suscripción vigente cuyo cargo de este año todavía no ha llegado)."
+                    title="Marca este concepto como cancelado solo en este año: se seguirá mostrando, pero tachado. No afecta a otros años."
                   >
                     Cancelado
                   </label>

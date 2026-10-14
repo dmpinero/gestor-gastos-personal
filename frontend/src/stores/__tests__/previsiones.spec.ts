@@ -31,7 +31,6 @@ const conceptoEjemplo = {
   periodicidad: 'mensual' as const,
   mes_inicio: null,
   importe_previsto: '-50.00',
-  cancelado: false,
 }
 
 const resumenEjemplo = {
@@ -166,7 +165,7 @@ describe('useTiendaPrevisiones', () => {
     const tienda = useTiendaPrevisiones()
     await tienda.marcarCancelado(1, 2026, true)
 
-    expect(clienteApi.actualizar).toHaveBeenCalledWith('/previsiones/1/cancelado', {
+    expect(clienteApi.actualizar).toHaveBeenCalledWith('/previsiones/1/cancelado/2026', {
       cancelado: true,
     })
     expect(clienteApi.obtener).toHaveBeenCalledWith('/previsiones/resumen-anual?anio=2026')

@@ -21,6 +21,7 @@ from tests.unitarios.aplicacion.dobles import (
     RepositorioAsociacionesDescripcionFalso,
     RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
+    RepositorioConceptosCanceladosFalso,
     RepositorioCuentasFalso,
     RepositorioMovimientosFalso,
     RepositorioPrevisionesFalso,
@@ -44,6 +45,7 @@ def _preparar():
         repo_ajustes,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        RepositorioConceptosCanceladosFalso(),
     )
     ajustar = AjustarValorMensual(repo_previsiones, repo_ajustes)
     eliminar_ajuste = EliminarAjusteMensual(repo_previsiones, repo_ajustes)

@@ -14,6 +14,7 @@ from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
     AsociacionDescripcion,
+    ConceptoCanceladoAnio,
     ConceptoPrevisto,
 )
 from gestor_gastos.dominio.prevision.valores import (
@@ -393,6 +394,27 @@ class RepositorioAjustesPrevisionFalso:
 
     def listar_todos(self) -> list[AjusteMensual]:
         return list(self._ajustes.values())
+
+
+class RepositorioConceptosCanceladosFalso:
+    """Doble de RepositorioConceptosCancelados en memoria."""
+
+    def __init__(self) -> None:
+        self._cancelados: dict[tuple[int, int], ConceptoCanceladoAnio] = {}
+        self._siguiente_id = 1
+
+    def establecer(self, concepto_id: int, anio: int, cancelado: bool) -> None:
+        clave = (concepto_id, anio)
+        if cancelado and clave not in self._cancelados:
+            self._cancelados[clave] = ConceptoCanceladoAnio(
+                id=self._siguiente_id, concepto_id=concepto_id, anio=anio
+            )
+            self._siguiente_id += 1
+        elif not cancelado:
+            self._cancelados.pop(clave, None)
+
+    def listar_por_anio(self, anio: int) -> list[ConceptoCanceladoAnio]:
+        return [c for c in self._cancelados.values() if c.anio == anio]
 
 
 class RepositorioAsociacionesFalso:

@@ -96,7 +96,7 @@ export const useTiendaPrevisiones = defineStore('previsiones', () => {
     error.value = null
     errorTraza.value = null
     try {
-      await clienteApi.actualizar(`/previsiones/${idConcepto}/cancelado`, { cancelado })
+      await clienteApi.actualizar(`/previsiones/${idConcepto}/cancelado/${anio}`, { cancelado })
       await cargarResumenAnual(anio)
     } catch (motivo) {
       _guardarError(motivo)

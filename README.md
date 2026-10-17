@@ -21,7 +21,7 @@ Aplicación web para llevar el control de gastos personales.
 gestor-gastos-personal/
 ├── backend/    # API FastAPI (dominio, aplicación, infraestructura, interfaces)
 ├── frontend/   # SPA Vue 3
-├── docs/       # ADRs y notas de versión
+├── docs/       # ADRs, manual de usuario y notas de versión
 ├── openspec/   # Specs SDD por funcionalidad
 └── docker-compose.yml
 ```
@@ -87,6 +87,21 @@ Python, Node ni MySQL: todo corre dentro de los contenedores.
 Para detener los contenedores sin perder los datos: `docker compose down`.
 Para arrancarlos de nuevo más tarde: `docker compose up -d` (sin `--build`,
 ya que las imágenes siguen construidas).
+
+## Documentación
+
+Todo vive en [`docs/`](docs/):
+
+- **[Manual de usuario](docs/manual-usuario/README.md)**: una página por
+  cada opción del menú, con capturas, explicando qué hace y qué se puede
+  hacer en cada pantalla (Dashboard, Movimientos, Importar, Historial,
+  Resumen anual, Notificaciones, Gestión y Backup).
+- **[ADRs](docs/adr/)**: decisiones de arquitectura (`docs/adr/0001-...md`,
+  `0002-...md`), con el número de contexto, alternativas consideradas y la
+  decisión final.
+- **[Release notes](docs/release-notes/)**: redacción final en prosa de
+  cada versión publicada (ver [CONTRIBUTING.md](CONTRIBUTING.md#releases)
+  para cómo se generan a partir de los Conventional Commits).
 
 ## Desarrollo sin Docker
 

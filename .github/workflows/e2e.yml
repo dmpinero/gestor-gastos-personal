@@ -53,7 +53,7 @@ jobs:
 
       - name: Publicar informe de Playwright
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: informe-playwright
           path: frontend/playwright-report/

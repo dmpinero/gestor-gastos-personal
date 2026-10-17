@@ -94,8 +94,8 @@ importers:
         specifier: ^10.1.8
         version: 10.1.8(eslint@10.8.1(jiti@2.7.0))
       eslint-plugin-oxlint:
-        specifier: ~1.73.0
-        version: 1.73.0(oxlint@1.74.0)
+        specifier: ~1.88.0
+        version: 1.88.0(oxlint@1.74.0)
       eslint-plugin-playwright:
         specifier: ^2.10.5
         version: 2.11.0(eslint@10.8.1(jiti@2.7.0))
@@ -1458,10 +1458,10 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-plugin-oxlint@1.73.0:
-    resolution: {integrity: sha512-2qsGYkwpas99+jLmB7F3W8Gv+7QkHIr67AMw10UTs/QAMCm2eO0Z8B8ROMvAgyKaWIitkcvH8DwLfTrHMeXzCw==}
+  eslint-plugin-oxlint@1.88.0:
+    resolution: {integrity: sha512-5njQn7i07e3mTMzoj4acolSZZXqnd3H1S3JcV8lUJfpavoB2UvRKNiq9fZXYFLY4iHvsckUK2yQxnJn44ImjnA==}
     peerDependencies:
-      oxlint: ~1.73.0
+      oxlint: ~1.88.0
 
   eslint-plugin-playwright@2.11.0:
     resolution: {integrity: sha512-zOIEYyv1TSn2izXkyg/yj0LXc4YBQI6pl3xIFWwMCcXt/dgQCz8dBqXiXFMoM3xc/GqZThAtaGYo8aPu/vBd+Q==}
@@ -2633,6 +2633,7 @@ packages:
     engines: {node: '>=v14.21.3'}
     peerDependencies:
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
+      vue: '*'
 
   vite-plugin-vue-inspector@6.0.0:
     resolution: {integrity: sha512-OpyITJLgZNibxlrik1EmRtvXHDjLRxNPsWkGFTERZs2LgMEdG4W0WoFt5GIgp3a3jRou+eJR8U1zOBk/XQgEbw==}
@@ -4163,7 +4164,7 @@ snapshots:
     dependencies:
       eslint: 10.8.1(jiti@2.7.0)
 
-  eslint-plugin-oxlint@1.73.0(oxlint@1.74.0):
+  eslint-plugin-oxlint@1.88.0(oxlint@1.74.0):
     dependencies:
       jsonc-parser: 3.3.1
       oxlint: 1.74.0
@@ -5266,10 +5267,10 @@ snapshots:
       vite: 8.2.1(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)
       vite-plugin-inspect: 11.4.1(vite@8.2.1(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
       vite-plugin-vue-inspector: 6.0.0(vite@8.2.1(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
+      vue: 3.5.41(typescript@6.0.3)
     transitivePeerDependencies:
       - '@nuxt/kit'
       - supports-color
-      - vue
 
   vite-plugin-vue-inspector@6.0.0(vite@8.2.1(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)):
     dependencies:

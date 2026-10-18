@@ -15,7 +15,16 @@ RUN pnpm build
 
 FROM nginx:alpine AS produccion
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# URL_BACKEND se sustituye en nginx.conf.template al arrancar el contenedor
+# (envsubst, soportado de forma nativa por la imagen oficial de nginx para
+# cualquier fichero en /etc/nginx/templates/). El valor por defecto es el
+# que resuelve dentro de la red de docker-compose; en despliegues donde
+# backend y frontend no comparten red (p. ej. Render, cada uno como
+# servicio independiente) hay que sobreescribirla con la URL pública real
+# del backend.
+ENV URL_BACKEND=http://backend:8000
+
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=construccion /aplicacion/dist /usr/share/nginx/html
 
 EXPOSE 80

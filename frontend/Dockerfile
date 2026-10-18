@@ -24,6 +24,12 @@ FROM nginx:alpine AS produccion
 # del backend.
 ENV URL_BACKEND=http://backend:8000
 
+# Puerto en el que escucha nginx dentro del contenedor. Por defecto 80 (el
+# que mapea docker-compose.yml); en plataformas que asignan el puerto
+# dinamicamente e inyectan su propia variable PORT (p. ej. Railway), esta
+# la sobreescribe automaticamente sin tocar nada mas.
+ENV PORT=80
+
 # Activa el script de arranque que detecta el/los resolver(es) DNS locales
 # del contenedor (desde /etc/resolv.conf) y los expone como
 # NGINX_LOCAL_RESOLVERS, usado en nginx.conf.template para resolver el

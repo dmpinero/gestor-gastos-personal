@@ -1,4 +1,4 @@
-FROM node:24-slim AS construccion
+FROM node:26-slim AS construccion
 
 RUN corepack enable
 

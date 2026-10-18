@@ -46,6 +46,8 @@ services:
     build:
       context: ./frontend
     restart: unless-stopped
+    environment:
+      URL_BACKEND: http://backend:8000
     ports:
       - "5173:80"
     depends_on:

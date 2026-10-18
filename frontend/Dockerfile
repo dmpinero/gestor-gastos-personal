@@ -1,6 +1,9 @@
 FROM node:26-slim AS construccion
 
-RUN corepack enable
+# Node ya no incluye corepack preinstalado desde esta version (ver
+# https://github.com/nodejs/corepack); hay que instalarlo explicitamente
+# antes de poder activarlo.
+RUN npm install -g corepack@latest && corepack enable
 
 WORKDIR /aplicacion
 

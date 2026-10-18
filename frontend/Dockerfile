@@ -24,6 +24,12 @@ FROM nginx:alpine AS produccion
 # del backend.
 ENV URL_BACKEND=http://backend:8000
 
+# Activa el script de arranque que detecta el/los resolver(es) DNS locales
+# del contenedor (desde /etc/resolv.conf) y los expone como
+# NGINX_LOCAL_RESOLVERS, usado en nginx.conf.template para resolver el
+# backend de forma dinamica en vez de una sola vez al arrancar.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=construccion /aplicacion/dist /usr/share/nginx/html
 

@@ -20,12 +20,18 @@ describe('formatearFecha', () => {
 
 describe('formatearImporte', () => {
   it('formatea un importe positivo con el símbolo € al final', () => {
-    expect(formatearImporte('1500.00')).toContain('1500,00')
+    expect(formatearImporte('1500.00')).toContain('1.500,00')
     expect(formatearImporte('1500.00')).toContain('€')
   })
 
   it('formatea un importe negativo conservando el signo', () => {
     expect(formatearImporte('-30.00')).toContain('-30,00')
+  })
+
+  it('separa los millares también entre 1.000 y 9.999,99', () => {
+    // Regresión: sin useGrouping: 'always', el motor (Node y Chrome
+    // observados) deja de agrupar por millares justo en este rango.
+    expect(formatearImporte('1766.61')).toBe('1.766,61 €')
   })
 })
 

@@ -1,6 +1,13 @@
+// useGrouping: 'always' es necesario de forma explícita porque, sin él, el
+// motor (Node y Chrome observados) deja de agrupar por millares justo entre
+// 1.000 y 9.999,99 (p. ej. 1766.61 -> "1766,61 €" en vez de "1.766,61 €"),
+// pese a que el valor por defecto de la propia especificación ECMA-402 ya
+// es "auto" (equivalente a agrupar siempre salvo "compact"): es un fallo del
+// motor con el locale es-ES + style "currency", no de esta función.
 const formateadorImporte = new Intl.NumberFormat('es-ES', {
   style: 'currency',
   currency: 'EUR',
+  useGrouping: true,
 })
 
 export function formatearImporte(importe: string | number): string {

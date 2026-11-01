@@ -9,6 +9,7 @@ export default mergeConfig(
       environment: 'jsdom',
       exclude: [...configDefaults.exclude, 'e2e/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
+      setupFiles: ['./vitest.setup.ts'],
       // 'forks' (el pool por defecto) no arranca de forma fiable en algunos
       // entornos Windows; 'threads' es igual de aislado para nuestros tests.
       pool: 'threads',

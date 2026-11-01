@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import { Plus } from '@lucide/vue'
 import { computed, ref } from 'vue'
 
 import { useTiendaCategorias } from '@/stores/categorias'
 import { Button } from '@/componentes/ui/button'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from '@/componentes/ui/combobox'
 import {
   Dialog,
   DialogContent,
@@ -11,14 +20,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/componentes/ui/dialog'
+import { Input } from '@/componentes/ui/input'
 import { Label } from '@/componentes/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/componentes/ui/select'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/componentes/ui/sheet'
 
 const props = defineProps<{ cantidad: number }>()
 const emit = defineEmits<{ confirmar: [categoriaId: number, subcategoriaId: number | null] }>()
@@ -54,6 +58,22 @@ const subcategoriasDeLaCategoria = computed(() => {
   return categoria?.subcategorias ?? []
 })
 
+function mostrarCategoria(valor: string): string {
+  return (
+    tiendaCategorias.categorias.find((c) => c.categoria.id === Number(valor))?.categoria.nombre ??
+    ''
+  )
+}
+
+function mostrarSubcategoria(valor: string): string {
+  if (valor === SIN_SUBCATEGORIA) return '(sin subcategoría)'
+  for (const c of tiendaCategorias.categorias) {
+    const sub = c.subcategorias.find((s) => s.id === Number(valor))
+    if (sub) return sub.nombre
+  }
+  return ''
+}
+
 function confirmar(): void {
   emit('confirmar', categoriaId.value, subcategoriaId.value)
   abierto.value = false
@@ -61,7 +81,56 @@ function confirmar(): void {
   subcategoriaId.value = null
 }
 
-// La interacción real con los Select (Reka UI) es frágil en jsdom; se
+// Mismo patrón que PanelEdicionMovimiento.vue: crear categoría/subcategoría
+// sin salir del diálogo de recategorización en bloque.
+const panelCrearCategoriaAbierto = ref(false)
+const nombreNuevaCategoria = ref('')
+const errorCrearCategoria = ref<string | null>(null)
+
+function abrirCrearCategoria(): void {
+  nombreNuevaCategoria.value = ''
+  errorCrearCategoria.value = null
+  panelCrearCategoriaAbierto.value = true
+}
+
+async function crearCategoriaNueva(): Promise<void> {
+  errorCrearCategoria.value = null
+  try {
+    const categoria = await tiendaCategorias.crearCategoria(nombreNuevaCategoria.value)
+    categoriaTexto.value = String(categoria.id)
+    panelCrearCategoriaAbierto.value = false
+  } catch (motivo) {
+    errorCrearCategoria.value = (motivo as Error).message
+  }
+}
+
+const nombreCategoriaActual = computed(() => mostrarCategoria(String(categoriaId.value)))
+
+const panelCrearSubcategoriaAbierto = ref(false)
+const nombreNuevaSubcategoria = ref('')
+const errorCrearSubcategoria = ref<string | null>(null)
+
+function abrirCrearSubcategoria(): void {
+  nombreNuevaSubcategoria.value = ''
+  errorCrearSubcategoria.value = null
+  panelCrearSubcategoriaAbierto.value = true
+}
+
+async function crearSubcategoriaNueva(): Promise<void> {
+  errorCrearSubcategoria.value = null
+  try {
+    const subcategoria = await tiendaCategorias.crearSubcategoria(
+      categoriaId.value,
+      nombreNuevaSubcategoria.value,
+    )
+    subcategoriaTexto.value = String(subcategoria.id)
+    panelCrearSubcategoriaAbierto.value = false
+  } catch (motivo) {
+    errorCrearSubcategoria.value = (motivo as Error).message
+  }
+}
+
+// La interacción real con los Combobox (Reka UI) es frágil en jsdom; se
 // exponen los proxies para que los tests fijen la elección directamente,
 // dejando la interacción real con el desplegable cubierta por el E2E.
 defineExpose({ categoriaTexto, subcategoriaTexto })
@@ -84,45 +153,76 @@ defineExpose({ categoriaTexto, subcategoriaTexto })
 
       <div class="flex flex-col gap-1.5">
         <Label id="etiqueta-categoria-masiva" for="selector-categoria-masiva">Categoría</Label>
-        <Select v-model="categoriaTexto">
-          <SelectTrigger
-            id="selector-categoria-masiva"
-            aria-labelledby="etiqueta-categoria-masiva"
-            class="w-full"
+        <div class="flex gap-2">
+          <Combobox v-model="categoriaTexto" open-on-click open-on-focus>
+            <ComboboxTrigger class="w-full">
+              <ComboboxInput
+                id="selector-categoria-masiva"
+                aria-labelledby="etiqueta-categoria-masiva"
+                placeholder="Selecciona o escribe para buscar"
+                :display-value="mostrarCategoria"
+              />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+              <ComboboxItem
+                v-for="c in tiendaCategorias.categorias"
+                :key="c.categoria.id"
+                :value="String(c.categoria.id)"
+              >
+                {{ c.categoria.nombre }}
+              </ComboboxItem>
+            </ComboboxContent>
+          </Combobox>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Crear categoría"
+            @click="abrirCrearCategoria"
           >
-            <SelectValue placeholder="Selecciona una categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="c in tiendaCategorias.categorias"
-              :key="c.categoria.id"
-              :value="String(c.categoria.id)"
-            >
-              {{ c.categoria.nombre }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+            <Plus class="size-4" />
+          </Button>
+        </div>
       </div>
 
       <div class="flex flex-col gap-1.5">
         <Label id="etiqueta-subcategoria-masiva" for="selector-subcategoria-masiva"
           >Subcategoría</Label
         >
-        <Select v-model="subcategoriaTexto" :disabled="categoriaId === 0">
-          <SelectTrigger
-            id="selector-subcategoria-masiva"
-            aria-labelledby="etiqueta-subcategoria-masiva"
-            class="w-full"
+        <div class="flex gap-2">
+          <Combobox v-model="subcategoriaTexto" open-on-click open-on-focus>
+            <ComboboxTrigger class="w-full">
+              <ComboboxInput
+                id="selector-subcategoria-masiva"
+                aria-labelledby="etiqueta-subcategoria-masiva"
+                placeholder="Selecciona o escribe para buscar"
+                :display-value="mostrarSubcategoria"
+              />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+              <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+              <ComboboxItem
+                v-for="s in subcategoriasDeLaCategoria"
+                :key="s.id"
+                :value="String(s.id)"
+              >
+                {{ s.nombre }}
+              </ComboboxItem>
+            </ComboboxContent>
+          </Combobox>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Crear subcategoría"
+            :disabled="categoriaId === 0"
+            @click="abrirCrearSubcategoria"
           >
-            <SelectValue placeholder="(sin subcategoría)" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-            <SelectItem v-for="s in subcategoriasDeLaCategoria" :key="s.id" :value="String(s.id)">
-              {{ s.nombre }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+            <Plus class="size-4" />
+          </Button>
+        </div>
       </div>
 
       <DialogFooter>
@@ -132,4 +232,66 @@ defineExpose({ categoriaTexto, subcategoriaTexto })
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <Sheet v-model:open="panelCrearCategoriaAbierto">
+    <SheetContent>
+      <SheetHeader>
+        <SheetTitle>Crear categoría</SheetTitle>
+      </SheetHeader>
+
+      <form class="flex flex-col gap-3 px-4" @submit.prevent="crearCategoriaNueva">
+        <div class="flex flex-col gap-1.5">
+          <Label for="nombre-nueva-categoria-masiva">Nombre</Label>
+          <Input
+            id="nombre-nueva-categoria-masiva"
+            v-model="nombreNuevaCategoria"
+            placeholder="Nueva categoría"
+            required
+          />
+        </div>
+
+        <p v-if="errorCrearCategoria" class="text-sm text-destructive" role="alert">
+          {{ errorCrearCategoria }}
+        </p>
+
+        <div class="flex gap-2">
+          <Button type="submit" variant="success">Crear categoría</Button>
+          <Button type="button" variant="destructive" @click="panelCrearCategoriaAbierto = false"
+            >Cancelar</Button
+          >
+        </div>
+      </form>
+    </SheetContent>
+  </Sheet>
+
+  <Sheet v-model:open="panelCrearSubcategoriaAbierto">
+    <SheetContent>
+      <SheetHeader>
+        <SheetTitle>Nueva subcategoría en "{{ nombreCategoriaActual }}"</SheetTitle>
+      </SheetHeader>
+
+      <form class="flex flex-col gap-3 px-4" @submit.prevent="crearSubcategoriaNueva">
+        <div class="flex flex-col gap-1.5">
+          <Label for="nombre-nueva-subcategoria-masiva">Nombre</Label>
+          <Input
+            id="nombre-nueva-subcategoria-masiva"
+            v-model="nombreNuevaSubcategoria"
+            placeholder="Nueva subcategoría"
+            required
+          />
+        </div>
+
+        <p v-if="errorCrearSubcategoria" class="text-sm text-destructive" role="alert">
+          {{ errorCrearSubcategoria }}
+        </p>
+
+        <div class="flex gap-2">
+          <Button type="submit" variant="success">Crear subcategoría</Button>
+          <Button type="button" variant="destructive" @click="panelCrearSubcategoriaAbierto = false"
+            >Cancelar</Button
+          >
+        </div>
+      </form>
+    </SheetContent>
+  </Sheet>
 </template>

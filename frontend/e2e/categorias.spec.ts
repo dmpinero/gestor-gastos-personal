@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('gestión de categoría y subcategoría', async ({ page }) => {
   const nombreCategoria = `Categoria E2E ${Date.now()}`
@@ -119,17 +119,17 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
   await tarjetaOrigen.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaOrigen.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoriaOrigen,
   )
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Subcategoría', { exact: true }),
     nombreSubcategoria,
@@ -149,7 +149,7 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
   await panelSubcategoria
     .getByPlaceholder('Nombre de la subcategoría')
     .fill(nombreSubcategoriaEditada)
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelSubcategoria.getByLabel('Categoría', { exact: true }),
     nombreCategoriaDestino,
@@ -159,7 +159,7 @@ test('editar una subcategoría cambia su nombre y su categoría, actualizando lo
   await expect(tarjetaOrigen.locator('li', { hasText: nombreSubcategoriaEditada })).toHaveCount(0)
   await expect(tarjetaDestino.locator('li', { hasText: nombreSubcategoriaEditada })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   const filaMovimiento = page.locator('tr', { hasText: descripcionMovimiento })
   await expect(filaMovimiento).toContainText(nombreCategoriaDestino)
@@ -292,17 +292,17 @@ test('eliminar una subcategoría con movimientos asociados la borra en cascada a
   await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoria,
   )
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Subcategoría', { exact: true }),
     nombreSubcategoria,
@@ -352,12 +352,12 @@ test('eliminar una categoría con subcategorías y movimientos asociados los bor
   await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoria,

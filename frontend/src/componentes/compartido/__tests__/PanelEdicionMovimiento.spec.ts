@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import type { Movimiento } from '@/api/tipos'
+import { useTiendaAdjuntos } from '@/stores/adjuntos'
 import { useTiendaCategorias } from '@/stores/categorias'
 import { useTiendaCuentas } from '@/stores/cuentas'
 import { useTiendaMovimientos } from '@/stores/movimientos'
@@ -42,6 +43,11 @@ function montar() {
     },
   ]
   const tiendaMovimientos = useTiendaMovimientos()
+  // SeccionAdjuntosMovimiento pide sus adjuntos nada más montarse al editar
+  // (ver abrirParaEditar); sin este espía, esa petición real fallaría en el
+  // entorno de test y su propio role="alert" contaminaría las aserciones de
+  // estos tests, que buscan el error del formulario principal.
+  vi.spyOn(useTiendaAdjuntos(), 'cargarDeMovimiento').mockResolvedValue()
   const wrapper = mount(PanelEdicionMovimiento, {
     attachTo: document.body,
     global: { plugins: [pinia] },
@@ -188,8 +194,12 @@ describe('PanelEdicionMovimiento', () => {
     await enviarFormularioDe('nombre-nueva-categoria')
 
     expect(espia).toHaveBeenCalledWith('Salud')
-    expect(document.body.querySelector('#selector-categoria')?.textContent).toContain('Salud')
-    expect(document.body.querySelector('#selector-subcategoria')?.textContent).not.toContain('Cine')
+    expect(
+      (document.body.querySelector('#selector-categoria') as HTMLInputElement).value,
+    ).toContain('Salud')
+    expect(
+      (document.body.querySelector('#selector-subcategoria') as HTMLInputElement).value,
+    ).not.toContain('Cine')
     expect(
       document.body.querySelectorAll('[data-slot="sheet-content"][data-state="open"]'),
     ).toHaveLength(1)
@@ -219,7 +229,9 @@ describe('PanelEdicionMovimiento', () => {
     await enviarFormularioDe('nombre-nueva-subcategoria')
 
     expect(espia).toHaveBeenCalledWith(100, 'Teatro')
-    expect(document.body.querySelector('#selector-subcategoria')?.textContent).toContain('Teatro')
+    expect(
+      (document.body.querySelector('#selector-subcategoria') as HTMLInputElement).value,
+    ).toContain('Teatro')
     expect(
       document.body.querySelectorAll('[data-slot="sheet-content"][data-state="open"]'),
     ).toHaveLength(1)

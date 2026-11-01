@@ -4,6 +4,7 @@ from gestor_gastos.dominio.prevision.entidades import (
     AjusteMensual,
     AsociacionConcepto,
     AsociacionDescripcion,
+    ConceptoCanceladoAnio,
     ConceptoPrevisto,
 )
 
@@ -42,6 +43,18 @@ class RepositorioAjustesMensuales(Protocol):
     def listar_por_anio(self, anio: int) -> list[AjusteMensual]: ...
 
     def listar_todos(self) -> list[AjusteMensual]: ...
+
+
+class RepositorioConceptosCancelados(Protocol):
+    """Puerto de persistencia para ConceptoCanceladoAnio."""
+
+    def establecer(self, concepto_id: int, anio: int, cancelado: bool) -> None:
+        """cancelado=True crea la marca (concepto_id, anio) si no existía;
+        cancelado=False la quita si existía. Ambas operaciones son
+        idempotentes."""
+        ...
+
+    def listar_por_anio(self, anio: int) -> list[ConceptoCanceladoAnio]: ...
 
 
 class RepositorioAsociaciones(Protocol):

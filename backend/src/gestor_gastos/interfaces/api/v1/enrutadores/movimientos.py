@@ -1,12 +1,23 @@
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.movimiento.actualizar_movimiento import ActualizarMovimiento
 from gestor_gastos.aplicacion.movimiento.crear_movimiento import CrearMovimiento
 from gestor_gastos.aplicacion.movimiento.eliminar_movimiento import EliminarMovimiento
 from gestor_gastos.aplicacion.movimiento.listar_movimientos import ListarMovimientos
+from gestor_gastos.configuracion import obtener_configuracion
+from gestor_gastos.infraestructura.almacenamiento.almacen_adjuntos_filesystem import (
+    AlmacenAdjuntosFilesystem,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_adjuntos_sqlalchemy import (  # noqa: E501
+    RepositorioAdjuntosSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_categorias_sqlalchemy import (  # noqa: E501
     RepositorioCategoriasSqlAlchemy,
 )
@@ -91,4 +102,8 @@ def actualizar(
     responses=RESPUESTA_NO_ENCONTRADO,
 )
 def eliminar(id_movimiento: int, sesion: Session = Depends(obtener_sesion)) -> None:
-    EliminarMovimiento(RepositorioMovimientosSqlAlchemy(sesion)).ejecutar(id_movimiento)
+    almacen = AlmacenAdjuntosFilesystem(Path(obtener_configuracion().ruta_adjuntos))
+    eliminar_adjuntos = EliminarAdjuntosDeMovimiento(RepositorioAdjuntosSqlAlchemy(sesion), almacen)
+    EliminarMovimiento(RepositorioMovimientosSqlAlchemy(sesion), eliminar_adjuntos).ejecutar(
+        id_movimiento
+    )

@@ -8,23 +8,18 @@ const router = useRouter()
 
 const pestanas = [
   {
-    nombre: 'administracion-backup',
-    ruta: '/administracion/backup',
+    nombre: 'backup-realizar',
+    ruta: '/backup/realizar',
     etiqueta: 'Realizar backup',
   },
   {
-    nombre: 'administracion-importar-backup',
-    ruta: '/administracion/importar-backup',
+    nombre: 'backup-importar',
+    ruta: '/backup/importar',
     etiqueta: 'Importar backup',
-  },
-  {
-    nombre: 'administracion-gestion-conceptos',
-    ruta: '/administracion/gestion-conceptos',
-    etiqueta: 'Gestión de conceptos',
   },
 ]
 
-const PESTANA_POR_DEFECTO = 'administracion-backup'
+const PESTANA_POR_DEFECTO = 'backup-realizar'
 
 const pestanaActiva = computed<string>({
   get: () => (typeof ruta.name === 'string' ? ruta.name : PESTANA_POR_DEFECTO),
@@ -37,7 +32,7 @@ const pestanaActiva = computed<string>({
 
 <template>
   <section>
-    <h2 class="text-xl font-semibold">Administración</h2>
+    <h2 class="text-xl font-semibold">Backup</h2>
 
     <Tabs v-model="pestanaActiva" class="mt-4">
       <TabsList>

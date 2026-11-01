@@ -73,3 +73,20 @@ subcategorías.
 - Dado que la categoría "Otros ingresos" no tiene ninguna subcategoría
 - Cuando se consulta el listado jerárquico
 - Entonces "Otros ingresos" aparece con una lista de subcategorías vacía
+
+### Requisito: Alta de categoría o subcategoría al recategorizar movimientos en bloque
+
+Al cambiar la categoría de varios movimientos seleccionados a la vez, el
+sistema DEBE permitir dar de alta una categoría o subcategoría nueva sin
+cerrar el diálogo, dejándola elegida para aplicarla directamente a los
+movimientos seleccionados.
+
+#### Escenario: Crear una categoría nueva desde el diálogo de recategorización en bloque
+- Dado que la persona usuaria tiene varios movimientos seleccionados y ha abierto "Cambiar categoría"
+- Cuando pulsa el botón de crear categoría, indica un nombre y confirma
+- Entonces la categoría nueva queda elegida en el diálogo, lista para aplicarse con "Aplicar"
+
+#### Escenario: El botón de crear subcategoría requiere una categoría ya elegida
+- Dado que el diálogo de recategorización en bloque está abierto sin ninguna categoría elegida
+- Cuando la persona usuaria mira el botón de crear subcategoría
+- Entonces el botón aparece deshabilitado hasta que se elija una categoría

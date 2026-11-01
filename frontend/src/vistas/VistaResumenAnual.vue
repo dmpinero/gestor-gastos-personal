@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert, Download, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
+import { CircleAlert, Download, Link2, Plus, RefreshCw, Search, Upload } from '@lucide/vue'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { DriveStep } from 'driver.js'
 
@@ -30,6 +30,14 @@ import {
   AlertDialogTrigger,
 } from '@/componentes/ui/alert-dialog'
 import { Button } from '@/componentes/ui/button'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxTrigger,
+} from '@/componentes/ui/combobox'
 import {
   Dialog,
   DialogContent,
@@ -73,6 +81,12 @@ const anio = ref(new Date().getFullYear())
 function cargarResumen(): void {
   tienda.cargarResumenAnual(anio.value)
 }
+
+const SIN_MES_DESTACADO = 'ninguno'
+const mesDestacadoStr = ref(SIN_MES_DESTACADO)
+const mesDestacado = computed<number | null>(() =>
+  mesDestacadoStr.value === SIN_MES_DESTACADO ? null : Number(mesDestacadoStr.value),
+)
 
 onMounted(() => {
   tiendaCategorias.cargar()
@@ -349,6 +363,14 @@ function nombreSubcategoria(idSubcategoria: number | null): string {
   return ''
 }
 
+function mostrarCategoria(valor: string): string {
+  return nombreCategoria(Number(valor))
+}
+
+function mostrarSubcategoria(valor: string): string {
+  return valor === SIN_SUBCATEGORIA ? '(sin subcategoría)' : nombreSubcategoria(Number(valor))
+}
+
 const busqueda = ref('')
 
 function coincideConBusqueda(fila: FilaResumenAnual): boolean {
@@ -361,6 +383,13 @@ function coincideConBusqueda(fila: FilaResumenAnual): boolean {
   ].some((v) => v.toLowerCase().includes(termino))
 }
 
+// Un concepto cancelado en este año concreto (checkbox "Cancelado" en la
+// propia fila) no se oculta: TablaResumenAnual lo muestra igual, tachado.
+// La marca es por (concepto, año): no afecta a otros años.
+async function cambiarCancelado(conceptoId: number, cancelado: boolean): Promise<void> {
+  await tienda.marcarCancelado(conceptoId, anio.value, cancelado)
+}
+
 const filasGastosFiltradas = computed(() =>
   (tienda.resumenAnual?.filas_gastos ?? []).filter(coincideConBusqueda),
 )
@@ -368,21 +397,24 @@ const filasIngresosFiltradas = computed(() =>
   (tienda.resumenAnual?.filas_ingresos ?? []).filter(coincideConBusqueda),
 )
 
-const totalesGastosMostrados = computed(() =>
-  busqueda.value.trim() === ''
-    ? (tienda.resumenAnual?.totales_gastos ?? [])
-    : sumarTotalesPorMes(filasGastosFiltradas.value),
-)
-const totalesIngresosMostrados = computed(() =>
-  busqueda.value.trim() === ''
-    ? (tienda.resumenAnual?.totales_ingresos ?? [])
-    : sumarTotalesPorMes(filasIngresosFiltradas.value),
-)
+// Al filtrar por búsqueda, el total ya no puede tomarse tal cual del backend
+// (incluiría conceptos que no coinciden con el término buscado): se
+// recalcula siempre a partir de las filas realmente mostradas.
+const totalesGastosMostrados = computed(() => sumarTotalesPorMes(filasGastosFiltradas.value))
+const totalesIngresosMostrados = computed(() => sumarTotalesPorMes(filasIngresosFiltradas.value))
 
 const agrupadoPorCategoria = ref(false)
 
 function pasosTour(): DriveStep[] {
   return [
+    {
+      element: '[data-tour="resumen-anual-asociar-conceptos"]',
+      popover: {
+        title: 'Asociar conceptos',
+        description:
+          'Lleva a Gestión, donde puedes asociar cada concepto previsto con la categoría o descripción real de tus movimientos.',
+      },
+    },
     {
       element: '[data-tour="resumen-anual-importar"]',
       popover: {
@@ -422,6 +454,14 @@ function pasosTour(): DriveStep[] {
       },
     },
     {
+      element: '[data-tour="resumen-anual-destacar-mes"]',
+      popover: {
+        title: 'Destacar mes',
+        description:
+          'Elige un mes para resaltar su columna en las tablas y centrarte en los gastos de ese mes.',
+      },
+    },
+    {
       element: '[data-tour="resumen-anual-buscar"]',
       popover: {
         title: 'Buscar',
@@ -454,6 +494,12 @@ useRegistrarTourPagina({ pasos: pasosTour })
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 class="text-xl font-semibold">Resumen anual</h2>
       <div class="flex gap-2">
+        <Button variant="outline" as-child data-tour="resumen-anual-asociar-conceptos">
+          <RouterLink to="/gestion/conceptos">
+            <Link2 class="size-4" />
+            Asociar conceptos
+          </RouterLink>
+        </Button>
         <Button variant="outline" data-tour="resumen-anual-importar" @click="abrirImportar">
           <Upload class="size-4" />
           Importar Excel
@@ -502,6 +548,25 @@ useRegistrarTourPagina({ pasos: pasosTour })
         <Input id="anio-resumen" v-model.number="anio" type="number" />
       </div>
 
+      <div class="flex max-w-40 flex-col gap-1.5" data-tour="resumen-anual-destacar-mes">
+        <Label for="destacar-mes">Destacar mes</Label>
+        <Select v-model="mesDestacadoStr">
+          <SelectTrigger id="destacar-mes">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem :value="SIN_MES_DESTACADO">Ninguno</SelectItem>
+            <SelectItem
+              v-for="(mes, indice) in MESES_COMPLETOS"
+              :key="mes"
+              :value="String(indice + 1)"
+            >
+              {{ mes }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div class="flex max-w-xs flex-1 flex-col gap-1.5" data-tour="resumen-anual-buscar">
         <Label for="buscar-conceptos">Buscar</Label>
         <div class="relative">
@@ -541,24 +606,26 @@ useRegistrarTourPagina({ pasos: pasosTour })
               >Categoría</Label
             >
             <div class="flex gap-2">
-              <Select v-model="formulario.categoriaId">
-                <SelectTrigger
-                  id="selector-categoria-previsto"
-                  aria-labelledby="etiqueta-categoria-previsto"
-                  class="w-full"
-                >
-                  <SelectValue placeholder="Selecciona una categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
+              <Combobox v-model="formulario.categoriaId" open-on-click open-on-focus class="w-full">
+                <ComboboxTrigger class="w-full">
+                  <ComboboxInput
+                    id="selector-categoria-previsto"
+                    aria-labelledby="etiqueta-categoria-previsto"
+                    placeholder="Selecciona o escribe para buscar"
+                    :display-value="mostrarCategoria"
+                  />
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                  <ComboboxItem
                     v-for="cat in categoriasDelTipoElegido"
                     :key="cat.id"
                     :value="String(cat.id)"
                   >
                     {{ cat.nombre }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  </ComboboxItem>
+                </ComboboxContent>
+              </Combobox>
               <Button
                 type="button"
                 variant="outline"
@@ -576,25 +643,32 @@ useRegistrarTourPagina({ pasos: pasosTour })
               >Subcategoría</Label
             >
             <div class="flex gap-2">
-              <Select v-model="formulario.subcategoriaId">
-                <SelectTrigger
-                  id="selector-subcategoria-previsto"
-                  aria-labelledby="etiqueta-subcategoria-previsto"
-                  class="flex-1"
-                >
-                  <SelectValue placeholder="(sin subcategoría)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</SelectItem>
-                  <SelectItem
+              <Combobox
+                v-model="formulario.subcategoriaId"
+                open-on-click
+                open-on-focus
+                class="flex-1"
+              >
+                <ComboboxTrigger class="w-full">
+                  <ComboboxInput
+                    id="selector-subcategoria-previsto"
+                    aria-labelledby="etiqueta-subcategoria-previsto"
+                    placeholder="Selecciona o escribe para buscar"
+                    :display-value="mostrarSubcategoria"
+                  />
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxEmpty>Sin resultados.</ComboboxEmpty>
+                  <ComboboxItem :value="SIN_SUBCATEGORIA">(sin subcategoría)</ComboboxItem>
+                  <ComboboxItem
                     v-for="s in subcategoriasDeLaCategoria"
                     :key="s.id"
                     :value="String(s.id)"
                   >
                     {{ s.nombre }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  </ComboboxItem>
+                </ComboboxContent>
+              </Combobox>
               <Button
                 type="button"
                 variant="outline"
@@ -844,21 +918,27 @@ useRegistrarTourPagina({ pasos: pasosTour })
           titulo="Gastos"
           :filas="filasGastosFiltradas"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de gasto configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
         <TablaResumenAnualAgrupada
           titulo="Ingresos"
           :filas="filasIngresosFiltradas"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de ingreso configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
       </template>
       <template v-else>
@@ -867,22 +947,28 @@ useRegistrarTourPagina({ pasos: pasosTour })
           :filas="filasGastosFiltradas"
           :totales="totalesGastosMostrados"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de gasto configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
         <TablaResumenAnual
           titulo="Ingresos"
           :filas="filasIngresosFiltradas"
           :totales="totalesIngresosMostrados"
           :anio="anio"
+          :mes-destacado="mesDestacado"
           mensaje-vacio="No hay conceptos de ingreso configurados."
           @editar="abrirParaEditar"
           @eliminar="eliminar"
           @editar-celda="editarCelda"
           @cargar-acumulado-real="cargarAcumuladoReal"
+          @movimiento-editado="cargarResumen"
+          @cambiar-cancelado="cambiarCancelado"
         />
       </template>
     </div>

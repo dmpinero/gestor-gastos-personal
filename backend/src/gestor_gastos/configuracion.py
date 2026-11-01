@@ -23,6 +23,8 @@ class Configuracion(BaseSettings):
     sentry_dsn: str | None = None
     otel_endpoint_exportador: str | None = None
 
+    ruta_adjuntos: str = "/datos/adjuntos"
+
 
 @lru_cache
 def obtener_configuracion() -> Configuracion:

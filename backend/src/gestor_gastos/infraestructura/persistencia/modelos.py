@@ -1,7 +1,7 @@
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from gestor_gastos.infraestructura.persistencia.sesion import Base
@@ -100,6 +100,19 @@ class AjustePrevisionMensualModelo(Base):
     concepto: Mapped[ConceptoPrevistoModelo] = relationship()
 
 
+class ConceptoCanceladoAnioModelo(Base):
+    __tablename__ = "conceptos_previstos_cancelados_anio"
+    __table_args__ = (UniqueConstraint("concepto_id", "anio"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    concepto_id: Mapped[int] = mapped_column(
+        ForeignKey("conceptos_previstos.id", ondelete="CASCADE")
+    )
+    anio: Mapped[int] = mapped_column(Integer)
+
+    concepto: Mapped[ConceptoPrevistoModelo] = relationship()
+
+
 class AsociacionConceptoModelo(Base):
     __tablename__ = "asociaciones_conceptos"
     __table_args__ = (UniqueConstraint("categoria_resumen_id", "subcategoria_resumen_id"),)
@@ -133,3 +146,17 @@ class AsociacionDescripcionModelo(Base):
 
     categoria_resumen: Mapped[CategoriaModelo] = relationship()
     subcategoria_resumen: Mapped[SubcategoriaModelo | None] = relationship()
+
+
+class AdjuntoMovimientoModelo(Base):
+    __tablename__ = "adjuntos_movimiento"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    movimiento_id: Mapped[int] = mapped_column(ForeignKey("movimientos.id", ondelete="CASCADE"))
+    nombre_original: Mapped[str] = mapped_column(String(255))
+    nombre_almacenado: Mapped[str] = mapped_column(String(64))
+    tipo_mime: Mapped[str | None] = mapped_column(String(255))
+    tamanio_bytes: Mapped[int] = mapped_column(Integer)
+    fecha_subida: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+    movimiento: Mapped[MovimientoModelo] = relationship()

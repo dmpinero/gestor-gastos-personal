@@ -1,9 +1,20 @@
+import tempfile
 from decimal import Decimal
+from pathlib import Path
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.categoria.eliminar_categoria import EliminarCategoria
 from gestor_gastos.aplicacion.categoria.eliminar_subcategoria import EliminarSubcategoria
 from gestor_gastos.dominio.categoria.entidades import Categoria, Subcategoria
 from gestor_gastos.dominio.prevision.entidades import ConceptoPrevisto
+from gestor_gastos.infraestructura.almacenamiento.almacen_adjuntos_filesystem import (
+    AlmacenAdjuntosFilesystem,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_adjuntos_sqlalchemy import (  # noqa: E501
+    RepositorioAdjuntosSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_asociaciones_descripcion_sqlalchemy import (  # noqa: E501
     RepositorioAsociacionesDescripcionSqlAlchemy,
 )
@@ -19,6 +30,14 @@ from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_movimie
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_previsiones_sqlalchemy import (  # noqa: E501
     RepositorioPrevisionesSqlAlchemy,
 )
+
+
+def _eliminar_adjuntos(sesion_bd) -> EliminarAdjuntosDeMovimiento:
+    return EliminarAdjuntosDeMovimiento(
+        RepositorioAdjuntosSqlAlchemy(sesion_bd),
+        AlmacenAdjuntosFilesystem(Path(tempfile.mkdtemp())),
+    )
+
 
 # Reproduce el error 500 real reportado: la restricción de clave foránea de
 # conceptos_previstos hacia categorias/subcategorias no se tenía en cuenta al
@@ -48,6 +67,7 @@ def test_eliminar_categoria_en_cascada_con_concepto_previsto_directo(sesion_bd) 
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(categoria.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(categoria.id) is None
@@ -78,6 +98,7 @@ def test_eliminar_categoria_en_cascada_con_concepto_previsto_sobre_subcategoria(
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(categoria.id, cascada=True)
 
     assert repo_categorias.obtener_categoria_por_id(categoria.id) is None
@@ -110,6 +131,7 @@ def test_eliminar_subcategoria_en_cascada_con_concepto_previsto(sesion_bd) -> No
         repo_previsiones,
         repo_asociaciones,
         repo_asociaciones_descripcion,
+        _eliminar_adjuntos(sesion_bd),
     ).ejecutar(subcategoria.id, cascada=True)
 
     assert repo_categorias.obtener_subcategoria_por_id(subcategoria.id) is None

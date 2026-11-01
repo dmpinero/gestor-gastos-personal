@@ -3,6 +3,9 @@ from decimal import Decimal
 
 import pytest
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.categoria.actualizar_categoria import ActualizarCategoria
 from gestor_gastos.aplicacion.categoria.actualizar_subcategoria import ActualizarSubcategoria
 from gestor_gastos.aplicacion.categoria.crear_categoria import CrearCategoria
@@ -28,12 +31,18 @@ from gestor_gastos.dominio.prevision.entidades import (
     ConceptoPrevisto,
 )
 from tests.unitarios.aplicacion.dobles import (
+    AlmacenAdjuntosFalso,
+    RepositorioAdjuntosFalso,
     RepositorioAsociacionesDescripcionFalso,
     RepositorioAsociacionesFalso,
     RepositorioCategoriasFalso,
     RepositorioMovimientosFalso,
     RepositorioPrevisionesFalso,
 )
+
+
+def _eliminar_adjuntos() -> EliminarAdjuntosDeMovimiento:
+    return EliminarAdjuntosDeMovimiento(RepositorioAdjuntosFalso(), AlmacenAdjuntosFalso())
 
 
 def test_crear_categoria_la_guarda() -> None:
@@ -96,6 +105,7 @@ def test_eliminar_categoria_con_subcategorias_falla() -> None:
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(categoria.id)
 
 
@@ -120,7 +130,12 @@ def test_eliminar_categoria_con_subcategorias_y_movimientos_y_cascada_borra_todo
     )
 
     EliminarCategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(categoria.id, cascada=True)
 
     assert repo.obtener_categoria_por_id(categoria.id) is None
@@ -151,6 +166,7 @@ def test_eliminar_categoria_con_concepto_previsto_falla_sin_cascada() -> None:
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(categoria.id)
 
 
@@ -171,7 +187,12 @@ def test_eliminar_categoria_con_concepto_previsto_y_cascada_lo_borra() -> None:
     )
 
     EliminarCategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(categoria.id, cascada=True)
 
     assert repo.obtener_categoria_por_id(categoria.id) is None
@@ -187,7 +208,12 @@ def test_eliminar_categoria_sin_dependencias_la_borra() -> None:
     categoria = CrearCategoria(repo).ejecutar("Hogar")
 
     EliminarCategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(categoria.id)
 
     assert repo.obtener_categoria_por_id(categoria.id) is None
@@ -217,6 +243,7 @@ def test_eliminar_categoria_con_asociacion_falla_sin_cascada() -> None:
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(resumen.id)
 
 
@@ -238,7 +265,12 @@ def test_eliminar_categoria_con_asociacion_y_cascada_la_borra() -> None:
     )
 
     EliminarCategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(resumen.id, cascada=True)
 
     assert repo.obtener_categoria_por_id(resumen.id) is None
@@ -270,6 +302,7 @@ def test_eliminar_categoria_con_asociacion_descripcion_falla_sin_cascada() -> No
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(resumen.id)
 
 
@@ -289,7 +322,12 @@ def test_eliminar_categoria_con_asociacion_descripcion_y_cascada_la_borra() -> N
     )
 
     EliminarCategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(resumen.id, cascada=True)
 
     assert repo.obtener_categoria_por_id(resumen.id) is None
@@ -463,6 +501,7 @@ def test_eliminar_subcategoria_con_movimientos_falla() -> None:
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(subcategoria.id)
 
 
@@ -487,7 +526,12 @@ def test_eliminar_subcategoria_con_movimientos_y_cascada_borra_todo() -> None:
     )
 
     EliminarSubcategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(subcategoria.id, cascada=True)
 
     assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
@@ -519,6 +563,7 @@ def test_eliminar_subcategoria_con_concepto_previsto_falla_sin_cascada() -> None
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(subcategoria.id)
 
 
@@ -540,7 +585,12 @@ def test_eliminar_subcategoria_con_concepto_previsto_y_cascada_lo_borra() -> Non
     )
 
     EliminarSubcategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(subcategoria.id, cascada=True)
 
     assert repo.obtener_subcategoria_por_id(subcategoria.id) is None
@@ -573,6 +623,7 @@ def test_eliminar_subcategoria_con_asociacion_falla_sin_cascada() -> None:
             repo_previsiones,
             repo_asociaciones,
             repo_asociaciones_descripcion,
+            _eliminar_adjuntos(),
         ).ejecutar(sub_resumen.id)
 
 
@@ -595,7 +646,12 @@ def test_eliminar_subcategoria_con_asociacion_y_cascada_la_borra() -> None:
     )
 
     EliminarSubcategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
+        _eliminar_adjuntos(),
     ).ejecutar(sub_resumen.id, cascada=True)
 
     assert repo.obtener_subcategoria_por_id(sub_resumen.id) is None
@@ -647,7 +703,11 @@ def test_obtener_dependencias_de_categoria_cuenta_subcategorias_movimientos_y_co
     )
 
     dependencias = ObtenerDependenciasCategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
     ).ejecutar(categoria.id)
 
     assert dependencias.subcategorias == 1
@@ -703,7 +763,11 @@ def test_obtener_dependencias_de_subcategoria_cuenta_movimientos_y_conceptos() -
     )
 
     dependencias = ObtenerDependenciasSubcategoria(
-        repo, repo_movimientos, repo_previsiones, repo_asociaciones, repo_asociaciones_descripcion
+        repo,
+        repo_movimientos,
+        repo_previsiones,
+        repo_asociaciones,
+        repo_asociaciones_descripcion,
     ).ejecutar(subcategoria.id)
 
     assert dependencias.movimientos == 1

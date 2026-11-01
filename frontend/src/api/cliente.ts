@@ -1,5 +1,12 @@
 const URL_BASE_API = import.meta.env.VITE_URL_BASE_API ?? '/api/v1'
 
+/** Construye la URL completa de un recurso de la API, para usarla en un
+ * enlace directo (p. ej. `<a href>` para ver un adjunto en pestaña nueva)
+ * en vez de pasar por `clienteApi.descargar` + Blob. */
+export function urlRecurso(ruta: string): string {
+  return `${URL_BASE_API}${ruta}`
+}
+
 export class ErrorApi extends Error {
   constructor(
     public readonly estado: number,

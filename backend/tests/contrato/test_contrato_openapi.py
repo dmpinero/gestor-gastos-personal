@@ -9,6 +9,9 @@ _VALIDACION_ACEPTACION_POSITIVA = schemathesis.checks.CHECKS.get_by_names(
     ["positive_data_acceptance"]
 )
 _VALIDACION_RECHAZO_NEGATIVO = schemathesis.checks.CHECKS.get_by_names(["negative_data_rejection"])
+_VALIDACION_CONFORMIDAD_RESPUESTA = schemathesis.checks.CHECKS.get_by_names(
+    ["response_schema_conformance"]
+)
 
 # Casos donde OpenAPI/JSON Schema no puede expresar una restricción de negocio
 # que sí validamos en Pydantic, así que schemathesis genera datos "válidos por
@@ -39,6 +42,14 @@ _RUTAS_SIN_VALIDACION_ACEPTACION_POSITIVA = {
     # acepta la cadena literal "null" como valor de un query param entero,
     # solo un entero válido o la ausencia del parámetro).
     "/api/v1/previsiones/movimientos-por-categoria",
+    # el fichero adjunto no puede estar vacío (mismo motivo que
+    # /api/v1/movimientos/importar).
+    "/api/v1/adjuntos/movimiento/{movimiento_id}",
+    # el fichero Excel a analizar tampoco puede estar vacío (mismo motivo).
+    "/api/v1/movimientos/importar/analizar",
+    # el cuerpo de /confirmar incluye filas con importe/saldo, igualmente
+    # Decimal(12, 2): mismo motivo que /api/v1/movimientos/importar.
+    "/api/v1/movimientos/importar/confirmar",
 }
 
 # FastAPI/Starlette no rechazan un parámetro de query escalar (p.ej.
@@ -53,6 +64,22 @@ _RUTAS_SIN_VALIDACION_RECHAZO_NEGATIVO = {
     "/api/v1/previsiones/resumen-anual",
     "/api/v1/previsiones/resumen-anual/exportar",
     "/api/v1/previsiones/resumen-anual/importar",
+    # Pydantic acepta 0/1 como booleano válido (coerción laxa de FastAPI),
+    # aunque el JSON Schema de OpenAPI diga "boolean" estricto: no es un
+    # error de negocio de esta ruta, es la misma laxitud de Pydantic que
+    # afecta a cualquier campo bool de la API.
+    "/api/v1/movimientos/importar/confirmar",
+}
+
+# Un Decimal con magnitud extrema (p. ej. 5.22E-155) se serializa en
+# notación científica, que no cumple el patrón del esquema de "importe"/
+# "saldo" (pensado para la precisión de negocio normal, Decimal(12, 2));
+# JSON Schema no puede expresar "salvo en casos de magnitud absurda que
+# nunca ocurren con dinero real". Solo afecta a /confirmar porque es la
+# única ruta donde el cuerpo de la petición permite inyectar directamente
+# un Decimal arbitrario que luego se devuelve tal cual en "duplicados".
+_RUTAS_SIN_VALIDACION_CONFORMIDAD_RESPUESTA = {
+    "/api/v1/movimientos/importar/confirmar",
 }
 
 
@@ -64,4 +91,6 @@ def test_la_api_cumple_su_contrato_openapi(case: schemathesis.Case) -> None:
         excluidos.extend(_VALIDACION_ACEPTACION_POSITIVA)
     if case.path in _RUTAS_SIN_VALIDACION_RECHAZO_NEGATIVO:
         excluidos.extend(_VALIDACION_RECHAZO_NEGATIVO)
+    if case.path in _RUTAS_SIN_VALIDACION_CONFORMIDAD_RESPUESTA:
+        excluidos.extend(_VALIDACION_CONFORMIDAD_RESPUESTA)
     case.call_and_validate(excluded_checks=excluidos or None)

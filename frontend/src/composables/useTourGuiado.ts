@@ -23,21 +23,29 @@ export function useRegistrarTourPagina(proveedor: ProveedorTourPagina): void {
 }
 
 type SeccionMenu =
-  'dashboard' | 'gestion' | 'importar' | 'historial' | 'resumen-anual' | 'administracion'
+  | 'dashboard'
+  | 'movimientos'
+  | 'gestion'
+  | 'importar'
+  | 'historial'
+  | 'resumen-anual'
+  | 'notificaciones'
+  | 'backup'
 
 const SECCION_POR_RUTA: Record<string, SeccionMenu> = {
   inicio: 'dashboard',
+  movimientos: 'movimientos',
   'gestion-cuentas': 'gestion',
   'gestion-categorias': 'gestion',
-  'gestion-movimientos': 'gestion',
+  'gestion-conceptos': 'gestion',
   importar: 'importar',
   historial: 'historial',
   'historial-categoria': 'historial',
   'historial-subcategoria': 'historial',
   'resumen-anual': 'resumen-anual',
-  'administracion-backup': 'administracion',
-  'administracion-importar-backup': 'administracion',
-  'administracion-gestion-conceptos': 'administracion',
+  notificaciones: 'notificaciones',
+  'backup-realizar': 'backup',
+  'backup-importar': 'backup',
 }
 
 const ORIENTACION_POR_SECCION: Record<SeccionMenu, DriveStep> = {
@@ -49,12 +57,19 @@ const ORIENTACION_POR_SECCION: Record<SeccionMenu, DriveStep> = {
         'Resumen general: saldo por cuenta y totales de gastos e ingresos por categoría.',
     },
   },
+  movimientos: {
+    element: '[data-tour="nav-movimientos"]',
+    popover: {
+      title: 'Movimientos',
+      description: 'Registra, edita y filtra tus movimientos de gastos e ingresos.',
+    },
+  },
   gestion: {
     element: '[data-tour="nav-gestion"]',
     popover: {
       title: 'Gestión',
       description:
-        'Da de alta y edita tus cuentas bancarias, categorías/subcategorías y movimientos.',
+        'Administra tus cuentas, categorías, y las asociaciones entre conceptos previstos y categorías reales.',
     },
   },
   importar: {
@@ -81,12 +96,19 @@ const ORIENTACION_POR_SECCION: Record<SeccionMenu, DriveStep> = {
         'Compara lo previsto con lo real, mes a mes, para cada concepto de tu presupuesto anual.',
     },
   },
-  administracion: {
-    element: '[data-tour="nav-administracion"]',
+  notificaciones: {
+    element: '[data-tour="nav-notificaciones"]',
     popover: {
-      title: 'Administración',
+      title: 'Notificaciones',
       description:
-        'Copias de seguridad y asociaciones entre conceptos previstos y las categorías reales de tus movimientos.',
+        'Próximos gastos e ingresos recurrentes (suscripciones, nóminas, seguros...), predichos a partir de tu histórico de movimientos.',
+    },
+  },
+  backup: {
+    element: '[data-tour="nav-backup"]',
+    popover: {
+      title: 'Backup',
+      description: 'Realiza copias de seguridad de tus datos o restaura una copia anterior.',
     },
   },
 }
@@ -109,7 +131,8 @@ const pasosCierre: DriveStep[] = [
     element: '[data-tour="boton-manual-usuario"]',
     popover: {
       title: 'Ayuda',
-      description: 'Vuelve a abrir este manual interactivo cuando quieras, pulsando este icono.',
+      description:
+        'Pulsa este icono para volver a abrir este manual interactivo o consultar el historial de cambios.',
     },
   },
 ]

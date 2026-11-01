@@ -206,6 +206,11 @@ describe('ModalListaMovimientos', () => {
     )
     // Al cerrarse el panel de edición, la modal de lista sigue abierta.
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull()
+    // El padre necesita saber que el movimiento cambió (p. ej. para refrescar
+    // su propia lista, que es un snapshot y no se entera solo).
+    expect(wrapper.emitted('movimiento-actualizado')).toEqual([
+      [{ ...movimientos[0], descripcion: 'Ba pago editado' }],
+    ])
     wrapper.unmount()
   })
 

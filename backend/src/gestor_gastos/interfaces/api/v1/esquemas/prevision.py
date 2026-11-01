@@ -29,6 +29,10 @@ class ConceptoPrevistoSalidaEsquema(BaseModel):
     importe_previsto: Decimal
 
 
+class ConceptoPrevistoCanceladoEsquema(BaseModel):
+    cancelado: bool
+
+
 OrigenValorMensual = Literal["real", "previsto", "ajustado"]
 
 
@@ -58,6 +62,7 @@ class FilaResumenAnualEsquema(BaseModel):
     nombre: str
     periodicidad: Periodicidad
     valores: list[ValorMensualEsquema]
+    cancelado: bool
 
 
 class ResumenAnualEsquema(BaseModel):

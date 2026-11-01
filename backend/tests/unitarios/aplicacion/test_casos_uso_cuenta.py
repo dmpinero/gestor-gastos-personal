@@ -3,6 +3,9 @@ from decimal import Decimal
 
 import pytest
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.cuenta.actualizar_cuenta import ActualizarCuenta
 from gestor_gastos.aplicacion.cuenta.crear_cuenta import CrearCuenta
 from gestor_gastos.aplicacion.cuenta.eliminar_cuenta import EliminarCuenta
@@ -14,7 +17,12 @@ from gestor_gastos.dominio.excepciones import (
     NombreDuplicadoError,
 )
 from gestor_gastos.dominio.movimiento.entidades import Movimiento
-from tests.unitarios.aplicacion.dobles import RepositorioCuentasFalso, RepositorioMovimientosFalso
+from tests.unitarios.aplicacion.dobles import (
+    AlmacenAdjuntosFalso,
+    RepositorioAdjuntosFalso,
+    RepositorioCuentasFalso,
+    RepositorioMovimientosFalso,
+)
 
 
 def test_crear_cuenta_la_guarda_y_le_asigna_id() -> None:
@@ -54,7 +62,11 @@ def test_eliminar_cuenta_sin_movimientos_la_borra() -> None:
     repo_movimientos = RepositorioMovimientosFalso()
     cuenta = CrearCuenta(repo_cuentas).ejecutar(numero_cuenta="ES00 1234")
 
-    EliminarCuenta(repo_cuentas, repo_movimientos).ejecutar(cuenta.id)
+    EliminarCuenta(
+        repo_cuentas,
+        repo_movimientos,
+        EliminarAdjuntosDeMovimiento(RepositorioAdjuntosFalso(), AlmacenAdjuntosFalso()),
+    ).ejecutar(cuenta.id)
 
     assert repo_cuentas.obtener_por_id(cuenta.id) is None
 
@@ -75,7 +87,11 @@ def test_eliminar_cuenta_con_movimientos_falla() -> None:
     )
 
     with pytest.raises(EntidadConDependenciasError):
-        EliminarCuenta(repo_cuentas, repo_movimientos).ejecutar(cuenta.id)
+        EliminarCuenta(
+            repo_cuentas,
+            repo_movimientos,
+            EliminarAdjuntosDeMovimiento(RepositorioAdjuntosFalso(), AlmacenAdjuntosFalso()),
+        ).ejecutar(cuenta.id)
 
 
 def test_eliminar_cuenta_con_movimientos_y_cascada_borra_todo() -> None:
@@ -93,7 +109,11 @@ def test_eliminar_cuenta_con_movimientos_y_cascada_borra_todo() -> None:
         )
     )
 
-    EliminarCuenta(repo_cuentas, repo_movimientos).ejecutar(cuenta.id, cascada=True)
+    EliminarCuenta(
+        repo_cuentas,
+        repo_movimientos,
+        EliminarAdjuntosDeMovimiento(RepositorioAdjuntosFalso(), AlmacenAdjuntosFalso()),
+    ).ejecutar(cuenta.id, cascada=True)
 
     assert repo_cuentas.obtener_por_id(cuenta.id) is None
     assert repo_movimientos.obtener_por_id(movimiento.id) is None

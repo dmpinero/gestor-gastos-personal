@@ -43,6 +43,18 @@ class AjusteMensual:
 
 
 @dataclass
+class ConceptoCanceladoAnio:
+    """Marca manual del usuario de que un concepto previsto está cancelado
+    en un año concreto: la fila correspondiente se muestra tachada en el
+    resumen anual de ese año, en vez de ocultarse. No afecta a otros años:
+    por defecto (sin marca) un año no está cancelado."""
+
+    concepto_id: int
+    anio: int
+    id: int | None = None
+
+
+@dataclass
 class AsociacionConcepto:
     """Hace corresponder la categoría/subcategoría con la que se nombra un
     concepto previsto del resumen anual con la categoría/subcategoría real

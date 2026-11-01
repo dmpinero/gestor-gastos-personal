@@ -22,6 +22,11 @@ class FilaResumenAnual:
     nombre: str
     periodicidad: Periodicidad
     valores: list[ValorMensual]
+    # Marca manual del usuario para ESTE año concreto (ver
+    # ConceptoCanceladoAnio): no oculta la fila, el frontend la muestra
+    # tachada. No afecta a otros años, que mantienen su propio estado
+    # (por defecto, no cancelado).
+    cancelado: bool = False
 
 
 @dataclass(frozen=True)

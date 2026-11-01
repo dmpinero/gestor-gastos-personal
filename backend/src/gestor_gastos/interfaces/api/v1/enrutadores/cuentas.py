@@ -1,14 +1,25 @@
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.cuenta.actualizar_cuenta import ActualizarCuenta
 from gestor_gastos.aplicacion.cuenta.crear_cuenta import CrearCuenta
 from gestor_gastos.aplicacion.cuenta.eliminar_cuenta import EliminarCuenta
 from gestor_gastos.aplicacion.cuenta.listar_cuentas import ListarCuentas
 from gestor_gastos.aplicacion.cuenta.obtener_dependencias_cuenta import ObtenerDependenciasCuenta
+from gestor_gastos.configuracion import obtener_configuracion
 from gestor_gastos.dominio.cuenta.entidades import CuentaBancaria
+from gestor_gastos.infraestructura.almacenamiento.almacen_adjuntos_filesystem import (
+    AlmacenAdjuntosFilesystem,
+)
+from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_adjuntos_sqlalchemy import (  # noqa: E501
+    RepositorioAdjuntosSqlAlchemy,
+)
 from gestor_gastos.infraestructura.persistencia.repositorios.repositorio_cuentas_sqlalchemy import (
     RepositorioCuentasSqlAlchemy,
 )
@@ -76,8 +87,12 @@ def actualizar(
 def eliminar(
     id_cuenta: int, cascada: bool = Query(False), sesion: Session = Depends(obtener_sesion)
 ) -> None:
+    almacen = AlmacenAdjuntosFilesystem(Path(obtener_configuracion().ruta_adjuntos))
+    eliminar_adjuntos = EliminarAdjuntosDeMovimiento(RepositorioAdjuntosSqlAlchemy(sesion), almacen)
     EliminarCuenta(
-        RepositorioCuentasSqlAlchemy(sesion), RepositorioMovimientosSqlAlchemy(sesion)
+        RepositorioCuentasSqlAlchemy(sesion),
+        RepositorioMovimientosSqlAlchemy(sesion),
+        eliminar_adjuntos,
     ).ejecutar(id_cuenta, cascada=cascada)
 
 

@@ -3,6 +3,9 @@ from decimal import Decimal
 
 import pytest
 
+from gestor_gastos.aplicacion.adjunto.eliminar_adjuntos_de_movimiento import (
+    EliminarAdjuntosDeMovimiento,
+)
 from gestor_gastos.aplicacion.categoria.crear_categoria import CrearCategoria
 from gestor_gastos.aplicacion.categoria.crear_subcategoria import CrearSubcategoria
 from gestor_gastos.aplicacion.cuenta.crear_cuenta import CrearCuenta
@@ -12,6 +15,8 @@ from gestor_gastos.aplicacion.movimiento.eliminar_movimiento import EliminarMovi
 from gestor_gastos.aplicacion.movimiento.listar_movimientos import ListarMovimientos
 from gestor_gastos.dominio.excepciones import EntidadNoEncontradaError, FiltroDeListadoInvalidoError
 from tests.unitarios.aplicacion.dobles import (
+    AlmacenAdjuntosFalso,
+    RepositorioAdjuntosFalso,
     RepositorioCategoriasFalso,
     RepositorioCuentasFalso,
     RepositorioMovimientosFalso,
@@ -174,7 +179,10 @@ def test_eliminar_movimiento_lo_borra() -> None:
         datetime.date(2026, 1, 1),
     )
 
-    EliminarMovimiento(repo_movimientos).ejecutar(movimiento.id)
+    eliminar_adjuntos = EliminarAdjuntosDeMovimiento(
+        RepositorioAdjuntosFalso(), AlmacenAdjuntosFalso()
+    )
+    EliminarMovimiento(repo_movimientos, eliminar_adjuntos).ejecutar(movimiento.id)
 
     assert repo_movimientos.obtener_por_id(movimiento.id) is None
 

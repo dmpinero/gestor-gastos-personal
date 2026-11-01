@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { elegirOpcion, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 test('el panel de navegación colapsa y expande, y resalta la sección activa', async ({ page }) => {
   await page.goto('/')
@@ -7,7 +7,7 @@ test('el panel de navegación colapsa y expande, y resalta la sección activa', 
 
   await expect(page.getByRole('link', { name: 'Gestión' })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/gestion/categorias')
   await expect(page.getByRole('link', { name: 'Gestión' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute(
     'aria-current',
@@ -39,6 +39,64 @@ test('Importar es un acceso de primer nivel independiente de Gestión', async ({
   )
 })
 
+test('Movimientos es un acceso de primer nivel independiente de Gestión', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: 'Movimientos' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Movimientos' }).click()
+  await expect(page).toHaveURL(/\/movimientos$/)
+  await expect(page.getByRole('link', { name: 'Movimientos' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  await expect(page.getByRole('link', { name: 'Gestión' })).not.toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+})
+
+test('el orden de las secciones del menú lateral es Dashboard, Movimientos, Importar, Historial, Resumen anual, Notificaciones, Gestión, Backup', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const enlaces = page.locator('[data-slot="sidebar-menu"]').getByRole('link')
+  await expect(enlaces).toHaveText([
+    'Dashboard',
+    'Movimientos',
+    'Importar',
+    'Historial',
+    'Resumen anual',
+    'Notificaciones',
+    'Gestión',
+    'Backup',
+  ])
+})
+
+test('el menú lateral separa visualmente las secciones de uso diario de las de configuración', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const grupos = page.locator('[data-slot="sidebar-group"]')
+  await expect(grupos).toHaveCount(2)
+
+  const general = grupos.nth(0)
+  await expect(general.locator('[data-slot="sidebar-group-label"]')).toHaveText('General')
+  await expect(general.getByRole('link')).toHaveText([
+    'Dashboard',
+    'Movimientos',
+    'Importar',
+    'Historial',
+    'Resumen anual',
+    'Notificaciones',
+  ])
+
+  const configuracion = grupos.nth(1)
+  await expect(configuracion.locator('[data-slot="sidebar-group-label"]')).toHaveText(
+    'Configuración',
+  )
+  await expect(configuracion.getByRole('link')).toHaveText(['Gestión', 'Backup'])
+})
+
 test('el modo claro/oscuro se puede alternar y persiste tras recargar', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('html')).not.toHaveClass(/dark/)
@@ -60,13 +118,13 @@ test('cambiar de pestaña en Gestión muestra los datos reales de esa sección',
   await page.goto('/gestion/cuentas')
   await expect(page.getByRole('tab', { name: 'Cuentas' })).toHaveAttribute('data-state', 'active')
 
-  await page.getByRole('tab', { name: 'Movimientos' }).click()
-  await expect(page).toHaveURL(/\/gestion\/movimientos$/)
-  await expect(page.getByRole('tab', { name: 'Movimientos' })).toHaveAttribute(
+  await page.getByRole('tab', { name: 'Asociar conceptos' }).click()
+  await expect(page).toHaveURL(/\/gestion\/conceptos$/)
+  await expect(page.getByRole('tab', { name: 'Asociar conceptos' })).toHaveAttribute(
     'data-state',
     'active',
   )
-  await expect(page.getByLabel('Cuenta')).toBeVisible()
+  await expect(page.getByPlaceholder('p. ej. Ayuntamiento Las Rozas')).toBeVisible()
 })
 
 test('recargar la página mantiene la pestaña activa de Gestión', async ({ page }) => {
@@ -117,7 +175,7 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
     await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
   }
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   for (const [nombreCategoria, importe] of [
     [categoriaGasto, '-30.00'],
@@ -127,7 +185,11 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
     const panel = page.getByRole('dialog')
     await expect(panel).toBeVisible()
     await panel.locator('input[type="date"]').fill('2026-01-15')
-    await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+    await elegirOpcionBuscador(
+      page,
+      panel.getByLabel('Categoría', { exact: true }),
+      nombreCategoria,
+    )
     await panel.getByPlaceholder('Descripción').fill(`Movimiento ${nombreCategoria}`)
     await panel.getByPlaceholder('Importe').fill(importe)
     await panel.getByPlaceholder('Saldo').fill('100.00')
@@ -148,12 +210,38 @@ test('en el menú de Historial, el icono de cada categoría es rojo si es de gas
   await expect(enlaceIngreso.locator('svg').first()).toHaveClass(/text-success/)
 })
 
-test('la barra de estado muestra la versión y abre el historial de cambios', async ({ page }) => {
+test('la barra de estado muestra la versión, y el icono de ayuda abre el historial de cambios', async ({
+  page,
+}) => {
+  // La versión y el historial se leen en vivo de la API pública de GitHub
+  // (ver frontend/src/api/github.ts); se mockea aquí para que el test no
+  // dependa de la disponibilidad/límite de peticiones de esa API externa,
+  // que la propia app ya trata como un fallo esperado (ver BarraEstado.vue).
+  const release = (tag: string) => ({
+    tag_name: tag,
+    name: tag,
+    body: `## ${tag}\n\n* cambios de prueba`,
+    published_at: '2026-01-01T00:00:00Z',
+    html_url: `https://github.com/dmpinero/gestor-gastos-personal/releases/tag/${tag}`,
+  })
+  await page.route('https://api.github.com/repos/**', (route) => {
+    const esUltima = route.request().url().endsWith('/releases/latest')
+    route.fulfill({
+      json: esUltima ? release('v9.9.9') : [release('v9.9.9'), release('v9.9.8')],
+    })
+  })
+
   await page.goto('/')
   await expect(page.getByText(/^v\d+\.\d+\.\d+$/)).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/layout-06-barra-estado.png' })
 
-  await page.getByRole('button', { name: 'Ver historial de cambios' }).click()
+  // El historial de cambios vive dentro del icono de ayuda, junto al manual
+  // de usuario (ver BotonManualUsuario.vue).
+  await page
+    .getByRole('button', { name: 'Ayuda: manual de usuario interactivo e historial de cambios' })
+    .click()
+  await expect(page.getByRole('button', { name: 'Manual de usuario', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Historial de cambios', exact: true }).click()
   const modal = page.getByRole('dialog', { name: 'Historial de cambios' })
   await expect(modal).toBeVisible()
   await expect(modal).toContainText(/\d+\.\d+\.\d+/)

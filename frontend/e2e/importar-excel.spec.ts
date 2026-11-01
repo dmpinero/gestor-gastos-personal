@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ExcelJS from 'exceljs'
 import { test, expect } from '@playwright/test'
+import { confirmarRevisionExcel } from './utilidades'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const RUTA_FICHERO = path.resolve(
@@ -60,6 +61,7 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
   await page.screenshot({ path: 'e2e/capturas/importar-02-fichero-seleccionado.png' })
 
   await formulario.getByRole('button', { name: 'Importar' }).click()
+  await confirmarRevisionExcel(page)
 
   const resumen = page.locator('[data-test="resumen-importacion"]')
   await expect(resumen).toBeVisible()
@@ -80,7 +82,7 @@ test('importar un Excel de movimientos muestra el resumen de la importación', a
   await page.screenshot({ path: 'e2e/capturas/importar-04-cuenta-creada.png' })
 })
 
-test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta correcta', async ({
+test('"Ver movimientos importados" lleva a Movimientos con la cuenta correcta', async ({
   page,
 }) => {
   await page.goto('/importar')
@@ -88,15 +90,12 @@ test('"Ver movimientos importados" lleva a la pestaña Movimientos con la cuenta
   const formulario = zona.locator('xpath=ancestor::form')
   await zona.locator('..').locator('input[type="file"]').setInputFiles(RUTA_FICHERO)
   await formulario.getByRole('button', { name: 'Importar' }).click()
+  await confirmarRevisionExcel(page)
   await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
 
   await page.getByRole('button', { name: 'Ver movimientos importados' }).click()
 
-  await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
-  await expect(page.getByRole('tab', { name: 'Movimientos' })).toHaveAttribute(
-    'data-state',
-    'active',
-  )
+  await expect(page).toHaveURL(/\/movimientos\?cuenta_id=\d+/)
   // El selector de cuenta muestra el alias (= titular tomado del Excel) en
   // vez del número de cuenta en bruto, cuando la cuenta tiene alias.
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA EJEMPLO')
@@ -130,7 +129,7 @@ test('importar un PDF (certificado de movimientos) crea la cuenta y sus movimien
   await page.screenshot({ path: 'e2e/capturas/importar-pdf-01-resumen.png' })
 
   await resumen.getByRole('button', { name: 'Ver movimientos importados' }).click()
-  await expect(page).toHaveURL(/\/gestion\/movimientos\?cuenta_id=\d+/)
+  await expect(page).toHaveURL(/\/movimientos\?cuenta_id=\d+/)
   await expect(page.getByLabel('Cuenta')).toContainText('PERSONA PDF EJEMPLO')
   const filaSinCategorizar = page.locator('tbody tr', { hasText: 'Pago en Comercio Desconocido' })
   await expect(filaSinCategorizar).toContainText('Sin categorizar')
@@ -189,6 +188,7 @@ test('soltar el fichero sobre la zona de arrastre también permite importarlo', 
   await expect(zona).toContainText('movimientos_ejemplo.xlsx')
 
   await zona.locator('xpath=ancestor::form').getByRole('button', { name: 'Importar' }).click()
+  await confirmarRevisionExcel(page)
   await expect(page.locator('[data-test="resumen-importacion"]')).toBeVisible()
   await page.screenshot({ path: 'e2e/capturas/importar-07-resumen-tras-arrastrar.png' })
 })
@@ -242,6 +242,10 @@ test('soltar varios ficheros a la vez los procesa e importa todos ("procesamient
   await page.screenshot({ path: 'e2e/capturas/importar-08-varios-ficheros-seleccionados.png' })
 
   await zona.locator('xpath=ancestor::form').getByRole('button', { name: 'Importar' }).click()
+  // Los ficheros se analizan y confirman uno a uno: dos ficheros Excel
+  // implican dos modales de revisión en secuencia.
+  await confirmarRevisionExcel(page)
+  await confirmarRevisionExcel(page)
 
   const resumen = page.locator('[data-test="resumen-importacion"]')
   await expect(resumen).toBeVisible()
@@ -284,6 +288,7 @@ test('importar un fichero con varias filas muestra el progreso de filas procesad
     buffer: contenido,
   })
   await formulario.getByRole('button', { name: 'Importar' }).click()
+  await confirmarRevisionExcel(page)
 
   // El progreso avanza demasiado rápido en local (base de datos en la misma
   // máquina) para fiar una aserción en un valor intermedio concreto sin que
@@ -317,6 +322,7 @@ test('reimportar el mismo Excel de movimientos permite ver el detalle de los dup
     buffer: contenido,
   })
   await formulario.getByRole('button', { name: 'Importar' }).click()
+  await confirmarRevisionExcel(page)
   await expect(page.locator('[data-test="resumen-importacion"]')).toContainText(
     'Movimientos importados: 1',
   )
@@ -327,6 +333,7 @@ test('reimportar el mismo Excel de movimientos permite ver el detalle de los dup
     buffer: contenido,
   })
   await formulario.getByRole('button', { name: 'Importar' }).click()
+  await confirmarRevisionExcel(page)
   const resumen = page.locator('[data-test="resumen-importacion"]')
   await expect(resumen).toContainText('Movimientos omitidos por duplicado: 1')
 
@@ -434,7 +441,11 @@ test('un error 500 real muestra "Más detalle" con la traza y permite copiarla',
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto('/importar')
 
-  await page.route('**/api/v1/movimientos/importar', (route) =>
+  // Con un Excel de movimientos, el primer paso tras pulsar "Importar" es
+  // /analizar (propone categoría/subcategoría antes de mostrar el modal de
+  // revisión): es ahí donde se simula el error 500, antes de que llegue a
+  // aparecer ese modal.
+  await page.route('**/api/v1/movimientos/importar/analizar', (route) =>
     route.fulfill({
       status: 500,
       contentType: 'application/json',

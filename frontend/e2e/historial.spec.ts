@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { elegirOpcion, elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
+import { elegirOpcionBuscador, seleccionarCuenta } from './utilidades'
 
 async function crearMovimiento(
   page: Page,
@@ -14,7 +14,7 @@ async function crearMovimiento(
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panel = page.getByRole('dialog')
   await panel.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
+  await elegirOpcionBuscador(page, panel.getByLabel('Categoría', { exact: true }), nombreCategoria)
   await seleccionarSubcategoriaSiAplica(page, panel, subcategoria)
   await panel.getByPlaceholder('Descripción').fill(descripcion)
   await panel.getByPlaceholder('Importe').fill(importe)
@@ -29,7 +29,7 @@ async function seleccionarSubcategoriaSiAplica(
   subcategoria: string | null,
 ): Promise<void> {
   if (!subcategoria) return
-  await elegirOpcion(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
+  await elegirOpcionBuscador(page, panel.getByLabel('Subcategoría', { exact: true }), subcategoria)
 }
 
 test('sin selección muestra un mensaje para elegir categoría o subcategoría', async ({ page }) => {
@@ -74,7 +74,7 @@ test('navegar por categoría y subcategoría en el historial muestra gastos e in
   await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(page, numeroCuentaA, nombreCategoria, null, descripcionGastoA, '-15.00')
   await crearMovimiento(page, numeroCuentaB, nombreCategoria, null, descripcionGastoB, '-25.00')
   await crearMovimiento(page, numeroCuentaA, nombreCategoria, null, descripcionIngreso, '300.00')
@@ -193,7 +193,7 @@ test('un movimiento se puede editar directamente desde el historial', async ({ p
   await panelCategoria.getByRole('button', { name: 'Crear categoría' }).click()
   await expect(page.locator('[data-slot="card"]', { hasText: nombreCategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(page, numeroCuenta, nombreCategoria, null, descripcionOriginal, '-12.00')
 
   await page.getByRole('button', { name: 'Expandir Historial' }).click()
@@ -245,7 +245,7 @@ test('el Historial se ve agrupado por categoría/subcategoría por defecto, y se
   await tarjetaCategoria.getByRole('button', { name: 'Añadir' }).click()
   await expect(tarjetaCategoria.locator('li', { hasText: nombreSubcategoria })).toBeVisible()
 
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await crearMovimiento(
     page,
     numeroCuenta,
@@ -337,12 +337,12 @@ test('una subcategoría con una asociación por descripción muestra en el histo
   // El movimiento real se guarda bajo otra categoría (sin subcategoría),
   // como ocurre con los cargos de Amazon Prime en el banco: no comparte
   // categoría con la subcategoría del resumen, solo la descripción.
-  await page.goto('/gestion/movimientos')
+  await page.goto('/movimientos')
   await seleccionarCuenta(page, numeroCuenta)
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelMovimiento = page.getByRole('dialog')
   await panelMovimiento.locator('input[type="date"]').fill('2026-01-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelMovimiento.getByLabel('Categoría', { exact: true }),
     nombreCategoriaMovimiento,
@@ -372,8 +372,8 @@ test('una subcategoría con una asociación por descripción muestra en el histo
 
   // Crear la asociación por descripción, apuntando a la subcategoría del
   // resumen (no solo a la categoría).
-  await page.goto('/administracion/gestion-conceptos')
-  await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible()
+  await page.goto('/gestion/conceptos')
+  await expect(page.getByRole('heading', { name: 'Gestión' })).toBeVisible()
   await page.getByPlaceholder('p. ej. Ayuntamiento Las Rozas').fill(fragmentoDescripcion)
   await elegirOpcionBuscador(
     page,

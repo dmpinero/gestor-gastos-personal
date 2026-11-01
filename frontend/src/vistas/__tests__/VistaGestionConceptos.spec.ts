@@ -21,7 +21,7 @@ const { driverMock } = vi.hoisted(() => {
   return { driverMock }
 })
 vi.mock('driver.js', () => ({ driver: driverMock }))
-vi.mock('vue-router', () => ({ useRoute: () => ({ name: 'administracion-gestion-conceptos' }) }))
+vi.mock('vue-router', () => ({ useRoute: () => ({ name: 'gestion-conceptos' }) }))
 
 function mockearRutas(): void {
   vi.mocked(clienteApi.obtener).mockResolvedValue([])
@@ -43,7 +43,7 @@ describe('VistaGestionConceptos — tour guiado', () => {
 
     const config = driverMock.mock.calls[0]?.[0]
     expect(config?.steps?.map((paso) => paso.element)).toEqual([
-      '[data-tour="nav-administracion"]',
+      '[data-tour="nav-gestion"]',
       '[data-tour="conceptos-form-categoria"]',
       '[data-tour="conceptos-form-descripcion"]',
       '[data-tour="conceptos-boton-crear"]',

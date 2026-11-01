@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
   elegirCuentaDelFormulario,
-  elegirOpcion,
   elegirOpcionBuscador,
   seleccionarCategoria,
   seleccionarCategorias,
@@ -646,7 +645,7 @@ test('los filtros de fecha, importe, categoría, subcategoría y cuenta se combi
   await page.getByRole('button', { name: 'Crear movimiento' }).click()
   const panelOtraCuenta = page.getByRole('dialog')
   await panelOtraCuenta.locator('input[type="date"]').fill('2026-03-01')
-  await elegirOpcion(
+  await elegirOpcionBuscador(
     page,
     panelOtraCuenta.getByLabel('Categoría', { exact: true }),
     nombreCategoria,

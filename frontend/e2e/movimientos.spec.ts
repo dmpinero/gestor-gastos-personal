@@ -863,7 +863,7 @@ test('el resumen muestra el total y la evolución de gastos e ingresos por separ
   await modalGastado.getByRole('button', { name: 'Cerrar' }).click()
 
   const tarjetaIngresado = page.locator('[data-slot="card"]', { hasText: 'Total ingresado' })
-  await expect(tarjetaIngresado).toContainText('1000,00 €')
+  await expect(tarjetaIngresado).toContainText('1.000,00 €')
 
   await tarjetaIngresado.getByRole('button', { name: 'Detalles' }).click()
   const modalIngresado = page.getByRole('dialog')

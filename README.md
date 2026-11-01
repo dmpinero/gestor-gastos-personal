@@ -311,6 +311,81 @@ se verifica en cada ejecución de CI y falla la build si una capa interna
 importa algo de una capa que no debería (p. ej. que el dominio dependa de
 SQLAlchemy).
 
+### Diagrama de arquitectura
+
+```mermaid
+flowchart TD
+
+subgraph group_frontend["Aplicación web"]
+  node_spa["Aplicación Vue<br/>[App.vue]"]
+  node_views["Vistas de la aplicación"]
+  node_api_client["Cliente API<br/>[cliente.ts]"]
+end
+
+subgraph group_api["Interfaz API"]
+  node_api_routes["Enrutadores REST"]
+  node_api_errors["Manejadores de errores"]
+end
+
+subgraph group_features["Casos de uso"]
+  node_accounts_categories["Cuentas y categorías"]
+  node_transactions["Gestión de movimientos"]
+  node_attachments["Adjuntos"]
+  node_dashboard["Resumen del dashboard<br/>[obtener_resumen.py]"]
+  node_import["Importación de extractos"]
+  node_notifications["Próximos eventos"]
+  node_forecast["Resumen anual (previsión)"]
+  node_backup["Backup completo (exportar/importar)"]
+end
+
+subgraph group_domain["Dominio y persistencia"]
+  node_movement_domain["Entidad y protocolo de Movimiento<br/>[repositorio.py]"]
+  node_forecast_domain["Entidad y protocolos de Previsión<br/>[repositorio.py]"]
+  node_sql_repos["Repositorios SQLAlchemy"]
+  node_database[("Base de datos MySQL")]
+  node_pdf_reader["Protocolo lector de PDF<br/>[lector_pdf.py]"]
+  node_excel_io["Importación/exportación Excel"]
+end
+
+node_user(("Usuario"))
+
+node_user -->|"usa"| node_spa
+node_spa -->|"renderiza"| node_views
+node_views -.->|"solicita datos"| node_api_client
+node_api_client -.->|"llama a la API REST"| node_api_routes
+node_api_routes -.->|"despacha a"| node_accounts_categories
+node_api_routes -.->|"despacha a"| node_transactions
+node_api_routes -.->|"despacha a"| node_attachments
+node_api_routes -.->|"despacha a"| node_dashboard
+node_api_routes -.->|"despacha a"| node_import
+node_api_routes -.->|"despacha a"| node_notifications
+node_api_routes -->|"despacha a"| node_forecast
+node_api_routes -->|"despacha a"| node_backup
+node_api_routes -->|"registra"| node_api_errors
+node_import -->|"lee PDF"| node_pdf_reader
+node_import -->|"crea movimientos"| node_movement_domain
+node_forecast -->|"consulta lo real"| node_movement_domain
+node_forecast -->|"usa protocolos de previsión"| node_forecast_domain
+node_sql_repos -->|"implementa el protocolo"| node_movement_domain
+node_sql_repos -.->|"persiste datos"| node_database
+node_backup -.->|"lee el libro Excel"| node_excel_io
+node_spa -->|"usa la API REST"| node_api_routes
+
+classDef toneNeutral fill:#f8fafc,stroke:#334155,stroke-width:1.5px,color:#0f172a
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+class node_spa,node_views,node_api_client,node_user toneBlue
+class node_api_routes,node_api_errors toneAmber
+class node_accounts_categories,node_transactions,node_attachments,node_dashboard,node_import,node_notifications,node_forecast,node_backup toneMint
+class node_movement_domain,node_forecast_domain,node_sql_repos,node_database,node_pdf_reader,node_excel_io toneRose
+```
+
+*(Diagrama generado inicialmente con [gitdiagram.com](https://gitdiagram.com/dmpinero/gestor-gastos-personal)
+a partir del código del repositorio, con las rutas de fichero verificadas y
+las etiquetas traducidas.)*
+
 ## e. Funcionalidades principales
 
 - **Dashboard**: resumen visual del estado financiero actual (saldo por

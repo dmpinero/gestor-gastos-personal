@@ -427,4 +427,6 @@ las etiquetas traducidas.)*
 Cada pantalla está documentada con capturas en detalle en el
 [manual de usuario](docs/manual-usuario/README.md). También existe una
 [presentación del proyecto](docs/presentacion/README.md) con una visión
-general en formato diapositivas.
+general en formato diapositivas, y un documento sobre el
+[ciclo de desarrollo y aseguramiento de la calidad](docs/CicloDesarrollo.md)
+(metodología, herramientas, CI/CD, accesibilidad y releases).

@@ -65,13 +65,13 @@ test('la página de inicio muestra el panel principal con saldos y totales por c
   // un valor global exacto, para no depender del resto de datos ya cargados.
   const tarjetaCuenta = page.locator('[data-slot="card"]', { hasText: numeroCuenta })
   await expect(tarjetaCuenta).toBeVisible()
-  await expect(tarjetaCuenta).toContainText('2470,00 €')
+  await expect(tarjetaCuenta).toContainText('2.470,00 €')
 
   const filaGasto = page.locator('li', { hasText: nombreCategoriaGasto })
   await expect(filaGasto).toContainText('-30,00 €')
 
   const filaIngreso = page.locator('li', { hasText: nombreCategoriaIngreso })
-  await expect(filaIngreso).toContainText('1500,00 €')
+  await expect(filaIngreso).toContainText('1.500,00 €')
 
   await page.screenshot({ path: 'e2e/capturas/inicio-01-panel-principal.png' })
 })

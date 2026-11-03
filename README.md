@@ -1,5 +1,17 @@
 # Gestor de Gastos Personal — Documento de entrega
 
+## URLs
+
+| Recurso | Enlace |
+| --- | --- |
+| Documentación completa y detallada | Este mismo archivo [`README.md`](README.md) |
+| Código fuente | Repositorio público en GitHub: [github.com/dmpinero/gestor-gastos-personal](https://github.com/dmpinero/gestor-gastos-personal) |
+| Despliegue en funcionamiento | [frontend-production-0cbc.up.railway.app](https://frontend-production-0cbc.up.railway.app/) |
+| Slides con la presentación del proyecto | Google Slides: [docs.google.com/presentation/d/135rRewL5rbf8d31LTtApmunfVg2dimEKOw1-9nGkKE4](https://docs.google.com/presentation/d/135rRewL5rbf8d31LTtApmunfVg2dimEKOw1-9nGkKE4) |
+| Documentación del proyecto | Carpeta [`docs/`](docs) |
+| Vídeo explicativo con captura de pantalla | Google Drive: [drive.google.com/file/d/1A8F7n3cvVGcVhunN1Tos_f71pwp4ohzh/view](https://drive.google.com/file/d/1A8F7n3cvVGcVhunN1Tos_f71pwp4ohzh/view?usp=drive_link) |
+| Información del despliegue | Sección [Infraestructura y despliegue](#infraestructura-y-despliegue) de este mismo archivo |
+
 ## a. Descripción general del proyecto
 
 Gestor de Gastos Personal es una aplicación web para llevar el control de

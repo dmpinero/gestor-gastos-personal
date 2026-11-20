@@ -5,3 +5,6 @@ Presentación en Google Slides con una visión general del proyecto
 despliegue, funcionalidades principales y calidad/buenas prácticas).
 
 **Enlace**: https://docs.google.com/presentation/d/135rRewL5rbf8d31LTtApmunfVg2dimEKOw1-9nGkKE4
+
+También disponible como PDF en este mismo directorio:
+[`Gestor de Gastos Personal-Presentación del proyecto.pdf`](<Gestor de Gastos Personal-Presentación del proyecto.pdf>).
